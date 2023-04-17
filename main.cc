@@ -7,11 +7,18 @@
 #include "gmod_api.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
 
+#include "socket.hh"
+
 using namespace std;
 
 typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
-int main()
+int main() {
+    auto socket = new Socket(9001);
+    return 0;
+}
+
+int main_mp()
 {
     IGMOD *test = CreateGMOD();
 
@@ -57,7 +64,7 @@ int main()
         {
             // string message_type = observer->GetMessageType();
             // cout << message_type << endl;
-            auto multi_face_landmarks = static_cast<MultiFaceLandmarks*>(observer->GetData());
+            auto multi_face_landmarks = static_cast<MultiFaceLandmarks *>(observer->GetData());
             auto lm = (*multi_face_landmarks)[0];
             // Landmark {float: x,y,z,visibility,presence }
             cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(1).x() << ", " << lm.landmark(1).z() << endl;
