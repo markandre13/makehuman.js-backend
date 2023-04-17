@@ -14,7 +14,7 @@ ln -s ${MEDIAPIPE_CPP_DIR}/mediapipe_models .
 CXX="c++"
 CXXFLAGS="-std=c++17"
 PROTOBUF_FLAGS="-I/Users/mark/lib/include"
-OPENCV_FLAGS="-I/usr/local/Cellar/opencv@3/3.4.16_4/include"
+OPENCV_FLAGS="-I/usr/local/opt/opencv@3/include"
 PROTOBUF_LDFLAGS="-L${HOME}/lib/lib"
 MEDIAPIPE_CPP_LDFLAGS="-L${MEDIAPIPE_CPP_DIR}/library"
 LIBS="-lprotobuf -lgmod"
