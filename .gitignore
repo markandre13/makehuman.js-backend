@@ -1,0 +1,6 @@
+.DS_Store
+Info.plist
+*~
+*.o
+a.out
+demo
