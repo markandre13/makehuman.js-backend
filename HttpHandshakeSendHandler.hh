@@ -14,6 +14,7 @@ public:
     virtual bool want_read() { return false; }
     virtual bool want_write() { return true; }
     virtual int fd() const { return fd_; }
+    virtual const char *name() const { return "HttpHandshakeSendHandler"; }
     virtual bool finish() { return off_ == resheaders_.size(); }
     virtual EventHandler *next();
 private:

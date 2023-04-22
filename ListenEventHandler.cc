@@ -6,6 +6,7 @@
 
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <iostream>
 
 ListenEventHandler::~ListenEventHandler()
 {
@@ -25,26 +26,25 @@ int ListenEventHandler::on_read_event()
     {
         perror("accept");
     }
+    std::cout << "ListenEventHandler: accepted client" << std::endl;
     return 0;
 }
 
 EventHandler *ListenEventHandler::ListenEventHandler::next()
 {
-    if (cfd_ != -1)
-    {
-        int val = 1;
-        int fd = cfd_;
-        cfd_ = -1;
-        if (make_non_block(fd) == -1 ||
-            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val)) == -1)
-        {
-            close(fd);
-            return 0;
-        }
-        return new HttpHandshakeRecvHandler(fd);
-    }
-    else
+    if (cfd_ == -1)
     {
         return 0;
     }
+    int val = 1;
+    int fd = cfd_;
+    cfd_ = -1;
+    if (make_non_block(fd) == -1 ||
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val)) == -1)
+    {
+        close(fd);
+        return 0;
+    }
+    // std::cout << "ListenEventHandler: start HTTP receive handler on fd " << fd << std::endl;
+    return new HttpHandshakeRecvHandler(fd);
 }

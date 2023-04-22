@@ -17,6 +17,7 @@ public:
     virtual bool want_read() { return wslay_event_want_read(ctx_); }
     virtual bool want_write() { return wslay_event_want_write(ctx_); }
     virtual int fd() const { return fd_; }
+    virtual const char *name() const { return "EchoWebSocketHandler"; }
     virtual bool finish() { return !want_read() && !want_write(); }
     virtual EventHandler *next() { return 0; }
 

@@ -16,7 +16,7 @@ int HttpHandshakeRecvHandler::on_read_event()
     char buf[4096];
     ssize_t r;
     std::string client_key;
-    while (1)
+    while (true)
     {
         while ((r = read(fd_, buf, sizeof(buf))) == -1 && errno == EINTR)
             ;
@@ -62,6 +62,8 @@ int HttpHandshakeRecvHandler::on_read_event()
         std::string::size_type keyhdend = headers_.find("\r\n", keyhdstart);
         client_key = headers_.substr(keyhdstart, keyhdend - keyhdstart);
         accept_key_ = create_acceptkey(client_key);
+
+        // std::cout << "HttpHandshakeRecvHandler: got HTTP request" << std::endl;
     }
     return 0;
 }
@@ -72,6 +74,7 @@ EventHandler *HttpHandshakeRecvHandler::next()
     {
         int fd = fd_;
         fd_ = -1;
+        // std::cout << "HttpHandshakeRecvHandler: start HTTP send handler on fd " << fd << std::endl;
         return new HttpHandshakeSendHandler(fd, accept_key_);
     }
     else

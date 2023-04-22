@@ -11,6 +11,7 @@ public:
     virtual bool want_read() { return true; }
     virtual bool want_write() { return false; }
     virtual int fd() const { return fd_; }
+    virtual const char *name() const { return "ListenEventHandler"; }
     virtual bool finish() { return false; }
     virtual EventHandler *next();
 

@@ -12,6 +12,7 @@ public:
     virtual bool want_read() { return true; }
     virtual bool want_write() { return false; }
     virtual int fd() const { return fd_; }
+    virtual const char *name() const { return "HttpHandshakeRecvHandler"; }
     virtual bool finish() { return !accept_key_.empty(); }
     virtual EventHandler *next();
 

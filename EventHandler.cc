@@ -3,13 +3,14 @@
 #include <sys/select.h>
 
 #include <set>
+#include <iostream>
 
 void reactor(EventHandler *listen_handler)
 {
     std::set<EventHandler *> handlers;
     handlers.insert(listen_handler);
 
-    while (1)
+    while (true)
     {
         fd_set rd, wr, ex;
         int fd_max = listen_handler->fd();
@@ -18,8 +19,14 @@ void reactor(EventHandler *listen_handler)
         FD_ZERO(&ex);
         for (auto h = handlers.begin(); h != handlers.end(); ++h)
         {
-            FD_SET((*h)->fd(), &rd);
-            FD_SET((*h)->fd(), &wr);
+            if ((*h)->want_read())
+            {
+                FD_SET((*h)->fd(), &rd);
+            }
+            if ((*h)->want_write())
+            {
+                FD_SET((*h)->fd(), &wr);
+            }
             FD_SET((*h)->fd(), &ex);
             if ((*h)->fd() > fd_max)
             {
@@ -27,34 +34,59 @@ void reactor(EventHandler *listen_handler)
             }
         }
 
+        // std::cout << "waiting..." << std::endl;
         select(fd_max + 1, &rd, &wr, &ex, NULL);
 
-        for (auto p = handlers.begin(); p != handlers.end(); ++p)
+        auto p = handlers.begin();
+        while (p != handlers.end())
         {
-redo:            
-            if ((FD_ISSET((*p)->fd(), &rd) && (*p)->on_read_event() == -1) ||
-                (FD_ISSET((*p)->fd(), &wr) && (*p)->on_write_event() == -1) ||
-                (FD_ISSET((*p)->fd(), &ex)))
+            auto fail = false;
+            if (FD_ISSET((*p)->fd(), &rd))
+            {
+                // std::cout << (*p)->name() << " can read data on socket " << (*p)->fd() << std::endl;
+                if ((*p)->on_read_event() == -1)
+                {
+                    std::cout << "    read failure" << std::endl;
+                    fail = true;
+                }
+            }
+            if (FD_ISSET((*p)->fd(), &wr))
+            {
+                // std::cout << "  can write data on socket " << (*p)->fd() << std::endl;
+                if ((*p)->on_write_event() == -1)
+                {
+                    std::cout << "    write failure" << std::endl;
+                    fail = true;
+                }
+            }
+            if (FD_ISSET((*p)->fd(), &ex))
+            {
+                // std::cout << (*p)->name() << " exception on socket " << (*p)->fd() << std::endl;
+                fail = true;
+            }
+
+            if (fail)
             {
                 delete *p;
-                handlers.erase(p);
-                p = handlers.begin();
-                goto redo;
+                p = handlers.erase(p);
+                continue;
             }
 
             EventHandler *next = (*p)->next();
-            if (next) {
+            if (next)
+            {
+                // std::cout << (*p)->name() << " span next handler on socket " << (*p)->fd() << std::endl;
                 handlers.insert(next);
-                p = handlers.begin();
-                goto redo;
             }
 
-            if ((*p)->finish()) {
+            if ((*p)->finish())
+            {
+                // std::cout << (*p)->name() << " close handler for socket " << (*p)->fd() << std::endl;
                 delete *p;
-                handlers.erase(p);
-                p = handlers.begin();
-                goto redo;
+                p = handlers.erase(p);
+                continue;
             }
+            ++p;
         }
     }
 }

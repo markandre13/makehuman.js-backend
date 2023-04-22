@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <iostream>
 
 static ssize_t send_callback(
     wslay_event_context_ptr ctx,
@@ -22,18 +23,20 @@ static void on_msg_recv_callback(
 EchoWebSocketHandler::EchoWebSocketHandler(int fd) : fd_(fd)
 {
     struct wslay_event_callbacks callbacks = {
-        recv_callback,
-        send_callback,
-        NULL, /* genmask_callback */
-        NULL, /* on_frame_recv_start_callback */
-        NULL, /* on_frame_recv_callback */
-        NULL, /* on_frame_recv_end_callback */
-        on_msg_recv_callback};
+        recv_callback,       // called when wslay wants to read data
+        send_callback,       // called when wslay wants to send data
+        NULL,                /* genmask_callback */
+        NULL,                /* on_frame_recv_start_callback */
+        NULL,                /* on_frame_recv_callback */
+        NULL,                /* on_frame_recv_end_callback */
+        on_msg_recv_callback // message received via wslay
+    };
     wslay_event_context_server_init(&ctx_, &callbacks, this);
 }
 
 EchoWebSocketHandler::~EchoWebSocketHandler()
 {
+    std::cout << "EchoWebSocketHandler: close" << std::endl;
     wslay_event_context_free(ctx_);
     shutdown(fd_, SHUT_WR);
     close(fd_);
@@ -41,6 +44,7 @@ EchoWebSocketHandler::~EchoWebSocketHandler()
 
 ssize_t EchoWebSocketHandler::send_data(const uint8_t *data, size_t len, int flags)
 {
+    // std::cout << "EchoWebSocketHandler::send_data(...," << len << "," << flags << ")" << std::endl;
     ssize_t r;
     int sflags = 0;
 #ifdef MSG_MORE
@@ -59,6 +63,7 @@ ssize_t EchoWebSocketHandler::recv_data(uint8_t *data, size_t len, int flags)
     ssize_t r;
     while ((r = recv(fd_, data, len, 0)) == -1 && errno == EINTR)
         ;
+    // std::cout << "EchoWebSocketHandler::recv_data(...," << len << "," << flags << ") -> " << r << std::endl;
     return r;
 }
 
@@ -111,6 +116,7 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx,
 {
     if (!wslay_is_ctrl_frame(arg->opcode))
     {
+        std::cout << "EchoWebSocketHandler: echo " << arg->msg_length << " bytes" << std::endl;
         struct wslay_event_msg msgarg = {arg->opcode, arg->msg, arg->msg_length};
         wslay_event_queue_msg(ctx, &msgarg);
     }
