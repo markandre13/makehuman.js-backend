@@ -1,19 +1,34 @@
-
 #include "EventHandler.hh"
-#include <sys/select.h>
+#include "ListenEventHandler.hh"
+#include "socket.hh"
 
+#include <cstdlib>
 #include <set>
 #include <iostream>
+#include <sys/select.h>
 
-void reactor(EventHandler *listen_handler)
+std::set<EventHandler *> handlers;
+
+void wsInit()
 {
-    std::set<EventHandler *> handlers;
-    handlers.insert(listen_handler);
+    ignore_sig_pipe();
 
+    int sfd = create_listen_socket("9001");
+    if (sfd == -1)
+    {
+        std::cerr << "Failed to create server socket" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    handlers.insert(new ListenEventHandler(sfd));
+}
+
+void wsHandle()
+{
     while (true)
     {
         fd_set rd, wr, ex;
-        int fd_max = listen_handler->fd();
+        int fd_max = -1;
         FD_ZERO(&rd);
         FD_ZERO(&wr);
         FD_ZERO(&ex);
@@ -35,7 +50,13 @@ void reactor(EventHandler *listen_handler)
         }
 
         // std::cout << "waiting..." << std::endl;
-        select(fd_max + 1, &rd, &wr, &ex, NULL);
+        timeval t;
+        t.tv_sec = 0;
+        t.tv_usec = 0;
+        if (select(fd_max + 1, &rd, &wr, &ex, &t) <= 0)
+        {
+            break;
+        }
 
         auto p = handlers.begin();
         while (p != handlers.end())

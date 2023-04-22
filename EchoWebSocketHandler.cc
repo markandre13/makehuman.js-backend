@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <unistd.h>
 #include <sys/socket.h>
+
+#include <string>
 #include <iostream>
 
 static ssize_t send_callback(
@@ -116,7 +118,8 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx,
 {
     if (!wslay_is_ctrl_frame(arg->opcode))
     {
-        std::cout << "EchoWebSocketHandler: echo " << arg->msg_length << " bytes" << std::endl;
+        auto msg = std::string((const char*)arg->msg, 0, arg->msg_length);
+        std::cout << "EchoWebSocketHandler: echo " << arg->msg_length << " bytes: \"" << msg << "\""  << std::endl;
         struct wslay_event_msg msgarg = {arg->opcode, arg->msg, arg->msg_length};
         wslay_event_queue_msg(ctx, &msgarg);
     }

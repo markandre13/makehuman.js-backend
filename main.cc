@@ -7,22 +7,24 @@
 #include "gmod_api.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
 
-#include "socket.hh"
+#include "EventHandler.hh"
 
 using namespace std;
 
 typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
-int main() {
-    auto socket = new Socket(9001);
-    return 0;
-}
+// int main() {
+//     auto socket = new Socket(9001);
+//     return 0;
+// }
 
-int main_mp()
+int main()
 {
+    wsInit();
+
     IGMOD *test = CreateGMOD();
 
-    test->set_camera_props(0, 640 * 2, 480 * 2, 30);
+    test->set_camera_props(0, 640, 480, 30);
     test->set_camera(true);
     test->set_overlay(true);
 
@@ -58,7 +60,12 @@ int main_mp()
     // FOR GRAPH THAT RETURNS MULTIPLE NORMALIZED LANDMARK LISTS
     //////////////////////////////////
     auto obs = test->create_observer("multi_face_landmarks");
-    obs->SetPresenceCallback([](class IObserver *observer, bool present) {});
+    obs->SetPacketCallback([](class IObserver *observer){
+        cout << "packet" << endl;
+    });
+    obs->SetPresenceCallback([](class IObserver *observer, bool present) {
+        cout << "present = " << (present ? "true" : "false") << endl;
+    });
     obs->SetPacketCallback(
         [](class IObserver *observer)
         {
@@ -68,6 +75,7 @@ int main_mp()
             auto lm = (*multi_face_landmarks)[0];
             // Landmark {float: x,y,z,visibility,presence }
             cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(1).x() << ", " << lm.landmark(1).z() << endl;
+            wsHandle();
         });
     //////////////////////////////////
 

@@ -14,4 +14,7 @@ public:
     virtual EventHandler *next() = 0;
 };
 
-void reactor(EventHandler *listen_handler);
+void wsInit();
+void wsHandle();
+
+// void reactor(EventHandler *listen_handler);
