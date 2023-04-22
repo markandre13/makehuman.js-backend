@@ -11,6 +11,9 @@
 
 using namespace std;
 
+bool isFaceRequested();
+void sendFace(/*array of floats*/);
+
 typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
 // int main() {
@@ -74,8 +77,12 @@ int main()
             auto multi_face_landmarks = static_cast<MultiFaceLandmarks *>(observer->GetData());
             auto lm = (*multi_face_landmarks)[0];
             // Landmark {float: x,y,z,visibility,presence }
-            cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(1).x() << ", " << lm.landmark(1).z() << endl;
+            // cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(1).x() << ", " << lm.landmark(1).z() << endl;
             wsHandle();
+            if(isFaceRequested()) {
+                // comvert landmarks into array of floats
+                sendFace(/*array of floats*/);
+            }
         });
     //////////////////////////////////
 
