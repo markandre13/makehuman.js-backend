@@ -13,7 +13,8 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIBS="-lprotobuf -lgmod -lwslay -lnettle"
 LIB=-lwslay -lnettle
 
-SRC = ws.cc
+SRC = ws.cc EchoWebSocketHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
+	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc
 OBJ = $(SRC:.cc=.o)
 
 .SUFFIXES: .cc .o
