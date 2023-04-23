@@ -3,5 +3,10 @@ demo
 .vscode
 .DS_Store
 Info.plist
+DEADJOE
+mediapipe
+mediapipe_graphs
+mediapipe_models
 *.o
+*.bak
 *~
