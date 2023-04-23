@@ -1,3 +1,8 @@
+# mediapipe_daemon
+
+A daemon for [makehuman.js](https://github.com/markandre13/makehuman.js) providing access to [mediapipe_cpp_lib](https://github.com/markandre13/mediapipe_cpp_lib).
+
+<!--
 once mediapipe_cpp_lib has been build:
 
 # we need this version, the one in protobuf won't do
@@ -12,3 +17,4 @@ ln -s /Users/mark/upstream/mediapipe_cpp_lib/mediapipe_graphs .
 
 c++ -std=c++17 -I. -I/Users/mark/lib/include -I/usr/local/Cellar/opencv@3/3.4.16_4/include  -L/Users/mark/lib/lib -L /Users/mark/upstream/mediapipe_cpp_lib/library -lprotobuf -lgmod main.cc
 DYLD_LIBRARY_PATH=/Users/mark/upstream/mediapipe_cpp_lib/library ./a.out
+-->
