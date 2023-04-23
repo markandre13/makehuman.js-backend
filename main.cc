@@ -1,18 +1,17 @@
-#include <iostream>
 #include <functional>
+#include <iostream>
+#include <opencv2/opencv.hpp>
 #include <typeinfo>
 #include <vector>
-#include <opencv2/opencv.hpp>
-
-#include "gmod_api.h"
-#include "mediapipe/framework/formats/landmark.pb.h"
 
 #include "EventHandler.hh"
+#include "gmod_api.h"
+#include "mediapipe/framework/formats/landmark.pb.h"
 
 using namespace std;
 
 bool isFaceRequested();
-void sendFace(/*array of floats*/);
+void sendFace(float *float_array, int size);
 
 typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
@@ -21,8 +20,7 @@ typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 //     return 0;
 // }
 
-int main()
-{
+int main() {
     wsInit();
 
     IGMOD *test = CreateGMOD();
@@ -63,27 +61,26 @@ int main()
     // FOR GRAPH THAT RETURNS MULTIPLE NORMALIZED LANDMARK LISTS
     //////////////////////////////////
     auto obs = test->create_observer("multi_face_landmarks");
-    obs->SetPacketCallback([](class IObserver *observer){
-        cout << "packet" << endl;
-    });
-    obs->SetPresenceCallback([](class IObserver *observer, bool present) {
-        cout << "present = " << (present ? "true" : "false") << endl;
-    });
-    obs->SetPacketCallback(
-        [](class IObserver *observer)
-        {
-            // string message_type = observer->GetMessageType();
-            // cout << message_type << endl;
-            auto multi_face_landmarks = static_cast<MultiFaceLandmarks *>(observer->GetData());
-            auto lm = (*multi_face_landmarks)[0];
-            // Landmark {float: x,y,z,visibility,presence }
-            // cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(1).x() << ", " << lm.landmark(1).z() << endl;
-            wsHandle();
-            if(isFaceRequested()) {
-                // comvert landmarks into array of floats
-                sendFace(/*array of floats*/);
+    obs->SetPacketCallback([](class IObserver *observer) { cout << "packet" << endl; });
+    obs->SetPresenceCallback([](class IObserver *observer, bool present) { cout << "present = " << (present ? "true" : "false") << endl; });
+    obs->SetPacketCallback([](class IObserver *observer) {
+        // string message_type = observer->GetMessageType();
+        // cout << message_type << endl;
+        auto multi_face_landmarks = static_cast<MultiFaceLandmarks *>(observer->GetData());
+        auto lm = (*multi_face_landmarks)[0];
+        // Landmark {float: x,y,z,visibility,presence }
+        // cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(0).x() << ", " << lm.landmark(0).z() << endl;
+        wsHandle();
+        if (isFaceRequested()) {
+            float float_array[lm.landmark_size() * 3];
+            for (int i = 0; i < lm.landmark_size(); ++i) {
+                float_array[i * 3] = lm.landmark(i).x();
+                float_array[i * 3 + 1] = lm.landmark(i).y();
+                float_array[i * 3 + 2] = lm.landmark(1).z();
             }
-        });
+            sendFace(float_array, lm.landmark_size() * 3);
+        }
+    });
     //////////////////////////////////
 
     // These are the graphs that have been tested and work
