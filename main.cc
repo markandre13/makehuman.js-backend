@@ -15,12 +15,8 @@ void sendFace(float *float_array, int size);
 
 typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
-// int main() {
-//     auto socket = new Socket(9001);
-//     return 0;
-// }
-
 int main() {
+    cout << "makehuman.js mediapipe daemon" << endl << endl;
     wsInit();
 
     IGMOD *test = CreateGMOD();

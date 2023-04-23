@@ -1,7 +1,11 @@
 #include "EchoWebSocketHandler.hh"
 // #include <wslay/wslay_event.h>
 
-enum wslay_event_close_status { WSLAY_CLOSE_RECEIVED = 1 << 0, WSLAY_CLOSE_QUEUED = 1 << 1, WSLAY_CLOSE_SENT = 1 << 2 };
+enum wslay_event_close_status { 
+    WSLAY_CLOSE_RECEIVED = 1 << 0, 
+    WSLAY_CLOSE_QUEUED = 1 << 1, 
+    WSLAY_CLOSE_SENT = 1 << 2 
+    };
 
 struct wslay_event_context {
         /* config status, bitwise OR of enum wslay_event_config values*/
@@ -173,8 +177,8 @@ void sendFace(float* float_array, int size) {
         case WSLAY_ERR_NOMEM:
             std::cout << "WSLAY_ERR_NOMEM Out of memory." << std::endl;
             break;
-        default:
-            std::cout << "SEND FACE " << r << std::endl;
+            // default:
+            //     std::cout << "SEND FACE " << r << std::endl;
     }
 }
 
@@ -183,10 +187,12 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
     if (arg->opcode == WSLAY_BINARY_FRAME) {
         auto msg = std::string((const char*)arg->msg, 0, arg->msg_length);
         if (msg == "GET FACE") {
-            std::cout << "FACE REQUESTED " << (int)arg->opcode << std::endl;
+            // std::cout << "FACE REQUESTED " << (int)arg->opcode << std::endl;
             _ctx = ctx;
             faceRequest = true;
             // sendFace();
+        } else {
+            std::cout << "unknown request '" << msg << "'" << std::endl;
         }
         // std::cout << "EchoWebSocketHandler: echo " << arg->msg_length << " bytes: \"" << msg << "\""  << std::endl;
         // struct wslay_event_msg msgarg = {arg->opcode, arg->msg, arg->msg_length};
