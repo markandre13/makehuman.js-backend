@@ -23,8 +23,8 @@ void wsInit() {
     handlers.insert(new ListenEventHandler(sfd));
 }
 
-void wsHandle() {
-    while (true) {
+void wsHandle(bool block) {
+    // while (true) {
         fd_set rd, wr, ex;
         int fd_max = -1;
         FD_ZERO(&rd);
@@ -47,8 +47,8 @@ void wsHandle() {
         timeval t;
         t.tv_sec = 0;
         t.tv_usec = 0;
-        if (select(fd_max + 1, &rd, &wr, &ex, &t) <= 0) {
-            break;
+        if (select(fd_max + 1, &rd, &wr, &ex, block ? nullptr : &t) <= 0) {
+            return;
         }
 
         auto p = handlers.begin();
@@ -98,5 +98,5 @@ void wsHandle() {
             }
             ++p;
         }
-    }
+    // }
 }

@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-APP=demo
+APP=daemon
 
 CXX=c++
 CXXFLAGS=-std=c++17 -g -O0
@@ -11,10 +11,9 @@ PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
 MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lprotobuf -lgmod -lwslay -lnettle
-# LIB=-lwslay -lnettle
 
 SRC = main.cc \
-	EchoWebSocketHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
+	MakeHumanHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
 	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc
 OBJ = $(SRC:.cc=.o)
 
@@ -24,6 +23,12 @@ all: $(APP)
 
 depend:
 	makedepend -I. -Y $(SRC)
+
+run:
+	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP)
+
+clean:
+	rm $(OBJ)
 
 $(APP): $(OBJ)
 	@echo "linking..."
@@ -36,14 +41,13 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: gmod_api.h mediapipe/framework/formats/landmark.pb.h socket.hh
-ws.o: EventHandler.hh ListenEventHandler.hh socket.hh
-EchoWebSocketHandler.o: EchoWebSocketHandler.hh EventHandler.hh
+main.o: EventHandler.hh gmod_api.h mediapipe/framework/formats/landmark.pb.h
+MakeHumanHandler.o: MakeHumanHandler.hh EventHandler.hh wslay_event.h
 HttpHandshakeSendHandler.o: HttpHandshakeSendHandler.hh EventHandler.hh
-HttpHandshakeSendHandler.o: EchoWebSocketHandler.hh
+HttpHandshakeSendHandler.o: MakeHumanHandler.hh
 HttpHandshakeRecvHandler.o: HttpHandshakeRecvHandler.hh EventHandler.hh
 HttpHandshakeRecvHandler.o: HttpHandshakeSendHandler.hh createAcceptKey.hh
 ListenEventHandler.o: ListenEventHandler.hh EventHandler.hh
 ListenEventHandler.o: HttpHandshakeRecvHandler.hh socket.hh
-EventHandler.o: EventHandler.hh
+EventHandler.o: EventHandler.hh ListenEventHandler.hh socket.hh
 createAcceptKey.o: createAcceptKey.hh

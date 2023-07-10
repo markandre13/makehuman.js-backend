@@ -14,6 +14,6 @@ class EventHandler {
 };
 
 void wsInit();
-void wsHandle();
+void wsHandle(bool block = false);
 
 // void reactor(EventHandler *listen_handler);

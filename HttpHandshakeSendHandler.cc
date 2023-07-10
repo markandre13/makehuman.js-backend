@@ -3,7 +3,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "EchoWebSocketHandler.hh"
+#include "MakeHumanHandler.hh"
 
 HttpHandshakeSendHandler::HttpHandshakeSendHandler(int fd, const std::string &accept_key)
     : fd_(fd),
@@ -51,7 +51,7 @@ EventHandler *HttpHandshakeSendHandler::next() {
     if (finish()) {
         int fd = fd_;
         fd_ = -1;
-        return new EchoWebSocketHandler(fd);
+        return new MakeHumanHandler(fd);
     } else {
         return 0;
     }

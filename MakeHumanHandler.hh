@@ -4,10 +4,10 @@
 
 #include "EventHandler.hh"
 
-class EchoWebSocketHandler : public EventHandler {
+class MakeHumanHandler : public EventHandler {
     public:
-        EchoWebSocketHandler(int fd);
-        virtual ~EchoWebSocketHandler();
+        MakeHumanHandler(int fd);
+        virtual ~MakeHumanHandler();
         virtual int on_read_event() { return wslay_event_recv(ctx_) == 0 ? 0 : -1; }
         virtual int on_write_event() { return wslay_event_send(ctx_) == 0 ? 0 : -1; }
 
