@@ -14,7 +14,7 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
 	MakeHumanHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
-	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc
+	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc chordata.cc
 OBJ = $(SRC:.cc=.o)
 
 .SUFFIXES: .cc .o
@@ -51,3 +51,4 @@ ListenEventHandler.o: ListenEventHandler.hh EventHandler.hh
 ListenEventHandler.o: HttpHandshakeRecvHandler.hh socket.hh
 EventHandler.o: EventHandler.hh ListenEventHandler.hh socket.hh
 createAcceptKey.o: createAcceptKey.hh
+chordata.o: MakeHumanHandler.hh EventHandler.hh

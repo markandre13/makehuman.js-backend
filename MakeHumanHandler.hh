@@ -4,6 +4,9 @@
 
 #include "EventHandler.hh"
 
+bool isChordataRequested();
+void sendChordata(void* data, size_t size);
+
 class MakeHumanHandler : public EventHandler {
     public:
         MakeHumanHandler(int fd);

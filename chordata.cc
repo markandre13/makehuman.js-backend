@@ -1,0 +1,121 @@
+#include "MakeHumanHandler.hh"
+
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <string>
+#include <set>
+#include <iostream>
+
+static void chordataInit();
+
+extern std::set<EventHandler *> handlers;
+
+static char* chordata_buf = nullptr;
+static ssize_t chordata_len = 0;
+
+// using namespace std;
+
+extern void chordataLoop() {
+    wsInit();
+    chordataInit();
+
+    while (true) {
+        wsHandle(true);
+        if (isChordataRequested() && chordata_buf) {
+            // printf("chordata send %zd octets\n", chordata_len);
+            // hexdump((unsigned char*)chordata_buf, chordata_len);
+            sendChordata(chordata_buf, chordata_len);
+            chordata_buf = nullptr;
+        }
+    }
+}
+
+class ChordataRecvHandler : public EventHandler {
+    public:
+        ChordataRecvHandler(int fd) : fd_(fd) {}
+        virtual ~ChordataRecvHandler();
+        virtual int on_read_event();
+        virtual int on_write_event() { return 0; }
+        virtual bool want_read() { return true; }
+        virtual bool want_write() { return false; }
+        virtual int fd() const { return fd_; }
+        virtual const char *name() const { return "HttpHandshakeRecvHandler"; }
+        virtual bool finish() { return !accept_key_.empty(); }
+        virtual EventHandler *next() { return nullptr; }
+
+    private:
+        int fd_;
+        std::string headers_;
+        std::string accept_key_;
+};
+
+void hexdump(unsigned char *buffer, int received) {
+    int data = 0;
+    while (data < received) {
+        for (int x = 0; x < 16; x++) {
+            if (data < received)
+                printf("%02x ", (int)buffer[data]);
+            else
+                printf("   ");
+            data++;
+        }
+        data -= 16;
+        for (int x = 0; x < 16; x++) {
+            if (data < received)
+                printf("%c", buffer[data] >= 32 && buffer[data] <= 127 ? buffer[data] : '.');
+            else
+                printf(" ");
+            data++;
+        }
+        printf("\n");
+    }
+}
+
+ChordataRecvHandler::~ChordataRecvHandler() {
+    std::cout << "ChordataRecvHandler: close" << std::endl;
+    shutdown(fd_, SHUT_WR);
+    close(fd_);
+}
+
+int ChordataRecvHandler::on_read_event() {
+    sockaddr_in client;
+    static char buf[4096];
+    socklen_t client_address_size = sizeof(client);
+    ssize_t len = recvfrom(fd_, buf, sizeof(buf), 0, (struct sockaddr *)&client, &client_address_size);
+    if (len < 0) {
+        perror("recvfrom");
+        return 1;
+    }
+    // hexdump((unsigned char *)buf, len);
+    chordata_buf = buf;
+    chordata_len = len;
+    // printf("chordata rcvd %zd octets\n", len);
+    return 0;
+}
+
+void chordataInit() {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    int yes = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+
+    sockaddr_in name;
+    name.sin_family = AF_INET;
+    name.sin_addr.s_addr = htonl(INADDR_ANY);
+    name.sin_port = htons(6565);
+
+    if (bind(sock, (sockaddr *)&name, sizeof(sockaddr_in)) < 0) {
+        perror("bind");
+        close(sock);
+        sock = -1;
+        exit(1);
+    }
+
+    handlers.insert(new ChordataRecvHandler(sock));
+}
