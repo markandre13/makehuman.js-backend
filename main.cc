@@ -13,14 +13,23 @@
 #include "EventHandler.hh"
 #include "gmod_api.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
+#include "corba.hh"
 
-// On the Notochord's "Home" is an IP and PORT to which UDP will be send when started
-// c++ main.cc && ./a.out
+class skel_Backend: public CORBA::Skeleton {
+        std::shared_ptr<CORBA::ORB> orb;
+    protected:
+        skel_Backend(const std::shared_ptr<CORBA::ORB> &orb): Skeleton(orb) { }
+};
+
+class Backend: public skel_Backend {
+    public:
+        Backend(const std::shared_ptr<CORBA::ORB> &orb): skel_Backend(orb) {}
+};
 
 void chordataLoop();
 static void mediapipeLoop();
 
-// using namespace std;
+using namespace std;
 
 using std::string, std::vector, std::cout, std::endl;
 
@@ -31,7 +40,11 @@ typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
 
 int main() {
     cout << "makehuman.js mediapipe/notochord daemon" << endl;
-    chordataLoop();
+    auto orb = make_shared<CORBA::ORB>();
+    auto backend = make_shared<Backend>(orb);
+    orb->bind("Backend", backend);
+    orb->run();
+    // chordataLoop();
     return 0;
 }
 
