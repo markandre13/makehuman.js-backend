@@ -17,9 +17,13 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
-	MakeHumanHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
-	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc chordata.cc \
-	corba/corba.cc
+	chordata.cc \
+	corba/corba.cc corba/ws/socket.cc \
+	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
+	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \
+	corba/ws/MakeHumanHandler.cc
+
+	
 OBJ = $(SRC:.cc=.o)
 
 .SUFFIXES: .cc .o
@@ -46,16 +50,23 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: EventHandler.hh gmod_api.h
+main.o: corba/ws/EventHandler.hh gmod_api.h
 main.o: ../mediapipe/framework/formats/landmark.pb.h corba/corba.hh
-MakeHumanHandler.o: MakeHumanHandler.hh EventHandler.hh wslay_event.h
-HttpHandshakeSendHandler.o: HttpHandshakeSendHandler.hh EventHandler.hh
-HttpHandshakeSendHandler.o: MakeHumanHandler.hh
-HttpHandshakeRecvHandler.o: HttpHandshakeRecvHandler.hh EventHandler.hh
-HttpHandshakeRecvHandler.o: HttpHandshakeSendHandler.hh createAcceptKey.hh
-ListenEventHandler.o: ListenEventHandler.hh EventHandler.hh
-ListenEventHandler.o: HttpHandshakeRecvHandler.hh socket.hh
-EventHandler.o: EventHandler.hh ListenEventHandler.hh socket.hh
-createAcceptKey.o: createAcceptKey.hh
-chordata.o: MakeHumanHandler.hh EventHandler.hh
-corba/corba.o: corba/corba.hh
+chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
+corba/corba.o: corba/corba.hh corba/ws/EventHandler.hh
+corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh
+corba/ws/ListenEventHandler.o: corba/ws/EventHandler.hh
+corba/ws/ListenEventHandler.o: corba/ws/HttpHandshakeRecvHandler.hh
+corba/ws/ListenEventHandler.o: corba/ws/socket.hh
+corba/ws/EventHandler.o: corba/ws/EventHandler.hh
+corba/ws/EventHandler.o: corba/ws/ListenEventHandler.hh corba/ws/socket.hh
+corba/ws/createAcceptKey.o: corba/ws/createAcceptKey.hh
+corba/ws/HttpHandshakeSendHandler.o: corba/ws/HttpHandshakeSendHandler.hh
+corba/ws/HttpHandshakeSendHandler.o: corba/ws/EventHandler.hh
+corba/ws/HttpHandshakeSendHandler.o: corba/ws/MakeHumanHandler.hh
+corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeRecvHandler.hh
+corba/ws/HttpHandshakeRecvHandler.o: corba/ws/EventHandler.hh
+corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeSendHandler.hh
+corba/ws/HttpHandshakeRecvHandler.o: corba/ws/createAcceptKey.hh
+corba/ws/MakeHumanHandler.o: corba/ws/MakeHumanHandler.hh
+corba/ws/MakeHumanHandler.o: corba/ws/EventHandler.hh corba/ws/wslay_event.h

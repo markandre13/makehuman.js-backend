@@ -10,7 +10,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-#include "EventHandler.hh"
+#include "corba/ws/EventHandler.hh"
 #include "gmod_api.h"
 #include "../mediapipe/framework/formats/landmark.pb.h"
 #include "corba/corba.hh"

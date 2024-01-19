@@ -1,4 +1,4 @@
-#include "MakeHumanHandler.hh"
+#include "corba/ws/MakeHumanHandler.hh"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
