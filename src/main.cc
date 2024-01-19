@@ -12,8 +12,8 @@
 
 #include "EventHandler.hh"
 #include "gmod_api.h"
-#include "mediapipe/framework/formats/landmark.pb.h"
-#include "corba.hh"
+#include "../mediapipe/framework/formats/landmark.pb.h"
+#include "corba/corba.hh"
 
 class skel_Backend: public CORBA::Skeleton {
         std::shared_ptr<CORBA::ORB> orb;

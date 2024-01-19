@@ -1,8 +1,7 @@
-daemon
+src/backend
 .vscode
 .DS_Store
 Info.plist
-DEADJOE
 mediapipe
 mediapipe_graphs
 mediapipe_models
@@ -10,3 +9,4 @@ mediapipe_models
 *.o.tmp
 *.bak
 *~
+DEADJOE

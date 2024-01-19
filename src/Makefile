@@ -19,7 +19,7 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 SRC = main.cc \
 	MakeHumanHandler.cc HttpHandshakeSendHandler.cc HttpHandshakeRecvHandler.cc \
 	ListenEventHandler.cc EventHandler.cc createAcceptKey.cc socket.cc chordata.cc \
-	corba.cc
+	corba/corba.cc
 OBJ = $(SRC:.cc=.o)
 
 .SUFFIXES: .cc .o
@@ -46,7 +46,8 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: EventHandler.hh gmod_api.h mediapipe/framework/formats/landmark.pb.h
+main.o: EventHandler.hh gmod_api.h
+main.o: ../mediapipe/framework/formats/landmark.pb.h corba/corba.hh
 MakeHumanHandler.o: MakeHumanHandler.hh EventHandler.hh wslay_event.h
 HttpHandshakeSendHandler.o: HttpHandshakeSendHandler.hh EventHandler.hh
 HttpHandshakeSendHandler.o: MakeHumanHandler.hh
@@ -57,3 +58,4 @@ ListenEventHandler.o: HttpHandshakeRecvHandler.hh socket.hh
 EventHandler.o: EventHandler.hh ListenEventHandler.hh socket.hh
 createAcceptKey.o: createAcceptKey.hh
 chordata.o: MakeHumanHandler.hh EventHandler.hh
+corba/corba.o: corba/corba.hh
