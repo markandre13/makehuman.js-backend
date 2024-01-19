@@ -1,6 +1,10 @@
-# mediapipe_daemon
+# makehuman.js backend
 
 A daemon for [makehuman.js](https://github.com/markandre13/makehuman.js) providing access to [mediapipe_cpp_lib](https://github.com/markandre13/mediapipe_cpp_lib) and [Chordata Motion](https://chordata.cc).
+
+### Build
+
+Experts only for now.
 
 ### Technical
 

@@ -1,8 +1,9 @@
 #include "ListenEventHandler.hh"
 
 #include <errno.h>
-#include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 
 #include <iostream>

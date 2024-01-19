@@ -1,12 +1,16 @@
 #!/bin/sh -ex
 
-APP=daemon
+APP=backend
 
-CXX=c++
-CXXFLAGS=-std=c++17 -g -O0
+CXX=/usr/local/opt/llvm/bin/clang++
+CFLAGS=-std=c++23 -fmodules \
+	-Wall -Wextra -Wno-deprecated-anon-enum-enum-conversion \
+	-O0 -g -I/usr/local/opt/llvm/include/c++
+LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
+
 PROTOBUF_FLAGS=-I/Users/mark/lib/include
 OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
-WSLAG_FLAGS=-I/usr/local/opt/wslay/include
+WSLAG_FLAGS=-I/usr/local/include
 PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
 MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
@@ -28,15 +32,15 @@ run:
 	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP)
 
 clean:
-	rm $(OBJ)
+	rm -f $(OBJ)
 
 $(APP): $(OBJ)
 	@echo "linking..."
-	$(CXX) $(PROTBUF_LDFLAGS) $(MEDIAPIPE_CPP_LDFLAGS) $(LIB) $(OBJ) -o $(APP)
+	$(CXX) $(LDFLAGS) $(PROTOBUF_LDFLAGS) $(MEDIAPIPE_CPP_LDFLAGS) $(LIB) $(OBJ) -o $(APP)
 
 .cc.o:
 	@echo compiling $*.cc ...
-	$(CXX) $(CXXFLAGS) $(PROTOBUF_FLAGS) $(OPENCV_FLAGS) $(PROTOBUF_FLAGS) \
+	$(CXX) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
 	-c -o $*.o $*.cc
 
 # DO NOT DELETE

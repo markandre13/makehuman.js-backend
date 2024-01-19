@@ -7,5 +7,6 @@ mediapipe
 mediapipe_graphs
 mediapipe_models
 *.o
+*.o.tmp
 *.bak
 *~

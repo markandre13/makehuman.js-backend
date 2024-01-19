@@ -12,14 +12,16 @@
 #include <set>
 #include <iostream>
 
-static void chordataInit();
+// using namespace std clashes with bind(), so we have to be picky...
+using std::set, std::string, std::vector, std::cout, std::cerr, std::endl;
 
-extern std::set<EventHandler *> handlers;
+static void chordataInit();
+static void hexdump(unsigned char *buffer, int received);
+
+extern set<EventHandler *> handlers;
 
 static char* chordata_buf = nullptr;
 static ssize_t chordata_len = 0;
-
-// using namespace std;
 
 extern void chordataLoop() {
     wsInit();
@@ -51,9 +53,54 @@ class ChordataRecvHandler : public EventHandler {
 
     private:
         int fd_;
-        std::string headers_;
-        std::string accept_key_;
+        string headers_;
+        string accept_key_;
 };
+
+ChordataRecvHandler::~ChordataRecvHandler() {
+    cout << "ChordataRecvHandler: close" << endl;
+    shutdown(fd_, SHUT_WR);
+    close(fd_);
+}
+
+int ChordataRecvHandler::on_read_event() {
+    sockaddr_in client;
+    static char buf[4096];
+    socklen_t client_address_size = sizeof(client);
+    ssize_t len = recvfrom(fd_, buf, sizeof(buf), 0, (struct sockaddr *)&client, &client_address_size);
+    if (len < 0) {
+        perror("recvfrom");
+        return 1;
+    }
+    // hexdump((unsigned char *)buf, len);
+    chordata_buf = buf;
+    chordata_len = len;
+    // cout << "chordata rcvd " << len << " octets" << endl;
+    return 0;
+}
+
+// Notochord is setup to set COOP to this host as UDP port 6565
+void chordataInit() {
+    // open chordata UDP port // 192.168.178.24
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    int yes = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+
+    sockaddr_in name;
+    name.sin_family = AF_INET;
+    name.sin_addr.s_addr = htonl(INADDR_ANY);
+    name.sin_port = htons(6565);
+
+    if (bind(sock, (sockaddr *)&name, sizeof(sockaddr_in)) < 0) {
+        perror("bind");
+        close(sock);
+        sock = -1;
+        exit(1);
+    }
+
+    handlers.insert(new ChordataRecvHandler(sock));
+}
 
 void hexdump(unsigned char *buffer, int received) {
     int data = 0;
@@ -75,47 +122,4 @@ void hexdump(unsigned char *buffer, int received) {
         }
         printf("\n");
     }
-}
-
-ChordataRecvHandler::~ChordataRecvHandler() {
-    std::cout << "ChordataRecvHandler: close" << std::endl;
-    shutdown(fd_, SHUT_WR);
-    close(fd_);
-}
-
-int ChordataRecvHandler::on_read_event() {
-    sockaddr_in client;
-    static char buf[4096];
-    socklen_t client_address_size = sizeof(client);
-    ssize_t len = recvfrom(fd_, buf, sizeof(buf), 0, (struct sockaddr *)&client, &client_address_size);
-    if (len < 0) {
-        perror("recvfrom");
-        return 1;
-    }
-    // hexdump((unsigned char *)buf, len);
-    chordata_buf = buf;
-    chordata_len = len;
-    // printf("chordata rcvd %zd octets\n", len);
-    return 0;
-}
-
-void chordataInit() {
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-    int yes = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
-
-    sockaddr_in name;
-    name.sin_family = AF_INET;
-    name.sin_addr.s_addr = htonl(INADDR_ANY);
-    name.sin_port = htons(6565);
-
-    if (bind(sock, (sockaddr *)&name, sizeof(sockaddr_in)) < 0) {
-        perror("bind");
-        close(sock);
-        sock = -1;
-        exit(1);
-    }
-
-    handlers.insert(new ChordataRecvHandler(sock));
 }
