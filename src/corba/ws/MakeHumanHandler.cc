@@ -162,21 +162,22 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
     }
     switch (arg->opcode) {
         case WSLAY_BINARY_FRAME: {
-            auto msg = string((const char*)arg->msg, 0, arg->msg_length);
-            // cout << "WSLAY_BINARY_FRAME '" << msg << "'" << endl;
+            cout << "got " << arg->msg_length << " bytes" << endl;
             // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
-            if (msg == "GET FACE") {
-                // cout << "FACE REQUESTED " << (int)arg->opcode << endl;
-                _ctx = ctx;
-                faceRequest = true;
-                // sendFace();
-            } else if (msg == "GET CHORDATA") {
-                // cout << "CHORDATA REQUESTED: chordataRequest = true, ctx=" << ctx << endl;
-                _ctx = ctx;
-                chordataRequest = true;
-            } else {
-                cout << "unknown request '" << msg << "'" << endl;
-            }
+            // // cout << "WSLAY_BINARY_FRAME '" << msg << "'" << endl;
+            // // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
+            // if (msg == "GET FACE") {
+            //     // cout << "FACE REQUESTED " << (int)arg->opcode << endl;
+            //     _ctx = ctx;
+            //     faceRequest = true;
+            //     // sendFace();
+            // } else if (msg == "GET CHORDATA") {
+            //     // cout << "CHORDATA REQUESTED: chordataRequest = true, ctx=" << ctx << endl;
+            //     _ctx = ctx;
+            //     chordataRequest = true;
+            // } else {
+            //     cout << "unknown request '" << msg << "'" << endl;
+            // }
             // std::cout << "EchoWebSocketHandler: echo " << arg->msg_length << " bytes: \"" << msg << "\""  << std::endl;
             // struct wslay_event_msg msgarg = {arg->opcode, arg->msg, arg->msg_length};
             // wslay_event_queue_msg(ctx, &msgarg);
