@@ -1,6 +1,6 @@
 #include "MakeHumanHandler.hh"
-
 #include "wslay_event.h"
+#include "../corba.hh"
 
 using namespace std;
 
@@ -163,6 +163,7 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
     switch (arg->opcode) {
         case WSLAY_BINARY_FRAME: {
             cout << "got " << arg->msg_length << " bytes" << endl;
+            CORBA::ORB::socketRcvd(arg->msg, arg->msg_length);
             // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
             // // cout << "WSLAY_BINARY_FRAME '" << msg << "'" << endl;
             // // auto msg = string((const char*)arg->msg, 0, arg->msg_length);

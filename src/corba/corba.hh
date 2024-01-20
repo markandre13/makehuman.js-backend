@@ -2,28 +2,53 @@
 
 #include <string>
 #include <memory>
+#include <map>
 
 namespace CORBA {
-    class Skeleton;
 
-    class ORB {
-        public:
-            void run();
+class Object;
+class Skeleton;
+class NamingContextExtImpl;
+class GIOPDecoder;
+class GIOPEncoder;
 
-            //
-            // NameService
-            //
-            void bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const &obj);
-    };
+class ORB: public std::enable_shared_from_this<ORB> {
+        std::shared_ptr<NamingContextExtImpl> namingService;
+        // std::map<std::string, Skeleton*> initialReferences; // name to 
+        std::map<std::string, Skeleton*> servants; // objectId to skeleton
 
-    class Object {
-        protected:
-            std::shared_ptr<ORB> orb;
-            Object(const std::shared_ptr<ORB> &orb): orb(orb) { }
-    };
+    public:
+        ORB();
+        void run();
 
-    class Skeleton: Object {
-        protected:
-            Skeleton(const std::shared_ptr<CORBA::ORB> &orb): Object(orb) { }
-    };
-}
+        static void socketRcvd(const uint8_t *buffer, size_t size);
+        void _socketRcvd(const uint8_t *buffer, size_t size);
+
+        //
+        // NameService
+        //
+        void bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj);
+};
+
+class Object {
+    protected:
+        std::shared_ptr<ORB> orb;
+
+    public:
+        Object(std::shared_ptr<ORB> orb) : orb(std::move(orb)) {}
+};
+
+class Stub : public Object {
+    public:
+        Stub(std::shared_ptr<CORBA::ORB> orb) : Object(orb) {}
+};
+
+class Skeleton : public Object {
+    public:
+        Skeleton(std::shared_ptr<CORBA::ORB> orb) : Object(orb) {}
+        virtual void _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
+};
+
+// Stub
+
+}  // namespace CORBA

@@ -18,12 +18,12 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
 	chordata.cc \
-	corba/corba.cc corba/ws/socket.cc \
+	corba/corba.cc corba/giop.cc corba/dataview.cc \
+	corba/ws/socket.cc \
 	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
 	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \
 	corba/ws/MakeHumanHandler.cc
 
-	
 OBJ = $(SRC:.cc=.o)
 
 .SUFFIXES: .cc .o
@@ -50,10 +50,13 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: corba/ws/EventHandler.hh gmod_api.h
-main.o: ../mediapipe/framework/formats/landmark.pb.h corba/corba.hh
+main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
+main.o: corba/corba.hh
 chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
-corba/corba.o: corba/corba.hh corba/ws/EventHandler.hh
+corba/corba.o: corba/corba.hh corba/dataview.hh corba/giop.hh
+corba/corba.o: corba/ws/EventHandler.hh
+corba/giop.o: corba/giop.hh corba/dataview.hh corba/corba.hh
+corba/dataview.o: corba/dataview.hh
 corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh
 corba/ws/ListenEventHandler.o: corba/ws/EventHandler.hh
 corba/ws/ListenEventHandler.o: corba/ws/HttpHandshakeRecvHandler.hh
@@ -70,3 +73,4 @@ corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeSendHandler.hh
 corba/ws/HttpHandshakeRecvHandler.o: corba/ws/createAcceptKey.hh
 corba/ws/MakeHumanHandler.o: corba/ws/MakeHumanHandler.hh
 corba/ws/MakeHumanHandler.o: corba/ws/EventHandler.hh corba/ws/wslay_event.h
+corba/ws/MakeHumanHandler.o: corba/corba.hh

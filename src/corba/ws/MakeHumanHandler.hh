@@ -1,7 +1,6 @@
 #pragma once
 
 #include <wslay/wslay.h>
-
 #include "EventHandler.hh"
 
 bool isChordataRequested();
