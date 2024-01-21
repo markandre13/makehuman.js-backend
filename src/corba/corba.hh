@@ -36,6 +36,7 @@ class Object {
 
     public:
         Object(std::shared_ptr<ORB> orb) : orb(std::move(orb)) {}
+        virtual ~Object();
 };
 
 class Stub : public Object {

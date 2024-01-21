@@ -4,6 +4,12 @@ void hexdump(unsigned char *buffer, int received);
 
 namespace CORBA {
 
+void CDREncoder::ulong(uint32_t value) {
+    _data.resize(_data.size() + 4);
+    auto ptr = reinterpret_cast<uint32_t*>(_data.data() + _data.size() - 4);
+    *ptr = value;
+}
+
 bool CDRDecoder::operator==(const CDRDecoder &rhs) const {
     if (this == &rhs) {
         return true;

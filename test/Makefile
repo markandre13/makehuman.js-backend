@@ -19,7 +19,7 @@ MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lprotobuf -lgmod -lwslay -lnettle
 
-SRC = giop.cc cdr.cc util.cc ../src/corba/giop.cc ../src/corba/cdr.cc
+SRC = giop.cc cdr_decoder.cc cdr_encoder.cc util.cc ../src/corba/orb.cc ../src/corba/giop.cc ../src/corba/cdr.cc
 
 OBJ = $(SRC:.cc=.o)
 
@@ -48,7 +48,12 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-giop.o: ../src/corba/giop.hh ../src/corba/dataview.hh util.hh
+giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
+cdr_decoder.o: ../src/corba/cdr.hh
+cdr_encoder.o: ../src/corba/cdr.hh
 util.o: util.hh
-../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/dataview.hh
-../src/corba/dataview.o: ../src/corba/dataview.hh
+../src/corba/orb.o: ../src/corba/corba.hh ../src/corba/cdr.hh
+../src/corba/orb.o: ../src/corba/giop.hh ../src/corba/ws/EventHandler.hh
+../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
+../src/corba/giop.o: ../src/corba/corba.hh
+../src/corba/cdr.o: ../src/corba/cdr.hh

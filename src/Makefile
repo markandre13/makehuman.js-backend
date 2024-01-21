@@ -18,7 +18,7 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
 	chordata.cc \
-	corba/corba.cc corba/giop.cc corba/cdr.cc \
+	corba/corba.cc corba/orb.cc corba/giop.cc corba/cdr.cc \
 	corba/ws/socket.cc \
 	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
 	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \

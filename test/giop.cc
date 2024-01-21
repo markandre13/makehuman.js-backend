@@ -2,6 +2,8 @@
 #include "util.hh"
 #include <gtest/gtest.h>
 
+#include <iostream>
+
 using namespace std;
 
 TEST(GIOPDecoder, OmniOrbLocateRequest) {
@@ -18,7 +20,7 @@ TEST(GIOPDecoder, OmniOrbLocateRequest) {
         4749 4f50 0102 0103 2000 0000 0200 0000 GIOP.... .......
         0000 0000 1400 0000 ff62 6964 6972 fe97 .........bidir..
         c46b 6101 000f 5700 0000 0000           .ka...W.....)");
-    CORBA::DataView dataview((char *)data.data(), data.size());
+    CORBA::CDRDecoder dataview((char *)data.data(), data.size());
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();
@@ -52,7 +54,7 @@ TEST(GIOPDecoder, OmniOrbRequest) {
         0100 0000 1c00 0000 0100 0000 0100 0100 ................
         0100 0000 0100 0105 0901 0100 0100 0000 ................
         0901 0100 0400 0000 666f 6f00           ........foo.)");
-    CORBA::DataView dataview((char *)data.data(), data.size());
+    CORBA::CDRDecoder dataview((char *)data.data(), data.size());
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();
@@ -75,7 +77,7 @@ TEST(GIOPDecoder, OmniOrbReply) {
     auto data = parseOmniDump(R"(
         4749 4f50 0102 0101 0c00 0000 0400 0000 GIOP............
         0000 0000 0000 0000                     ........)");
-    CORBA::DataView dataview((char *)data.data(), data.size());
+    CORBA::CDRDecoder dataview((char *)data.data(), data.size());
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();

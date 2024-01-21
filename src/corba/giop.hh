@@ -85,7 +85,9 @@ class Object;
 
 class GIOPEncoder : public GIOPBase {
     public:
+        CDREncoder buffer;
         void object(const Object *object);
+        void reference(const Object *object);
 };
 
 class GIOPDecoder : public GIOPBase {

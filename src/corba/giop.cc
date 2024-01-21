@@ -2,6 +2,7 @@
 #include "corba.hh"
 
 #include <stdexcept>
+#include <iostream>
 
 using namespace std;
 
@@ -9,7 +10,26 @@ namespace CORBA {
 
 void GIOPEncoder::object(const Object *object) {
     cerr << "GIOPEncoder::object(...)" << endl;
+    if (object == nullptr) {
+        buffer.ulong(0);
+        return;
+    }
+    auto stub = dynamic_cast<const Stub*>(object);
+    if (stub != nullptr) {
+        throw runtime_error("Can not serialize stub yet.");
+    }
+    auto skeleton = dynamic_cast<const Skeleton*>(object);
+    if (skeleton != nullptr) {
+        reference(object);
+        return;
+    }
 
+    throw runtime_error("Can not serialize value type yet.");
+}
+
+// Interoperable Object Reference (IOR)
+void GIOPEncoder::reference(const Object *object) {
+    cerr << "GIOPEncoder::reference(...)" << endl;
 }
 
 MessageType GIOPDecoder::scanGIOPHeader() {
