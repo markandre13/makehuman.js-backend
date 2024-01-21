@@ -52,7 +52,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     // make_unique<RequestHeader>();
     if (majorVersion == 1 && minorVersion <= 1) {
         serviceContext();
-        std::cout << "SERVICE CONTEXT" << std::endl;
+        cout << "SERVICE CONTEXT" << endl;
     }
     auto header = new RequestHeader();
     header->requestId = buffer.ulong();
@@ -85,9 +85,9 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
                 break;
             case ProfileAddr:
             case ReferenceAddr:
-                throw std::runtime_error("Unsupported AddressingDisposition.");
+                throw runtime_error("Unsupported AddressingDisposition.");
             default:
-                throw std::runtime_error("Unknown AddressingDisposition.");
+                throw runtime_error("Unknown AddressingDisposition.");
         }
     }
 
@@ -118,9 +118,9 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
                 break;
             case ProfileAddr:
             case ReferenceAddr:
-                throw std::runtime_error("Unsupported AddressingDisposition.");
+                throw runtime_error("Unsupported AddressingDisposition.");
             default:
-                throw std::runtime_error("Unknown AddressingDisposition.");
+                throw runtime_error("Unknown AddressingDisposition.");
         }
     }
     return new LocateRequest(requestId, objectKey);
@@ -135,13 +135,13 @@ void GIOPDecoder::serviceContext() {
                     // std::cout << "ServiceContext CodeSets" << std::endl;
                     break;
                 case BI_DIR_IIOP:
-                    std::cout << "ServiceContext BI_DIR_IIOP" << std::endl;
+                    cout << "ServiceContext BI_DIR_IIOP" << endl;
                     break;
                 case SecurityAttributeService:
-                    std::cout << "ServiceContext SecurityAttributeService" << std::endl;
+                    cout << "ServiceContext SecurityAttributeService" << endl;
                     break;
                 default:
-                    std::cout << "ServiceContext " << serviceId << std::endl;
+                    cout << "ServiceContext " << serviceId << endl;
             }
         });
     }

@@ -24,7 +24,7 @@ class NamingContextExtImpl : public Skeleton {
             if (name2Object.contains(name)) {
                 throw runtime_error(format("name \"{}\" is already bound to object", name));
             }
-            name2Object[name] = move(servant);
+            name2Object[name] = servant;
         }
 
         Object *resolve(const std::string &name) {
@@ -32,7 +32,7 @@ class NamingContextExtImpl : public Skeleton {
             auto servant = name2Object.find(name);
             if (servant == name2Object.end()) {
                 cerr << format("name \"{}\" is not bound to an object", name) << endl;
-                throw std::runtime_error(format("name \"{}\" is not bound to an object", name));
+                throw runtime_error(format("name \"{}\" is not bound to an object", name));
             }
             return servant->second.get();
         }
@@ -43,7 +43,7 @@ class NamingContextExtImpl : public Skeleton {
             auto name = decoder.buffer.string();
             auto key = decoder.buffer.string();
             if (entries != 1 && !key.empty()) {
-                std::cerr << "warning: resolve got " << entries << " (expected 1) and/or key is \"" << key << "\" (expected \"\")" << std::endl;
+                cerr << "warning: resolve got " << entries << " (expected 1) and/or key is \"" << key << "\" (expected \"\")" << endl;
             }
             auto result = resolve(std::string(name));  // FIXME: we don't want to copy the string
             encoder.object(result);
@@ -67,7 +67,7 @@ class NamingContextExtImpl : public Skeleton {
                 return;
             }
             // TODO: throw a BAD_OPERATION system exception here
-            throw std::runtime_error(std::format("bad operation: '{}' does not exist", operation));
+            throw runtime_error(std::format("bad operation: '{}' does not exist", operation));
         }
 };
 
@@ -90,14 +90,14 @@ void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
     switch (type) {
         case CORBA::REQUEST: {
             auto request = decoder.scanRequestHeader();
-            std::string objectKey(request->objectKey.toString());  // FIXME: do not copy
-            std::cout << "REQUEST(requestId=" << request->requestId << ", objectKey=" << objectKey << ", " << request->method << ")" << std::endl;
+            string objectKey(request->objectKey.toString());  // FIXME: do not copy
+            cout << "REQUEST(requestId=" << request->requestId << ", objectKey=" << objectKey << ", " << request->method << ")" << endl;
             auto servant = servants.find(objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
                 if (request->responseExpected) {
                     // send error message
                 }
-                std::cerr << "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0" << std::endl;
+                cerr << "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0" << endl;
                 return;
             }
 
@@ -125,12 +125,12 @@ void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
                 if (request->responseExpected) {
                     // send reply
                 }
-                std::cerr << "EXCEPTION: " << e.what() << std::endl;
+                cerr << "EXCEPTION: " << e.what() << endl;
             }
 
         } break;
         default:
-            std::cout << "GOT YET UNIMPLEMENTED REQUEST " << type << std::endl;
+            cout << "GOT YET UNIMPLEMENTED REQUEST " << type << endl;
             break;
     }
 }

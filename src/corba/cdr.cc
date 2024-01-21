@@ -42,7 +42,7 @@ char CDRDecoder::character() {
 }
 
 uint16_t CDRDecoder::ushort() {
-    auto value = *reinterpret_cast<const uint16_t *>(align2());
+    auto value = *reinterpret_cast<const uint16_t *>(ptr2());
     if (std::endian::native != _endian) {
         value = __builtin_bswap16(value);
     }
@@ -50,7 +50,7 @@ uint16_t CDRDecoder::ushort() {
 }
 
 uint32_t CDRDecoder::ulong() {
-    auto ptr = reinterpret_cast<const uint32_t *>(align4());
+    auto ptr = reinterpret_cast<const uint32_t *>(ptr4());
     uint32_t value = *ptr;
     if (std::endian::native != _endian) {
         value = __builtin_bswap32(value);
@@ -59,7 +59,7 @@ uint32_t CDRDecoder::ulong() {
 }
 
 uint64_t CDRDecoder::ulonglong() {
-    auto value = *reinterpret_cast<const uint64_t *>(align8());
+    auto value = *reinterpret_cast<const uint64_t *>(ptr8());
     if (std::endian::native != _endian) {
         value = __builtin_bswap64(value);
     }

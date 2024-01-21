@@ -56,23 +56,35 @@ class CDRDecoder {
         size_t getOffset() const { return offset; }
 
     protected:
-        const char *align2() {
+        void align2() {
             if (offset & 0x01) {
                 offset |= 0x01;
                 ++offset;
             }
-            if (offset > length) {
-                throw std::out_of_range("out of range");
-            }
-            auto ptr = _data + offset;
-            offset += 2;
-            return ptr;
         }
-        const char *align4() {
+        void align4() {
             if (offset & 0x03) {
                 offset |= 0x03;
                 ++offset;
             }
+        }
+        void align8() {
+            if (offset & 0x07) {
+                offset |= 0x07;
+                ++offset;
+            }
+        }
+        const char *ptr2() {
+            align2();
+            auto ptr = _data + offset;
+            offset += 2;
+            if (offset > length) {
+                throw std::out_of_range("out of range");
+            }
+            return ptr;
+        }
+        const char *ptr4() {
+            align4();
             auto ptr = _data + offset;
             offset += 4;
             if (offset > length) {
@@ -80,11 +92,8 @@ class CDRDecoder {
             }
             return ptr;
         }
-        const char *align8() {
-            if (offset & 0x07) {
-                offset |= 0x07;
-                ++offset;
-            }
+        const char *ptr8() {
+            align8();
             auto ptr = _data + offset;
             offset += 8;
             if (offset > length) {
