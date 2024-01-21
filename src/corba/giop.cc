@@ -1,15 +1,16 @@
 #include "giop.hh"
-#include "corba.hh"
 
-#include <stdexcept>
-#include <iostream>
 #include <format>
+#include <iostream>
+#include <stdexcept>
+
+#include "corba.hh"
 
 using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const Object *object) {
+void GIOPEncoder::object(const Object* object) {
     cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
         buffer.ulong(0);
@@ -29,10 +30,13 @@ void GIOPEncoder::object(const Object *object) {
 }
 
 // Interoperable Object Reference (IOR)
-void GIOPEncoder::reference(const Object *object) {
+void GIOPEncoder::reference(const Object* object) {
     cerr << "GIOPEncoder::reference(...)" << endl;
     // const className = (object.constructor as any)._idlClassName()
     auto className = object->_idlClassName();
+    if (className == nullptr) {
+        throw runtime_error("GIOPEncoder::reference(): _idlClassName() must not return nullptr");
+    }
 
     auto host = "localhost";
     auto port = 9001;
@@ -42,11 +46,11 @@ void GIOPEncoder::reference(const Object *object) {
     buffer.string(oid);
 
     // tagged profile sequence
-    buffer.ulong(1); // profileCount
+    buffer.ulong(1);  // profileCount
 
     // profile id
     // 9.7.2 IIOP IOR Profiles
-    buffer.ulong(0); // IOR.TAG.IOR.INTERNET_IOP
+    buffer.ulong(0);  // IOR.TAG.IOR.INTERNET_IOP
     buffer.reserveSize();
     buffer.endian();
     buffer.octet(majorVersion);
@@ -55,16 +59,24 @@ void GIOPEncoder::reference(const Object *object) {
     // FIXME: the object should know where it is located, at least, if it's a stub, skeleton is local
     buffer.string(host);
     buffer.ushort(port);
-    // buffer.blob(object->id);
+    buffer.blob((const char*)object->id.data(), object->id.size());
 
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
-        buffer.ulong(1); // component count = 1
-        // buffer.beginEncapsulation(0); // TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
-        buffer.ulong(0x4d313300); // "M13\0" as ORB Type ID for corba.js
-        // buffer.endEncapsulation();
+        buffer.ulong(1);  // component count = 1
+        encapsulation(0, [this]() { // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+            buffer.ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
+        });
     }
     buffer.fillInSize();
+}
+
+void GIOPEncoder::encapsulation(uint32_t type, std::function<void()> closure) {
+        buffer.ulong(type);
+        buffer.reserveSize();
+        buffer.endian();
+        closure();
+        buffer.fillInSize();
 }
 
 MessageType GIOPDecoder::scanGIOPHeader() {
@@ -164,8 +176,8 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
 void GIOPDecoder::serviceContext() {
     auto serviceContextListLength = buffer.ulong();
     for (auto i = 0; i < serviceContextListLength; ++i) {
-        encapsulation([](uint32_t serviceId){
-            switch(serviceId) {
+        encapsulation([](uint32_t serviceId) {
+            switch (serviceId) {
                 case CodeSets:
                     // std::cout << "ServiceContext CodeSets" << std::endl;
                     break;

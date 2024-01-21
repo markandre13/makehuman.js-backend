@@ -38,8 +38,10 @@ void CDREncoder::ulonglong(uint64_t value) {
     offset += 8;
     *ptr = value;
 }
-void CDREncoder::string(const char *string) {
-    auto size = strlen(string) + 1;
+void CDREncoder::string(const char *buffer) {
+    string(buffer, strlen(buffer) +1 );
+}
+void CDREncoder::string(const char *string, size_t size) {
     ulong(size);
     _data.resize(offset + size);
     memcpy(_data.data() + offset, string, size);
@@ -59,7 +61,6 @@ void CDREncoder::string(std::string &string) {
     _data[_data.size() - 1] = 0;
     offset += string.size() + 1;
 }
-void CDREncoder::blob() {}
 void CDREncoder::endian() { octet(endian::native == endian::big ? 0 : 1); }
 
 void CDREncoder::reserveSize() {

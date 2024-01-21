@@ -21,6 +21,9 @@ class skel_Backend: public CORBA::Skeleton {
         std::shared_ptr<CORBA::ORB> orb;
     protected:
         skel_Backend(std::shared_ptr<CORBA::ORB> orb): Skeleton(orb) { }
+        const char * _idlClassName() const override {
+            return "Backend";
+        }
         void _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override {
             // if (operation == "resolve") {
             //     _orb_resolve(decoder, encoder);

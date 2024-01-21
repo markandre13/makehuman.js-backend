@@ -21,9 +21,10 @@ class CDREncoder {
         void ulonglong(uint64_t);
 
         void string(const char *string);
+        void string(const char *buffer, size_t size);
         void string(std::string_view &string);
         void string(std::string &string);
-        void blob();
+        void blob(const char *buffer, size_t size) { string(buffer, size); }
         void endian();
 
         void reserveSize();

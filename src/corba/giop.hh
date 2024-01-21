@@ -88,6 +88,7 @@ class GIOPEncoder : public GIOPBase {
         CDREncoder buffer;
         void object(const Object *object);
         void reference(const Object *object);
+        void encapsulation(uint32_t type, std::function<void()> closure);
 };
 
 class GIOPDecoder : public GIOPBase {
