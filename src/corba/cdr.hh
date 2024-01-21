@@ -11,11 +11,45 @@ namespace CORBA {
 
 class CDREncoder {
         std::vector<char> _data;
+        size_t offset = 0;
+        std::vector<size_t> sizeStack;
 
     public:
+        void octet(u_int8_t);
+        void ushort(uint16_t);
         void ulong(uint32_t);
+        void ulonglong(uint64_t);
+
+        void string(const char *string);
+        void string(std::string_view &string);
+        void string(std::string &string);
+        void blob();
+        void endian();
+
+        void reserveSize();
+        void fillInSize();
+
         const char *data() { return _data.data(); }
         size_t length() { return _data.size(); }
+
+        void align2() {
+            if (offset & 0x01) {
+                offset |= 0x01;
+                ++offset;
+            }
+        }
+        void align4() {
+            if (offset & 0x03) {
+                offset |= 0x03;
+                ++offset;
+            }
+        }
+        void align8() {
+            if (offset & 0x07) {
+                offset |= 0x07;
+                ++offset;
+            }
+        }
 };
 
 class CDRDecoder {
@@ -32,7 +66,7 @@ class CDRDecoder {
 
         bool boolean();
         uint8_t octet();
-        char character();
+        char8_t character();
         uint16_t ushort();
         uint32_t ulong();
         uint64_t ulonglong();

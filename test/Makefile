@@ -31,8 +31,7 @@ depend:
 	makedepend -I. -Y $(SRC)
 
 run:
-	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP) 
-	# --gtest_filter=GIOPDecoder.OmniOrbReply
+	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP) # --gtest_filter=CDRDEncoder.Octet
 
 clean:
 	rm -f $(OBJ)

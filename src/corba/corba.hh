@@ -2,6 +2,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 #include <map>
 
 namespace CORBA {
@@ -35,8 +36,10 @@ class Object {
         std::shared_ptr<ORB> orb;
 
     public:
-        Object(std::shared_ptr<ORB> orb) : orb(std::move(orb)) {}
+        Object(std::shared_ptr<ORB> orb) : orb(orb) {}
         virtual ~Object();
+        std::vector<uint8_t> id;
+        virtual const char * _idlClassName() const;
 };
 
 class Stub : public Object {

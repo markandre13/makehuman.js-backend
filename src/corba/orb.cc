@@ -19,6 +19,7 @@ class NamingContextExtImpl : public Skeleton {
 
     public:
         NamingContextExtImpl(const std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
+        const char * _idlClassName() const;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
             if (name2Object.contains(name)) {
@@ -71,7 +72,14 @@ class NamingContextExtImpl : public Skeleton {
         }
 };
 
+const char * NamingContextExtImpl::_idlClassName() const {
+    return "omg.org/CosNaming/NamingContextExt";
+}
+
 Object::~Object() {}
+const char * Object::_idlClassName() const {
+    return nullptr;
+}
 
 ORB::ORB() {}
 

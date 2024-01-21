@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <format>
 
 using namespace std;
 
@@ -30,6 +31,40 @@ void GIOPEncoder::object(const Object *object) {
 // Interoperable Object Reference (IOR)
 void GIOPEncoder::reference(const Object *object) {
     cerr << "GIOPEncoder::reference(...)" << endl;
+    // const className = (object.constructor as any)._idlClassName()
+    auto className = object->_idlClassName();
+
+    auto host = "localhost";
+    auto port = 9001;
+    auto oid = format("IDL:{}:1.0", className);
+
+    // type id
+    buffer.string(oid);
+
+    // tagged profile sequence
+    buffer.ulong(1); // profileCount
+
+    // profile id
+    // 9.7.2 IIOP IOR Profiles
+    buffer.ulong(0); // IOR.TAG.IOR.INTERNET_IOP
+    buffer.reserveSize();
+    buffer.endian();
+    buffer.octet(majorVersion);
+    buffer.octet(minorVersion);
+
+    // FIXME: the object should know where it is located, at least, if it's a stub, skeleton is local
+    buffer.string(host);
+    buffer.ushort(port);
+    // buffer.blob(object->id);
+
+    // IIOP >= 1.1: components
+    if (majorVersion != 1 || minorVersion != 0) {
+        buffer.ulong(1); // component count = 1
+        // buffer.beginEncapsulation(0); // TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+        buffer.ulong(0x4d313300); // "M13\0" as ORB Type ID for corba.js
+        // buffer.endEncapsulation();
+    }
+    buffer.fillInSize();
 }
 
 MessageType GIOPDecoder::scanGIOPHeader() {
