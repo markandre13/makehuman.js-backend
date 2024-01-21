@@ -6,6 +6,18 @@
 
 using namespace std;
 
+// 47 49 4f 50 01 02 01 01 60 00 00 00 00 00 00 00 GIOP....`.......  10
+// ^           ^     ^  ^  ^
+// |           |     |  |  length 0x60 in little endian
+// |           |     |  message type: REPLY
+// |           |     endian: 0 big, 1: little
+// |           version 1.2
+// "GIOP"
+
+// 00 00 00 00 00 00 00 00 10 00 00 00 49 44 4c 3a ............IDL: 20
+// 42 61 63 6b 65 6e 64 3a 31 2e 30 00 01 00 00 00 Backend:1.0..... 30
+// 00 00 00 00 34 00 00 00                         ....4...        
+
 TEST(GIOPDecoder, OmniOrbLocateRequest) {
     // OmniORB, IIOP 1.2, LocateRequest
     // 4749 4f50 0102 0103 2000 0000 0200 0000

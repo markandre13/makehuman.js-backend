@@ -18,12 +18,16 @@ class ORB: public std::enable_shared_from_this<ORB> {
         // std::map<std::string, Skeleton*> initialReferences; // name to 
         std::map<std::string, Skeleton*> servants; // objectId to skeleton
 
+        uint64_t servantIdCounter = 0;
+
     public:
         ORB();
         void run();
 
         static void socketRcvd(const uint8_t *buffer, size_t size);
         void _socketRcvd(const uint8_t *buffer, size_t size);
+
+        std::string registerServant(Skeleton *skeleton);
 
         //
         // NameService
@@ -37,8 +41,10 @@ class Object {
 
     public:
         Object(std::shared_ptr<ORB> orb) : orb(orb) {}
+        Object(std::shared_ptr<ORB> orb, std::string id) : orb(orb), id(id) {}
+       
         virtual ~Object();
-        std::vector<uint8_t> id;
+        std::string id;
         virtual const char * _idlClassName() const;
 };
 
@@ -49,7 +55,7 @@ class Stub : public Object {
 
 class Skeleton : public Object {
     public:
-        Skeleton(std::shared_ptr<CORBA::ORB> orb) : Object(orb) {}
+        Skeleton(std::shared_ptr<CORBA::ORB> orb) : Object(orb, orb->registerServant(this)) {}
         virtual void _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
 };
 

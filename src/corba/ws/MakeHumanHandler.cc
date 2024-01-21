@@ -1,6 +1,7 @@
 #include "MakeHumanHandler.hh"
 #include "wslay_event.h"
 #include "../corba.hh"
+#include "../hexdump.hh"
 
 using namespace std;
 
@@ -95,7 +96,8 @@ bool isChordataRequested() { return chordataRequest; }
 wslay_event_context_ptr _ctx;
 
 void sendChordata(void* data, size_t size) {
-    // cout << "chordata send " << size << " octets, ctx=" << _ctx << endl;
+    cout << "chordata send " << size << " octets, ctx=" << _ctx << endl;
+    hexdump((unsigned char*)data, size);
     chordataRequest = false;
     struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)data, size};
     int r = wslay_event_queue_msg(_ctx, &msgarg);
@@ -163,6 +165,7 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
     switch (arg->opcode) {
         case WSLAY_BINARY_FRAME: {
             cout << "got " << arg->msg_length << " bytes" << endl;
+            _ctx = ctx;
             CORBA::ORB::socketRcvd(arg->msg, arg->msg_length);
             // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
             // // cout << "WSLAY_BINARY_FRAME '" << msg << "'" << endl;

@@ -7,7 +7,26 @@
 
 namespace CORBA {
 
-enum MessageType { REQUEST, REPLY, CANCEL_REQUEST, LOCATE_REQUEST, LOCATE_REPLY, CLOSE_CONNECTION, MESSAGE_ERROR, FRAGMENT };
+enum GIOPMessageType {
+    GIOP_REQUEST,
+    GIOP_REPLY,
+    GIOP_CANCEL_REQUEST,
+    GIOP_LOCATE_REQUEST,
+    GIOP_LOCATE_REPLY,
+    GIOP_CLOSE_CONNECTION,
+    GIOP_MESSAGE_ERROR,
+    GIOP_FRAGMENT
+};
+
+enum GIOPReplyStatus {
+    GIOP_NO_EXCEPTION = 0,
+    GIOP_USER_EXCEPTION = 1,
+    GIOP_SYSTEM_EXCEPTION = 2,
+    GIOP_LOCATION_FORWARD = 3,
+    // since GIOP 1.2
+    GIOP_LOCATION_FORWARD_PERM = 4,
+    GIOP_NEEDS_ADDRESSING_MODE = 5
+};
 
 enum ServiceId {
     TransactionService = 0,
@@ -89,16 +108,20 @@ class GIOPEncoder : public GIOPBase {
         void object(const Object *object);
         void reference(const Object *object);
         void encapsulation(uint32_t type, std::function<void()> closure);
+        void skipGIOPHeader();
+        void skipReplyHeader();
+        void setGIOPHeader(GIOPMessageType type);
+        void setReplyHeader(uint32_t requestId, uint32_t replyStatus);
 };
 
 class GIOPDecoder : public GIOPBase {
     public:
         CDRDecoder &buffer;
-        MessageType type;
+        GIOPMessageType type;
         size_t length;
 
         GIOPDecoder(CDRDecoder &buffer) : buffer(buffer) {}
-        MessageType scanGIOPHeader();
+        GIOPMessageType scanGIOPHeader();
         const RequestHeader *scanRequestHeader();
         const LocateRequest *scanLocateRequest();
 

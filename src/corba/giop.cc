@@ -79,7 +79,44 @@ void GIOPEncoder::encapsulation(uint32_t type, std::function<void()> closure) {
         buffer.fillInSize();
 }
 
-MessageType GIOPDecoder::scanGIOPHeader() {
+void GIOPEncoder::skipGIOPHeader() {
+    buffer.offset = 10;
+}
+void GIOPEncoder::skipReplyHeader() {
+    buffer.offset = 24; // this does not work!!! anymore with having a variable length service context!!!
+}
+void GIOPEncoder::setGIOPHeader(GIOPMessageType type) {
+    auto offset = buffer.offset;
+    buffer.offset = 0;
+    buffer.octet('G');
+    buffer.octet('I');
+    buffer.octet('O');
+    buffer.octet('P');
+    buffer.octet(majorVersion);
+    buffer.octet(minorVersion);
+    buffer.endian();
+    buffer.octet(type);
+    cout << "GIOPHeader length = " << hex << offset - 12 << endl;
+    buffer.ulong(offset - 12);
+    buffer.offset = offset;
+}
+void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
+    skipGIOPHeader();
+    // fixme: create and use version methods like isVersionLessThan(1,2) or isVersionVersionGreaterEqual(1,2)
+    if (majorVersion == 1 && minorVersion < 2) {
+        // this.serviceContext()
+        buffer.ulong(0); // skipReplyHeader needs a fixed size service context
+    }
+    buffer.ulong(requestId);
+    buffer.ulong(replyStatus);
+    if (majorVersion == 1 && minorVersion >= 2) {
+        // this.serviceContext();
+        buffer.ulong(0); // skipReplyHeader needs a fixed size service context
+    }
+}
+
+
+GIOPMessageType GIOPDecoder::scanGIOPHeader() {
     auto header = reinterpret_cast<const GIOPHeader*>(buffer.data());
     if (memcmp(header->id, "GIOP", 4) != 0) {
         throw std::runtime_error("Missing GIOP Header");
@@ -89,7 +126,7 @@ MessageType GIOPDecoder::scanGIOPHeader() {
     minorVersion = buffer.octet();
     auto flags = buffer.octet();
     buffer.setLittleEndian(flags & 1);
-    type = static_cast<MessageType>(buffer.octet());
+    type = static_cast<GIOPMessageType>(buffer.octet());
     length = buffer.ulong();
     return type;
 }

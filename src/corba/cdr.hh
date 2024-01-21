@@ -10,10 +10,11 @@ namespace CORBA {
 // Common Data Representation
 
 class CDREncoder {
+    public:
         std::vector<char> _data;
         size_t offset = 0;
+    protected: 
         std::vector<size_t> sizeStack;
-
     public:
         void octet(u_int8_t);
         void ushort(uint16_t);

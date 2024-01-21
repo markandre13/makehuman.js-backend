@@ -18,7 +18,7 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
 	chordata.cc \
-	corba/corba.cc corba/orb.cc corba/giop.cc corba/cdr.cc \
+	corba/corba.cc corba/orb.cc corba/giop.cc corba/cdr.cc corba/hexdump.cc \
 	corba/ws/socket.cc \
 	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
 	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \
@@ -55,6 +55,8 @@ main.o: corba/corba.hh
 chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
 corba/corba.o: corba/corba.hh corba/cdr.hh corba/giop.hh
 corba/corba.o: corba/ws/EventHandler.hh
+corba/orb.o: corba/cdr.hh corba/corba.hh corba/giop.hh
+corba/orb.o: corba/ws/EventHandler.hh
 corba/giop.o: corba/giop.hh corba/cdr.hh corba/corba.hh
 corba/cdr.o: corba/cdr.hh
 corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh
@@ -73,4 +75,4 @@ corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeSendHandler.hh
 corba/ws/HttpHandshakeRecvHandler.o: corba/ws/createAcceptKey.hh
 corba/ws/MakeHumanHandler.o: corba/ws/MakeHumanHandler.hh
 corba/ws/MakeHumanHandler.o: corba/ws/EventHandler.hh corba/ws/wslay_event.h
-corba/ws/MakeHumanHandler.o: corba/corba.hh
+corba/ws/MakeHumanHandler.o: corba/corba.hh corba/hexdump.hh

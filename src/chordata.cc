@@ -16,7 +16,6 @@
 using std::set, std::string, std::vector, std::cout, std::cerr, std::endl;
 
 static void chordataInit();
-static void hexdump(unsigned char *buffer, int received);
 
 extern set<EventHandler *> handlers;
 
@@ -100,26 +99,4 @@ void chordataInit() {
     }
 
     handlers.insert(new ChordataRecvHandler(sock));
-}
-
-void hexdump(unsigned char *buffer, int received) {
-    int data = 0;
-    while (data < received) {
-        for (int x = 0; x < 16; x++) {
-            if (data < received)
-                printf("%02x ", (int)buffer[data]);
-            else
-                printf("   ");
-            data++;
-        }
-        data -= 16;
-        for (int x = 0; x < 16; x++) {
-            if (data < received)
-                printf("%c", buffer[data] >= 32 && buffer[data] <= 127 ? buffer[data] : '.');
-            else
-                printf(" ");
-            data++;
-        }
-        printf("\n");
-    }
 }

@@ -1,5 +1,3 @@
-#include "corba.hh"
-
 #include <format>
 #include <iostream>
 #include <map>
@@ -7,8 +5,11 @@
 #include <string>
 
 #include "cdr.hh"
+#include "corba.hh"
 #include "giop.hh"
 #include "ws/EventHandler.hh"
+
+void sendChordata(void* data, size_t size);
 
 using namespace std;
 
@@ -19,7 +20,7 @@ class NamingContextExtImpl : public Skeleton {
 
     public:
         NamingContextExtImpl(const std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
-        const char * _idlClassName() const;
+        const char *_idlClassName() const override;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
             if (name2Object.contains(name)) {
@@ -72,16 +73,20 @@ class NamingContextExtImpl : public Skeleton {
         }
 };
 
-const char * NamingContextExtImpl::_idlClassName() const {
-    return "omg.org/CosNaming/NamingContextExt";
-}
+const char *NamingContextExtImpl::_idlClassName() const { return "omg.org/CosNaming/NamingContextExt"; }
 
 Object::~Object() {}
-const char * Object::_idlClassName() const {
-    return nullptr;
-}
+const char *Object::_idlClassName() const { return nullptr; }
 
 ORB::ORB() {}
+
+string ORB::registerServant(Skeleton *servant) {
+    CDREncoder encoder;
+    encoder.ulonglong(++servantIdCounter);
+    string oid(encoder.data(), encoder.length());
+    servants[oid] = servant;
+    return oid;
+}
 
 void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj) {
     if (namingService == nullptr) {
@@ -96,7 +101,7 @@ void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
     CORBA::GIOPDecoder decoder(data);
     auto type = decoder.scanGIOPHeader();
     switch (type) {
-        case CORBA::REQUEST: {
+        case CORBA::GIOP_REQUEST: {
             auto request = decoder.scanRequestHeader();
             string objectKey(request->objectKey.toString());  // FIXME: do not copy
             cout << "REQUEST(requestId=" << request->requestId << ", objectKey=" << objectKey << ", " << request->method << ")" << endl;
@@ -123,10 +128,16 @@ void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
 
             try {
                 CORBA::GIOPEncoder encoder;
+                encoder.skipReplyHeader();
                 // std::cerr << "CALL" << std::endl;
                 servant->second->_call(request->method, decoder, encoder);
                 // std::cerr << "CALLED" << std::endl;
                 if (request->responseExpected) {
+                    auto length = encoder.buffer.offset; // FIXME: buffer.offset and buffer.lenght() differ
+                    encoder.setGIOPHeader(GIOP_REPLY);
+                    encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
+                    cout << "TODO: SEND " << hex << length << " OCTETS" << endl;
+                    sendChordata((void*)encoder.buffer.data(), length);
                     // send reply
                 }
             } catch (std::exception e) {
