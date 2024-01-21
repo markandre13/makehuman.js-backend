@@ -3,7 +3,7 @@
 #include <functional>
 #include <string>
 
-#include "dataview.hh"
+#include "cdr.hh"
 
 namespace CORBA {
 
@@ -56,14 +56,14 @@ enum AddressingDisposition { KeyAddr = 0, ProfileAddr = 1, ReferenceAddr = 2 };
 struct RequestHeader {
         uint32_t requestId;
         bool responseExpected;
-        DataView objectKey;
+        CDRDecoder objectKey;
         std::string_view method;
 };
 
 struct LocateRequest {
         uint32_t requestId;
-        DataView objectKey;
-        LocateRequest(uint32_t requestId, DataView objectKey) : requestId(requestId), objectKey(objectKey) {}
+        CDRDecoder objectKey;
+        LocateRequest(uint32_t requestId, CDRDecoder objectKey) : requestId(requestId), objectKey(objectKey) {}
 };
 
 class GIOPBase {
@@ -85,16 +85,16 @@ class Object;
 
 class GIOPEncoder : public GIOPBase {
     public:
-        void object(const Object &object);
+        void object(const Object *object);
 };
 
 class GIOPDecoder : public GIOPBase {
     public:
-        DataView &buffer;
+        CDRDecoder &buffer;
         MessageType type;
         size_t length;
 
-        GIOPDecoder(DataView &buffer) : buffer(buffer) {}
+        GIOPDecoder(CDRDecoder &buffer) : buffer(buffer) {}
         MessageType scanGIOPHeader();
         const RequestHeader *scanRequestHeader();
         const LocateRequest *scanLocateRequest();

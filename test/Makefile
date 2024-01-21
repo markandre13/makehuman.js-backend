@@ -19,7 +19,7 @@ MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lprotobuf -lgmod -lwslay -lnettle
 
-SRC = giop.cc dataview.cc util.cc ../src/corba/giop.cc ../src/corba/dataview.cc
+SRC = giop.cc cdr.cc util.cc ../src/corba/giop.cc ../src/corba/cdr.cc
 
 OBJ = $(SRC:.cc=.o)
 

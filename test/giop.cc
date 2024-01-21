@@ -31,7 +31,7 @@ TEST(GIOPDecoder, OmniOrbLocateRequest) {
 
     auto locateRequest = decoder.scanLocateRequest();
     EXPECT_EQ(locateRequest->requestId, 2);
-    CORBA::DataView objectKey(dataview.data() + 24, 20);
+    CORBA::CDRDecoder objectKey(dataview.data() + 24, 20);
     EXPECT_EQ(locateRequest->objectKey, objectKey);
 }
 
@@ -66,7 +66,7 @@ TEST(GIOPDecoder, OmniOrbRequest) {
     auto request = decoder.scanRequestHeader();
     EXPECT_TRUE(request->responseExpected);
     EXPECT_EQ(request->requestId, 4);
-    CORBA::DataView objectKey(dataview.data() + 28, 20);
+    CORBA::CDRDecoder objectKey(dataview.data() + 28, 20);
     EXPECT_EQ(request->objectKey, objectKey);
     EXPECT_EQ(request->method, string_view("sendObject"));
 }

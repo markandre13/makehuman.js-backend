@@ -18,7 +18,7 @@ LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = main.cc \
 	chordata.cc \
-	corba/corba.cc corba/giop.cc corba/dataview.cc \
+	corba/corba.cc corba/giop.cc corba/cdr.cc \
 	corba/ws/socket.cc \
 	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
 	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \
@@ -53,10 +53,10 @@ $(APP): $(OBJ)
 main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
 main.o: corba/corba.hh
 chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
-corba/corba.o: corba/corba.hh corba/dataview.hh corba/giop.hh
+corba/corba.o: corba/corba.hh corba/cdr.hh corba/giop.hh
 corba/corba.o: corba/ws/EventHandler.hh
-corba/giop.o: corba/giop.hh corba/dataview.hh corba/corba.hh
-corba/dataview.o: corba/dataview.hh
+corba/giop.o: corba/giop.hh corba/cdr.hh corba/corba.hh
+corba/cdr.o: corba/cdr.hh
 corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh
 corba/ws/ListenEventHandler.o: corba/ws/EventHandler.hh
 corba/ws/ListenEventHandler.o: corba/ws/HttpHandshakeRecvHandler.hh

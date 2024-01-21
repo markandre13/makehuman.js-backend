@@ -7,8 +7,9 @@ using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const Object &object) {
+void GIOPEncoder::object(const Object *object) {
     cerr << "GIOPEncoder::object(...)" << endl;
+
 }
 
 MessageType GIOPDecoder::scanGIOPHeader() {
@@ -86,7 +87,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
     auto requestId = buffer.ulong();
-    DataView objectKey;
+    CDRDecoder objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
         objectKey = buffer.blob();
     } else {

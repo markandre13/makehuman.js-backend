@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "dataview.hh"
+#include "cdr.hh"
 #include "giop.hh"
 #include "ws/EventHandler.hh"
 
@@ -46,14 +46,14 @@ class NamingContextExtImpl : public Skeleton {
                 std::cerr << "warning: resolve got " << entries << " (expected 1) and/or key is \"" << key << "\" (expected \"\")" << std::endl;
             }
             auto result = resolve(std::string(name));  // FIXME: we don't want to copy the string
-            encoder.object(*result);
+            encoder.object(result);
         }
 
         void _orb_resolve_str(GIOPDecoder &decoder, GIOPEncoder &encoder) {
             auto name = decoder.buffer.string();
             cerr << "NamingContextExtImpl::_orb_resolve_str(\"" << name << "\")" << endl;
             auto result = resolve(std::string(name));
-            encoder.object(*result);
+            encoder.object(result);
         }
 
         void _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
@@ -94,7 +94,7 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
 void ORB::socketRcvd(const uint8_t *buffer, size_t size) { currentORB->_socketRcvd(buffer, size); }
 
 void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
-    CORBA::DataView data((const char *)buffer, size);
+    CORBA::CDRDecoder data((const char *)buffer, size);
     CORBA::GIOPDecoder decoder(data);
     auto type = decoder.scanGIOPHeader();
     switch (type) {

@@ -7,15 +7,16 @@
 
 namespace CORBA {
 
-class DataView {
+// Common Data Representation
+class CDRDecoder {
     public:
         const char *_data;
         size_t offset;
         size_t length;
         std::endian _endian;
 
-        DataView(): _data(nullptr), offset(0), length(0) {}
-        DataView(const char *data, size_t length, std::endian endian = (std::endian)0) : _data(data), offset(0), length(length), _endian(endian) {}
+        CDRDecoder(): _data(nullptr), offset(0), length(0) {}
+        CDRDecoder(const char *data, size_t length, std::endian endian = (std::endian)0) : _data(data), offset(0), length(length), _endian(endian) {}
         std::string_view toString() const { return std::string_view(_data, length); }
 
         bool boolean();
@@ -29,14 +30,14 @@ class DataView {
         // longlong
         // float
         // double
-        DataView blob();
+        CDRDecoder blob();
         std::string_view string();
         // sequence
         // value
         // object
         // reference
 
-        bool operator==(const DataView &rhs) const;
+        bool operator==(const CDRDecoder &rhs) const;
         const char *data() const { return _data; }
         void skip(size_t size) { offset += size; }
         void setLittleEndian(bool little) { _endian = little ? std::endian::little : std::endian::big; }
