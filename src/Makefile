@@ -51,12 +51,12 @@ $(APP): $(OBJ)
 # DO NOT DELETE
 
 main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
-main.o: corba/corba.hh
+main.o: corba/corba.hh corba/giop.hh corba/cdr.hh
 chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
 corba/corba.o: corba/corba.hh corba/cdr.hh corba/giop.hh
 corba/corba.o: corba/ws/EventHandler.hh
 corba/orb.o: corba/cdr.hh corba/corba.hh corba/giop.hh
-corba/orb.o: corba/ws/EventHandler.hh
+corba/orb.o: corba/ws/EventHandler.hh corba/hexdump.hh
 corba/giop.o: corba/giop.hh corba/cdr.hh corba/corba.hh
 corba/cdr.o: corba/cdr.hh
 corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh

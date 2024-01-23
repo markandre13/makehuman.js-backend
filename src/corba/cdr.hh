@@ -79,6 +79,7 @@ class CDRDecoder {
         // double
         CDRDecoder blob();
         std::string_view string();
+        std::string_view string(size_t length);
         // sequence
         // value
         // object
@@ -90,8 +91,6 @@ class CDRDecoder {
         void setLittleEndian(bool little) { _endian = little ? std::endian::little : std::endian::big; }
         void setOffset(size_t offset) { this->offset = offset; }
         size_t getOffset() const { return offset; }
-
-    protected:
         void align2() {
             if (offset & 0x01) {
                 offset |= 0x01;
@@ -110,6 +109,7 @@ class CDRDecoder {
                 ++offset;
             }
         }
+    protected:
         const char *ptr2() {
             align2();
             auto ptr = _data + offset;

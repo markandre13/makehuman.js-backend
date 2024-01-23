@@ -148,7 +148,10 @@ CDRDecoder CDRDecoder::blob() {
 }
 
 std::string_view CDRDecoder::string() {
-    size_t len = ulong();
+    return string(ulong());
+}
+
+std::string_view CDRDecoder::string(size_t len) {
     std::string_view result(_data + offset, len - 1);
     offset += len;
     if (offset > length) {

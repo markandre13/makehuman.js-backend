@@ -130,6 +130,9 @@ class GIOPDecoder : public GIOPBase {
         // CORBA 3.4 Part 2, 9.3.3 Encapsulation
         // Used for ServiceContext, Profile and Component
         void encapsulation(std::function<void(uint32_t type)> closure);
+
+        void *object();  // const string typeInfo, bool isValue = false) {
+        void *reference(size_t length);
 };
 
 }  // namespace CORBA

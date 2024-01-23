@@ -9,6 +9,8 @@
 #include "giop.hh"
 #include "ws/EventHandler.hh"
 
+#include "hexdump.hh"
+
 void sendChordata(void* data, size_t size);
 
 using namespace std;
@@ -97,14 +99,16 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
 }
 
 void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
+    cout << "RECEIVED" << endl;
+    hexdump((unsigned char*)buffer, size);
     CORBA::CDRDecoder data((const char *)buffer, size);
     CORBA::GIOPDecoder decoder(data);
     auto type = decoder.scanGIOPHeader();
     switch (type) {
         case CORBA::GIOP_REQUEST: {
             auto request = decoder.scanRequestHeader();
-            string objectKey(request->objectKey.toString());  // FIXME: do not copy
-            cout << "REQUEST(requestId=" << request->requestId << ", objectKey=" << objectKey << ", " << request->method << ")" << endl;
+            string objectKey(request->objectKey.data(), request->objectKey.length);  // FIXME: do not copy
+            cout << "REQUEST(requestId=" << request->requestId << ", objectKey=" << hex << objectKey << ", " << request->method << ")" << endl;
             auto servant = servants.find(objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
                 if (request->responseExpected) {
@@ -140,7 +144,14 @@ void ORB::_socketRcvd(const uint8_t *buffer, size_t size) {
                     sendChordata((void*)encoder.buffer.data(), length);
                     // send reply
                 }
-            } catch (std::exception e) {
+            } 
+            catch (std::out_of_range e) {
+                if (request->responseExpected) {
+                    // send reply
+                }
+                cerr << "OUT OF RANGE: " << e.what() << endl;
+            }
+            catch (std::exception e) {
                 if (request->responseExpected) {
                     // send reply
                 }

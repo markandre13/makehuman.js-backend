@@ -16,21 +16,46 @@
 
 // #include "corba/ws/EventHandler.hh"
 #include "corba/corba.hh"
+#include "corba/giop.hh"
 
+using namespace std;
+using std::string, std::vector, std::cout, std::endl;
+
+// TODO:
+//   Stub
+//   Exceptions
+//   ValueType
+
+// BackendIn Skeleton
+// BackendOut Stub
 class skel_Backend: public CORBA::Skeleton {
         std::shared_ptr<CORBA::ORB> orb;
     protected:
         skel_Backend(std::shared_ptr<CORBA::ORB> orb): Skeleton(orb) { }
         const char * _idlClassName() const override {
-            return "Backend";
+            return "Server";
+        }
+        short call() {
+            cout << "Server::call() -> 42" << endl;
+            return 42;
         }
         void _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override {
-            // if (operation == "resolve") {
-            //     _orb_resolve(decoder, encoder);
-            //     return;
-            // }
-            // if (operation == "resolve_str") {
-            //     _orb_resolve_str(decoder, encoder);
+            if (operation == "call") {
+                encoder.buffer.ushort(call());
+                return;
+            }
+            if (operation == "setClient") {
+                cerr << "=========================================================================" << endl;
+                auto client = decoder.object();
+                cerr << "=========================================================================" << endl;
+                // encoder.buffer.ushort(call());
+                return;
+            }
+            // if (operation == "methodB") {
+            //     cerr << "=========================================================================" << endl;
+            //     auto client = decoder.object();
+            //     cerr << "=========================================================================" << endl;
+            //     // encoder.buffer.ushort(call());
             //     return;
             // }
             // TODO: throw a BAD_OPERATION system exception here
@@ -38,17 +63,15 @@ class skel_Backend: public CORBA::Skeleton {
         }
 };
 
+typedef std::shared_ptr<CORBA::ORB> ORB_var;
+
 class Backend: public skel_Backend {
     public:
-        Backend(std::shared_ptr<CORBA::ORB> orb): skel_Backend(orb) {}
+        Backend(ORB_var orb): skel_Backend(orb) {}
 };
 
 void chordataLoop();
 static void mediapipeLoop();
-
-using namespace std;
-
-using std::string, std::vector, std::cout, std::endl;
 
 bool isFaceRequested();
 void sendFace(float *float_array, int size);
@@ -59,6 +82,13 @@ int main() {
     cout << "makehuman.js mediapipe/notochord daemon" << endl;
     auto orb = make_shared<CORBA::ORB>();
     orb->bind("Backend", make_shared<Backend>(orb));
+    // after looking at developer:~/test-mico/test.cc: LoginTest::_narrow()
+    // CORBA does not require to register a STUB, instead Backend::_narrow(CORBA::Object_ptr) creates it!!!
+    // when it's a local object(?) just duplicate the pointer
+    // if it's in a repository (?) or remote, create a stub
+    // more details here: https://omniorb.sourceforge.io/omnipy42/omniORBpy/omniORBpy003.html#sec%3Anarrowing
+
+    // orb->registerStub();
     orb->run();
     return 0;
 }
