@@ -26,18 +26,49 @@ using std::string, std::vector, std::cout, std::endl;
 //   Exceptions
 //   ValueType
 
+class Client {
+    public:
+        virtual uint16_t methodC() = 0;
+    static shared_ptr<Client> _narrow(void *);
+};
+
+class Client_stub: public Client, public CORBA::Stub {
+    public:
+        Client_stub(std::shared_ptr<CORBA::ORB> orb): CORBA::Stub(orb) { }
+        uint16_t methodC();
+};
+
+uint16_t Client_stub::methodC() {
+
+}
+
+shared_ptr<Client> Client::_narrow(void *) {
+    throw runtime_error("not implemented yet");
+}
+
+class Backend_skel: public CORBA::Skeleton {
+    public:
+        Backend_skel(std::shared_ptr<CORBA::ORB> orb): Skeleton(orb) { }
+};
+
 // BackendIn Skeleton
 // BackendOut Stub
-class skel_Backend: public CORBA::Skeleton {
-        std::shared_ptr<CORBA::ORB> orb;
+class Backend_impl: public Backend_skel {
+        std::shared_ptr<Client> client;
     protected:
-        skel_Backend(std::shared_ptr<CORBA::ORB> orb): Skeleton(orb) { }
+        Backend_impl(std::shared_ptr<CORBA::ORB> orb): Backend_skel(orb) { }
         const char * _idlClassName() const override {
             return "Server";
         }
         short call() {
             cout << "Server::call() -> 42" << endl;
             return 42;
+        }
+        void setClient(shared_ptr<Client> client) {
+            this->client = client;
+        }
+        uint16_t methodB() {
+            return client->methodC();
         }
         void _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override {
             if (operation == "call") {
@@ -46,18 +77,16 @@ class skel_Backend: public CORBA::Skeleton {
             }
             if (operation == "setClient") {
                 cerr << "=========================================================================" << endl;
-                auto client = decoder.object();
+                auto objectRef = decoder.object(orb.get());
+                auto stub = Client::_narrow(objectRef);
+                setClient(stub);
                 cerr << "=========================================================================" << endl;
-                // encoder.buffer.ushort(call());
                 return;
             }
-            // if (operation == "methodB") {
-            //     cerr << "=========================================================================" << endl;
-            //     auto client = decoder.object();
-            //     cerr << "=========================================================================" << endl;
-            //     // encoder.buffer.ushort(call());
-            //     return;
-            // }
+            if (operation == "methodB") {              
+                encoder.buffer.ushort(methodB());
+                return;
+            }
             // TODO: throw a BAD_OPERATION system exception here
             throw std::runtime_error(std::format("bad operation: '{}' does not exist", operation));
         }
@@ -65,9 +94,9 @@ class skel_Backend: public CORBA::Skeleton {
 
 typedef std::shared_ptr<CORBA::ORB> ORB_var;
 
-class Backend: public skel_Backend {
+class Backend: public Backend_impl {
     public:
-        Backend(ORB_var orb): skel_Backend(orb) {}
+        Backend(ORB_var orb): Backend_impl(orb) {}
 };
 
 void chordataLoop();
@@ -87,6 +116,7 @@ int main() {
     // when it's a local object(?) just duplicate the pointer
     // if it's in a repository (?) or remote, create a stub
     // more details here: https://omniorb.sourceforge.io/omnipy42/omniORBpy/omniORBpy003.html#sec%3Anarrowing
+    // when an object is received, the IDL generated code can call _narrow to create the stub.
 
     // orb->registerStub();
     orb->run();

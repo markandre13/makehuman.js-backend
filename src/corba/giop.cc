@@ -1,5 +1,6 @@
 #include "giop.hh"
 
+#include <array>
 #include <format>
 #include <iostream>
 #include <stdexcept>
@@ -243,7 +244,7 @@ void GIOPDecoder::encapsulation(std::function<void(uint32_t type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-void* GIOPDecoder::object() {  // const string typeInfo, bool isValue = false) {
+void* GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.offset - 4;
 
@@ -251,7 +252,7 @@ void* GIOPDecoder::object() {  // const string typeInfo, bool isValue = false) {
         cerr << "[2]" << endl;
         return nullptr;
     }
-   
+
     if ((code & 0xffffff00) == 0x7fffff00) {
         throw runtime_error("GIOPDecoder::object(): value types are not implemented yet");
     }
@@ -262,25 +263,82 @@ void* GIOPDecoder::object() {  // const string typeInfo, bool isValue = false) {
 
     if (code < 0x7fffff00) {
         cerr << "got reference" << endl;
-        reference(code);
+        auto ref = reference(code);
+
+        // if (ref.host == this.connection.localAddress && ref.port == this.connection.localPort) {
+        //     return this.connection.orb.servants.get(ref.objectKey)
+        // }
+
+        cerr << "GOT OBJECT " << ref->oid << " " << ref->objectKey.toString() << endl;
+
+        // HAVE A LOOK AT WHAT ORGINAL CORBA RETURNS HERE, ME THINKS IT'S JUST THE OBJECT REFERENCE
+        // AND THE REST IS DONE IN _narrow()
+
+        // TODO: this belongs elsewhere
+        // let object = this.connection.stubsById.get(ref.objectKey)
+        // if (object !== undefined)
+        //     return object
+        // const shortName = reference.oid.substring(4, reference.oid.length - 4)
+        // let aStubClass = this.connection.orb.stubsByName.get(shortName)
+        // if (aStubClass === undefined) {
+        //     // throw Error(`ORB: no stub registered for OID '${reference.oid}' (${shortName})`)
+        //     throw new OBJECT_ADAPTER(0x4f4d0003, CompletionStatus.NO)
+        // }
+        // object = new aStubClass(this.connection.orb, reference.objectKey, this.connection)
+        // this.connection.stubsById.set(reference.objectKey, object!)
+        // return object
     }
 
     throw runtime_error(format("GIOPDecoder: Unsupported value with CORBA tag {:#x}", code));
 }
 
-struct ObjectReference {
-    string oid;
-    string host;
-    uint16_t port;
-    string objectKey;
-    // toString(): string {
-    //     return `ObjectReference(oid=${this.oid}, host=${this.host}, port=${this.port}, objectKey=${this.objectKey}')`
-    // }
+struct ORBTypeName {
+        uint32_t from;
+        uint32_t to;
+        const char* name;
 };
 
+static array<ORBTypeName, 35> orbTypeNames {{
+    {0x48500000, 0x4850000f, "Hewlett Packard"},
+    {0x49424d00, 0x49424d0f, "IBM"},
+    {0x494c5500, 0x494c55ff, "Xerox"},
+    {0x49534900, 0x4953490f, "AdNovum Informatik AG"},
+    {0x56495300, 0x5649530f, "Borland (VisiBroker)"},
+    {0x4f495300, 0x4f4953ff, "Objective Interface Systems"},
+    {0x46420000, 0x4642000f, "FloorBoard Software"},
+    {0x4E4E4E56, 0x4E4E4E56, "Rogue Wave"},
+    {0x4E550000, 0x4E55000f, "Nihon Unisys, Ltd"},
+    {0x4A424B52, 0x4A424B52, "SilverStream Software"},
+    {0x54414f00, 0x54414f00, "Center for Distributed Object Computing, Washington University"},
+    {0x4C434200, 0x4C43420F, "2AB"},
+    {0x41505831, 0x41505831, "Informatik 4, Univ. of Erlangen-Nuernberg"},
+    {0x4f425400, 0x4f425400, "ORBit"},
+    {0x47534900, 0x4753490f, "GemStone Systems, Inc."},
+    {0x464a0000, 0x464a000f, "Fujitsu Limited"},
+    {0x4E534440, 0x4E53444F, "Compaq Computer"},
+    {0x4f425f00, 0x4f425f0f, "TIBCO"},
+    {0x4f414b00, 0x4f414b0f, "Camros Corporation"},
+    {0x41545400, 0x4154540f, "AT&T Laboratories, Cambridge (OmniORB)"},
+    {0x4f4f4300, 0x4f4f430f, "IONA Technologies"},
+    {0x4e454300, 0x4e454303, "NEC Corporation"},
+    {0x424c5500, 0x424c550f, "Berry Software"},
+    {0x56495400, 0x564954ff, "Vitra"},
+    {0x444f4700, 0x444f47ff, "Exoffice Technologies"},
+    {0xcb0e0000, 0xcb0e00ff, "Chicago Board of Exchange (CBOE)"},
+    {0x4A414300, 0x4A41430f, "FU Berlin Institut für Informatik (JAC)"},
+    {0x58545240, 0x5854524F, "Xtradyne Technologies AG"},
+    {0x54475800, 0x54475803, "Top Graph'X"},
+    {0x41646100, 0x41646103, "AdaOS project"},
+    {0x4e4f4b00, 0x4e4f4bff, "Nokia"},
+    {0x53414E00, 0x53414E0f, "Sankhya Technologies Private Limited, India"},
+    {0x414E4400, 0x414E440f, "Androsoft GmbH"},
+    {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
+    {0x4d313300, 0x4d313300, "corba.js"}
+}};
+
 // returns ObjectReference
-void* GIOPDecoder::reference(size_t length) {
-    auto data = new ObjectReference();
+unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
+    auto data = make_unique<ObjectReference>();
 
     // struct IOR, field: string type_id ???
     data->oid = buffer.string(length);
@@ -289,101 +347,67 @@ void* GIOPDecoder::reference(size_t length) {
     // struct IOR, field: TaggedProfileSeq profiles ???
     auto profileCount = buffer.ulong();
     // console.log(`oid: '${oid}', tag count=${tagCount}`)
-    for (auto i = 0; i < profileCount; ++i) {
-        encapsulation([this](uint32_t profileId){
-            switch(profileId) {
-    //         // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
-    //         case IOR.TAG.IOR.INTERNET_IOP: {
-    //             // console.log(`Internet IOP Component, length=${profileLength}`)
-    //             const iiopMajorVersion = this.octet()
-    //             const iiopMinorVersion = this.octet()
-    //             // if (iiopMajorVersion !== 1 || iiopMinorVersion > 1) {
-    //             //     throw Error(`Unsupported IIOP ${iiopMajorVersion}.${iiopMinorVersion}. Currently only IIOP ${GIOPBase.MAJOR_VERSION}.${GIOPBase.MINOR_VERSION} is implemented.`)
-    //             // }
-    //             data.host = this.string()
-    //             data.port = this.ushort()
-    //             data.objectKey = this.blob()
-    //             // console.log(`IOR: IIOP(version: ${iiopMajorVersion}.${iiopMinorVersion}, host: ${data.host}:${data.port}, objectKey: ${data.objectKey})`)
-    //             // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
-    //             if (iiopMajorVersion === 1 && iiopMinorVersion !== 0) {
-    //                 // TaggedComponentSeq
-    //                 const n = this.ulong()
-    //                 // console.log(`IOR: ${n} components`)
-    //                 for (i = 0; i < n; ++i) {
-    //                     const id = this.ulong()
-    //                     const length = this.ulong()
-    //                     const nextOffset = this.offset + length
-    //                     switch (id) {
-    //                         case TagType.ORB_TYPE:
-    //                             const typeCount = this.ulong()
-    //                             for (let j = 0; j < typeCount; ++j) {
-    //                                 const orbType = this.ulong()
-    //                                 const orbTypeNames = [
-    //                                     [0x48500000, 0x4850000f, "Hewlett Packard"],
-    //                                     [0x49424d00, 0x49424d0f, "IBM"],
-    //                                     [0x494c5500, 0x494c55ff, "Xerox"],
-    //                                     [0x49534900, 0x4953490f, "AdNovum Informatik AG"],
-    //                                     [0x56495300, 0x5649530f, "Borland (VisiBroker)"],
-    //                                     [0x4f495300, 0x4f4953ff, "Objective Interface Systems"],
-    //                                     [0x46420000, 0x4642000f, "FloorBoard Software"],
-    //                                     [0x4E4E4E56, 0x4E4E4E56, "Rogue Wave"],
-    //                                     [0x4E550000, 0x4E55000f, "Nihon Unisys, Ltd"],
-    //                                     [0x4A424B52, 0x4A424B52, "SilverStream Software"],
-    //                                     [0x54414f00, 0x54414f00, "Center for Distributed Object Computing, Washington University"],
-    //                                     [0x4C434200, 0x4C43420F, "2AB"],
-    //                                     [0x41505831, 0x41505831, "Informatik 4, Univ. of Erlangen-Nuernberg"],
-    //                                     [0x4f425400, 0x4f425400, "ORBit"],
-    //                                     [0x47534900, 0x4753490f, "GemStone Systems, Inc."],
-    //                                     [0x464a0000, 0x464a000f, "Fujitsu Limited"],
-    //                                     [0x4E534440, 0x4E53444F, "Compaq Computer"],
-    //                                     [0x4f425f00, 0x4f425f0f, "TIBCO"],
-    //                                     [0x4f414b00, 0x4f414b0f, "Camros Corporation"],
-    //                                     [0x41545400, 0x4154540f, "AT&T Laboratories, Cambridge (OmniORB)"],
-    //                                     [0x4f4f4300, 0x4f4f430f, "IONA Technologies"],
-    //                                     [0x4e454300, 0x4e454303, "NEC Corporation"],
-    //                                     [0x424c5500, 0x424c550f, "Berry Software"],
-    //                                     [0x56495400, 0x564954ff, "Vitra"],
-    //                                     [0x444f4700, 0x444f47ff, "Exoffice Technologies"],
-    //                                     [0xcb0e0000, 0xcb0e00ff, "Chicago Board of Exchange (CBOE)"],
-    //                                     [0x4A414300, 0x4A41430f, "FU Berlin Institut für Informatik (JAC)"],
-    //                                     [0x58545240, 0x5854524F, "Xtradyne Technologies AG"],
-    //                                     [0x54475800, 0x54475803, "Top Graph'X"],
-    //                                     [0x41646100, 0x41646103, "AdaOS project"],
-    //                                     [0x4e4f4b00, 0x4e4f4bff, "Nokia"],
-    //                                     [0x53414E00, 0x53414E0f, "Sankhya Technologies Private Limited, India"],
-    //                                     [0x414E4400, 0x414E440f, "Androsoft GmbH"],
-    //                                     [0x42424300, 0x4242430f, "Bionic Buffalo Corporation"],
-    //                                     [0x4d313300, 0x4d313300, "corba.js"]
-    //                                 ]
-    //                                 let name: string | undefined
-    //                                 for (let x of orbTypeNames) {
-    //                                     if ((x[0] as number) <= orbType && orbType <= (x[1] as number)) {
-    //                                         name = x[2] as string
-    //                                         break
-    //                                     }
-    //                                 }
-    //                                 if (name === undefined) {
-    //                                     name = `0x${orbType.toString(16)}`
-    //                                 }
-    //                                 // console.log(`IOR: component[${i}] = ORB_TYPE ${name}`)
-    //                             }
-    //                             break
-    //                         case TagType.CODE_SETS:
-    //                             // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
-    //                             // console.log(`IOR: component[${i}] = CODE_SETS`)
-    //                             break
-    //                         case TagType.POLICIES:
-    //                             // console.log(`IOR: component[${i}] = POLICIES`)
-    //                             break
-    //                         default:
-    //                         // console.log(`IOR: component[${i}] = ${id} (0x${id.toString(16)})`)
-    //                     }
-    //                     this.offset = nextOffset
-    //                 }
-    //             }
-    //         } break
-    //         default:
-    //         // console.log(`IOR: Unhandled profile type=${profileId} (0x${profileId.toString(16)})`)
+    for (uint32_t i = 0; i < profileCount; ++i) {
+        auto _data = data.get();
+        encapsulation([this, _data](uint32_t profileId) {
+            switch (profileId) {
+                // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
+                case TAG_INTERNET_IOP: {
+                        // console.log(`Internet IOP Component, length=${profileLength}`)
+                    auto iiopMajorVersion = buffer.octet();
+                    auto iiopMinorVersion = buffer.octet();
+                    // if (iiopMajorVersion !== 1 || iiopMinorVersion > 1) {
+                    //     throw Error(`Unsupported IIOP ${iiopMajorVersion}.${iiopMinorVersion}. Currently only IIOP
+                    //     ${GIOPBase.MAJOR_VERSION}.${GIOPBase.MINOR_VERSION} is implemented.`)
+                    // }
+                    _data->host = buffer.string();
+                    _data->port = buffer.ushort();
+                    _data->objectKey = buffer.blob();
+                    // console.log(`IOR: IIOP(version: ${iiopMajorVersion}.${iiopMinorVersion}, host: ${data.host}:${data.port}, objectKey: ${data.objectKey})`)
+                    // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
+                    if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {
+                        // TaggedComponentSeq
+                        auto n = buffer.ulong();
+                        // console.log(`IOR: ${n} components`)
+                        for (uint32_t i = 0; i < n; ++i) {
+                            auto id = buffer.ulong();
+                            auto length = buffer.ulong();
+                            auto nextOffset = buffer.offset + length;
+                            switch (id) {
+                                case TAG_ORB_TYPE: {
+                                    auto typeCount = buffer.ulong();
+                                    for (uint32_t j = 0; j < typeCount; ++j) {
+                                        auto orbType = buffer.ulong();
+                                        const char* name = nullptr;
+                                        for (const auto& orbTypeName : orbTypeNames) {
+                                            if (orbTypeName.from <= orbType && orbType <= orbTypeName.to) {
+                                                name = orbTypeName.name;
+                                                break;
+                                            }
+                                        }
+                                        if (name == nullptr) {
+                                            cerr << format("IOR: component[{}] = ORB_TYPE {:x}", i, orbType) << endl;
+                                        } else {
+                                            cerr << format("IOR: component[{}] = ORB_TYPE {}", i, name) << endl;
+                                        }
+                                    }
+                                } break;
+                                case TAG_CODE_SETS:
+                                    // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
+                                    // console.log(`IOR: component[${i}] = CODE_SETS`)
+                                    break;
+                                case TAG_POLICIES:
+                                    // console.log(`IOR: component[${i}] = POLICIES`)
+                                    break;
+                                default:
+                                    // console.log(`IOR: component[${i}] = ${id} (0x${id.toString(16)})`)
+                            }
+                            buffer.offset = nextOffset;
+                        }
+                    }
+                } break;
+                default:
+                    cerr << format("IOR: Unhandled profile type={} {:x}", profileId, profileId) << endl;
             }
         });
     }
