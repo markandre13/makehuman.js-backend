@@ -1,3 +1,5 @@
+import std;
+
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -6,13 +8,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <iostream>
-#include <vector>
-#include <format>
-
+// #include <format>
+// #include <iostream>
 #include <opencv2/opencv.hpp>
-#include "gmod_api.h"
+// #include <vector>
+
 #include "../mediapipe/framework/formats/landmark.pb.h"
+#include "gmod_api.h"
 
 // #include "corba/ws/EventHandler.hh"
 #include "corba/corba.hh"
@@ -26,50 +28,79 @@ using std::string, std::vector, std::cout, std::endl;
 //   Exceptions
 //   ValueType
 
+// CORBA types
+// CORBA::RepositoryId
+// CORBA::ObjectId
+// CORBA::Object {
+//   string repository_id();    
+//   ORB getORB();   
+// }
+
 class Client {
     public:
         virtual uint16_t methodC() = 0;
-    static shared_ptr<Client> _narrow(void *);
+        static shared_ptr<Client> _narrow(shared_ptr<CORBA::Object> _obj);
+        static shared_ptr<Client> _nil();
 };
 
-class Client_stub: public Client, public CORBA::Stub {
+shared_ptr<Client> Client::_nil() {
+    return shared_ptr<Client>(nullptr);
+}
+
+class Client_stub : public Client, public CORBA::Stub {
     public:
-        Client_stub(std::shared_ptr<CORBA::ORB> orb): CORBA::Stub(orb) { }
+        virtual ~Client_stub();
+        Client_stub(std::shared_ptr<CORBA::ORB> orb, std::unique_ptr<CORBA::ObjectReference> ref);
         uint16_t methodC();
 };
 
+Client_stub::Client_stub(std::shared_ptr<CORBA::ORB> orb, std::unique_ptr<CORBA::ObjectReference> ref): CORBA::Stub(orb) {
+
+}
+Client_stub::~Client_stub() {}
+
 uint16_t Client_stub::methodC() {
-
+    return orb->twowayCall<uint16_t> (this, "methodC",
+        [](CORBA::GIOPEncoder &encoder) {},
+        [](CORBA::GIOPDecoder &decoder) {
+            return decoder.buffer.ushort();
+        }
+    );
 }
 
-shared_ptr<Client> Client::_narrow(void *) {
-    throw runtime_error("not implemented yet");
+shared_ptr<Client> Client::_narrow(shared_ptr<CORBA::Object> obj) {
+    if (obj) {
+        // if (strcmp(obj->_idlClassName(), "IDL:Client:1.0") == 0) {
+        //     return static_pointer_cast<Client>(obj);
+        // }
+        // if (obj->_is_a_remote("IDL:LoginTest:1.0")) {
+        //     return make_shared<Client_stub>(obj);
+        // }
+    }
+    return _nil();
 }
 
-class Backend_skel: public CORBA::Skeleton {
+
+
+class Backend_skel : public CORBA::Skeleton {
     public:
-        Backend_skel(std::shared_ptr<CORBA::ORB> orb): Skeleton(orb) { }
+        Backend_skel(std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
 };
 
 // BackendIn Skeleton
 // BackendOut Stub
-class Backend_impl: public Backend_skel {
+class Backend_impl : public Backend_skel {
         std::shared_ptr<Client> client;
+
     protected:
-        Backend_impl(std::shared_ptr<CORBA::ORB> orb): Backend_skel(orb) { }
-        const char * _idlClassName() const override {
-            return "Server";
-        }
+        Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
+        const char *_idlClassName() const override { return "Server"; }
         short call() {
             cout << "Server::call() -> 42" << endl;
             return 42;
         }
-        void setClient(shared_ptr<Client> client) {
-            this->client = client;
-        }
-        uint16_t methodB() {
-            return client->methodC();
-        }
+        void setClient(shared_ptr<Client> client) { this->client = client; }
+        uint16_t methodB() { return client->methodC(); }
         void _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override {
             if (operation == "call") {
                 encoder.buffer.ushort(call());
@@ -77,13 +108,21 @@ class Backend_impl: public Backend_skel {
             }
             if (operation == "setClient") {
                 cerr << "=========================================================================" << endl;
-                auto objectRef = decoder.object(orb.get());
-                auto stub = Client::_narrow(objectRef);
-                setClient(stub);
+
+                // auto objectRef = decoder.object(orb.get());
+                auto code = decoder.buffer.ulong();
+                if (code >= 0x7fffff00) {
+                    throw runtime_error("not a reference");
+                }
+                auto objectRef = decoder.reference(code);
+                new Client_stub(orb, move(objectRef));
+
+                // auto stub = Client::_narrow(objectRef);
+                // setClient(stub);
                 cerr << "=========================================================================" << endl;
                 return;
             }
-            if (operation == "methodB") {              
+            if (operation == "methodB") {
                 encoder.buffer.ushort(methodB());
                 return;
             }
@@ -94,9 +133,9 @@ class Backend_impl: public Backend_skel {
 
 typedef std::shared_ptr<CORBA::ORB> ORB_var;
 
-class Backend: public Backend_impl {
+class Backend : public Backend_impl {
     public:
-        Backend(ORB_var orb): Backend_impl(orb) {}
+        Backend(ORB_var orb) : Backend_impl(orb) {}
 };
 
 void chordataLoop();

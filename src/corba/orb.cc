@@ -18,20 +18,20 @@ using namespace std;
 namespace CORBA {
 
 class NamingContextExtImpl : public Skeleton {
-        std::map<std::string, std::shared_ptr<Object>> name2Object;
+        std::map<std::string, std::shared_ptr<ObjectBase>> name2Object;
 
     public:
         NamingContextExtImpl(const std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
         const char *_idlClassName() const override;
 
-        void bind(const std::string &name, std::shared_ptr<Object> servant) {
+        void bind(const std::string &name, std::shared_ptr<ObjectBase> servant) {
             if (name2Object.contains(name)) {
                 throw runtime_error(format("name \"{}\" is already bound to object", name));
             }
             name2Object[name] = servant;
         }
 
-        Object *resolve(const std::string &name) {
+        ObjectBase *resolve(const std::string &name) {
             // console.log(`NamingContextImpl.resolve("${name}")`)
             auto servant = name2Object.find(name);
             if (servant == name2Object.end()) {
@@ -77,10 +77,21 @@ class NamingContextExtImpl : public Skeleton {
 
 const char *NamingContextExtImpl::_idlClassName() const { return "omg.org/CosNaming/NamingContextExt"; }
 
-Object::~Object() {}
-const char *Object::_idlClassName() const { return nullptr; }
+const char *ObjectBase::_idlClassName() const { return nullptr; }
+
+bool ObjectBase::_is_a_remote(const char *repoid) {
+    return true;
+}
 
 ORB::ORB() {}
+
+unique_ptr<CDRDecoder> ORB::_twowayCall(
+            Stub *stub,
+            const char *method,
+            std::function<void(GIOPEncoder&)> encode
+) {
+    return make_unique<CDRDecoder>();
+}
 
 string ORB::registerServant(Skeleton *servant) {
     CDREncoder encoder;

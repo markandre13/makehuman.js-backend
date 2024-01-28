@@ -50,10 +50,10 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
-main.o: corba/corba.hh corba/giop.hh corba/cdr.hh
+main.o: ../mediapipe/framework/formats/landmark.pb.h gmod_api.h
+main.o: corba/corba.hh corba/giop.hh corba/cdr.hh corba/giop.hh
 chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
-corba/corba.o: corba/corba.hh corba/cdr.hh corba/giop.hh
+corba/corba.o: corba/corba.hh corba/giop.hh corba/cdr.hh
 corba/corba.o: corba/ws/EventHandler.hh
 corba/orb.o: corba/cdr.hh corba/corba.hh corba/giop.hh
 corba/orb.o: corba/ws/EventHandler.hh corba/hexdump.hh
@@ -75,4 +75,5 @@ corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeSendHandler.hh
 corba/ws/HttpHandshakeRecvHandler.o: corba/ws/createAcceptKey.hh
 corba/ws/MakeHumanHandler.o: corba/ws/MakeHumanHandler.hh
 corba/ws/MakeHumanHandler.o: corba/ws/EventHandler.hh corba/ws/wslay_event.h
-corba/ws/MakeHumanHandler.o: corba/corba.hh corba/hexdump.hh
+corba/ws/MakeHumanHandler.o: corba/corba.hh corba/giop.hh corba/cdr.hh
+corba/ws/MakeHumanHandler.o: corba/hexdump.hh

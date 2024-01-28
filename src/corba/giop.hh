@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdint.h>
 
 #include <functional>
@@ -165,13 +167,13 @@ class GIOPBase {
         // const TWO_TO_52 = 4503599627370496;
 };
 
-class Object;
+class ObjectBase;
 
 class GIOPEncoder : public GIOPBase {
     public:
         CDREncoder buffer;
-        void object(const Object *object);
-        void reference(const Object *object);
+        void object(const ObjectBase *object);
+        void reference(const ObjectBase *object);
         void encapsulation(uint32_t type, std::function<void()> closure);
         void skipGIOPHeader();
         void skipReplyHeader();

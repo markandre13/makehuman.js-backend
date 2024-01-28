@@ -11,7 +11,7 @@ using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const Object* object) {
+void GIOPEncoder::object(const ObjectBase* object) {
     cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
         buffer.ulong(0);
@@ -31,7 +31,7 @@ void GIOPEncoder::object(const Object* object) {
 }
 
 // Interoperable Object Reference (IOR)
-void GIOPEncoder::reference(const Object* object) {
+void GIOPEncoder::reference(const ObjectBase* object) {
     cerr << "GIOPEncoder::reference(...)" << endl;
     // const className = (object.constructor as any)._idlClassName()
     auto className = object->_idlClassName();
@@ -273,6 +273,19 @@ void* GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = 
 
         // HAVE A LOOK AT WHAT ORGINAL CORBA RETURNS HERE, ME THINKS IT'S JUST THE OBJECT REFERENCE
         // AND THE REST IS DONE IN _narrow()
+
+        // CORBA::Object_var ORB::string_to_object(const char+)
+        // In Orbit, Objects have Connections
+
+        // in MICO
+        // class Object : public ServerlessObject {
+        //    IOR *ior;
+        //    IOR *fwd_ior;
+        //    ORB_ptr orb;
+        //    string indent;
+        // }
+
+        // class C_stub: C, ::CORBA::ExtInterfaceDef_stub
 
         // TODO: this belongs elsewhere
         // let object = this.connection.stubsById.get(ref.objectKey)
