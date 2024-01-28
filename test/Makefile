@@ -51,8 +51,9 @@ giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
 cdr_decoder.o: ../src/corba/cdr.hh
 cdr_encoder.o: ../src/corba/cdr.hh
 util.o: util.hh
-../src/corba/orb.o: ../src/corba/corba.hh ../src/corba/cdr.hh
+../src/corba/orb.o: ../src/corba/cdr.hh ../src/corba/corba.hh
 ../src/corba/orb.o: ../src/corba/giop.hh ../src/corba/ws/EventHandler.hh
+../src/corba/orb.o: ../src/corba/hexdump.hh
 ../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/giop.o: ../src/corba/corba.hh
 ../src/corba/cdr.o: ../src/corba/cdr.hh

@@ -2,6 +2,8 @@
 
 using namespace std;
 
+void sendChordata(void*, unsigned long) {}
+
 vector<uint8_t> parseOmniDump(const string_view &data) {
     vector<uint8_t> result;
     auto lines = split(trim(data));

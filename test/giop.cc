@@ -24,8 +24,8 @@ TEST(GIOPDecoder, OmniOrbLocateRequest) {
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();
-    EXPECT_EQ(type, CORBA::LOCATE_REQUEST);
-    EXPECT_EQ(decoder.type, CORBA::LOCATE_REQUEST);
+    EXPECT_EQ(type, CORBA::GIOP_LOCATE_REQUEST);
+    EXPECT_EQ(decoder.type, CORBA::GIOP_LOCATE_REQUEST);
     EXPECT_EQ(decoder.majorVersion, 1);
     EXPECT_EQ(decoder.minorVersion, 2);
     EXPECT_EQ(decoder.length + 12, data.size());
@@ -58,8 +58,8 @@ TEST(GIOPDecoder, OmniOrbRequest) {
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();
-    EXPECT_EQ(type, CORBA::REQUEST);
-    EXPECT_EQ(decoder.type, CORBA::REQUEST);
+    EXPECT_EQ(type, CORBA::GIOP_REQUEST);
+    EXPECT_EQ(decoder.type, CORBA::GIOP_REQUEST);
     EXPECT_EQ(decoder.majorVersion, 1);
     EXPECT_EQ(decoder.minorVersion, 2);
     EXPECT_EQ(decoder.length + 12, data.size());
@@ -81,8 +81,8 @@ TEST(GIOPDecoder, OmniOrbReply) {
     CORBA::GIOPDecoder decoder(dataview);
 
     auto type = decoder.scanGIOPHeader();
-    EXPECT_EQ(type, CORBA::REPLY);
-    EXPECT_EQ(decoder.type, CORBA::REPLY);
+    EXPECT_EQ(type, CORBA::GIOP_REPLY);
+    EXPECT_EQ(decoder.type, CORBA::GIOP_REPLY);
     EXPECT_EQ(decoder.majorVersion, 1);
     EXPECT_EQ(decoder.minorVersion, 2);
     EXPECT_EQ(decoder.length + 12, data.size());
@@ -91,7 +91,7 @@ TEST(GIOPDecoder, OmniOrbReply) {
     auto request = decoder.scanRequestHeader();
     EXPECT_TRUE(request->responseExpected);
     EXPECT_EQ(request->requestId, 4);
-    CORBA::DataView objectKey(dataview.data() + 28, 20);
+    CORBA::CDRDecoder objectKey(dataview.data() + 28, 20);
     EXPECT_EQ(request->objectKey, objectKey);
     EXPECT_EQ(request->method, string_view("sendObject"));
 }
