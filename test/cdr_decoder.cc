@@ -1,69 +1,76 @@
+#include <bandit/bandit.h>
+
 #include "../src/corba/cdr.hh"
-#include <gtest/gtest.h>
 
-TEST(CDRDecoder, BooleanTrue) {
-    CORBA::CDRDecoder data("\xFF", 1, std::endian::big);
-    EXPECT_EQ(data.boolean(), true);
-}
+using namespace snowhouse;
+using namespace bandit;
 
-TEST(CDRDecoder, BooleanFalse) {
-    CORBA::CDRDecoder data("\x00", 0, std::endian::big);
-    EXPECT_EQ(data.boolean(), false);
-}
+using namespace std;
 
-TEST(CDRDecoder, Octet) {
-    CORBA::CDRDecoder data("A", 1, std::endian::big);
-    EXPECT_EQ(data.octet(), 'A');
-}
+go_bandit([]() {
+    describe("CDRDecoder", []() {
+        describe("boolean()", []() {
+            it("true", []() {
+                CORBA::CDRDecoder data("\xFF", 1, std::endian::big);
+                AssertThat(data.boolean(), Equals(true));
+            });
+            it("false", []() {
+                CORBA::CDRDecoder data("\x00", 0, std::endian::big);
+                AssertThat(data.boolean(), Equals(false));
+            });
+        });
+        it("octet()", []() {
+            CORBA::CDRDecoder data("A", 1, std::endian::big);
+            AssertThat(data.octet(), Equals('A'));
+        });
+        it("character()", []() {
+            CORBA::CDRDecoder data("A", 1, std::endian::big);
+            AssertThat((char)data.character(), Equals('A')); // FIXME: snowhouse???
+        });
+        describe("ushort()", []() {
+            it("big endian()", []() {
+                CORBA::CDRDecoder data("..\xDE\xAD!", 5, std::endian::big);
+                data.setOffset(2);
+                AssertThat(data.ushort(), Equals(0xDEAD));
 
-TEST(CDRDecoder, Character) {
-    CORBA::CDRDecoder data("A", 1, std::endian::big);
-    EXPECT_EQ(data.character(), 'A');
-}
+                data.setOffset(1);
+                AssertThat(data.ushort(), Equals(0xDEAD));
+                AssertThat(data.octet(), Equals('!'));
+            });
+            it("little endian()", []() {
+                CORBA::CDRDecoder data("\xAD\xDE", 2, std::endian::little);
+                AssertThat(data.ushort(), Equals(0xDEAD));
+            });
+        });
+        describe("ulong()", []() {
+            it("big endian()", []() {
+                CORBA::CDRDecoder data("....\xDE\xAD\xBE\xEF!", 9, std::endian::big);
+                data.setOffset(4);
+                AssertThat(data.ulong(), Equals(0xDEADBEEF));
 
-TEST(CDRDecoder, UShortBigEndian) {
-    CORBA::CDRDecoder data("..\xDE\xAD!", 5, std::endian::big);
-    data.setOffset(2);
-    EXPECT_EQ(data.ushort(), 0xDEAD);
+                data.setOffset(1);
+                AssertThat(data.ulong(), Equals(0xDEADBEEF));
+                AssertThat(data.octet(), Equals('!'));
+            });
+            it("little endian()", []() {
+                CORBA::CDRDecoder data("\xEF\xBE\xAD\xDE", 4, std::endian::little);
+                AssertThat(data.ulong(), Equals(0xDEADBEEF));
+            });
+        });
+        describe("ulonglong()", []() {
+            it("big endian()", []() {
+                CORBA::CDRDecoder data("........\xDE\xAD\xBE\xEF\xC0\xDE\xBA\xBE!", 17, std::endian::big);
+                data.setOffset(8);
+                AssertThat(data.ulonglong(), Equals(0xDEADBEEFC0DEBABE));
 
-    data.setOffset(1);
-    EXPECT_EQ(data.ushort(), 0xDEAD);
-    EXPECT_EQ(data.octet(), '!');
-}
-
-TEST(CDRDecoder, UShortLittleEndian) {
-    CORBA::CDRDecoder data("\xAD\xDE", 2, std::endian::little);
-    EXPECT_EQ(data.ushort(), 0xDEAD);
-}
-
-TEST(CDRDecoder, ULongBigEndian) {
-    CORBA::CDRDecoder data("....\xDE\xAD\xBE\xEF!", 9, std::endian::big);
-
-    data.setOffset(4);
-    EXPECT_EQ(data.ulong(), 0xDEADBEEF);
-
-    data.setOffset(1);
-    EXPECT_EQ(data.ulong(), 0xDEADBEEF);
-    EXPECT_EQ(data.octet(), '!');
-}
-
-TEST(CDRDecoder, ULongLittleEndian) {
-    CORBA::CDRDecoder data("\xEF\xBE\xAD\xDE", 4, std::endian::little);
-    EXPECT_EQ(data.ulong(), 0xDEADBEEF);
-}
-
-TEST(CDRDecoder, ULongLongBigEndian) {
-    CORBA::CDRDecoder data("........\xDE\xAD\xBE\xEF\xC0\xDE\xBA\xBE!", 17, std::endian::big);
-
-    data.setOffset(8);
-    EXPECT_EQ(data.ulonglong(), 0xDEADBEEFC0DEBABE);
-
-    data.setOffset(1);
-    EXPECT_EQ(data.ulonglong(), 0xDEADBEEFC0DEBABE);
-    EXPECT_EQ(data.octet(), '!');
-}
-
-TEST(CDRDecoder, ULongLongLittleEndian) {
-    CORBA::CDRDecoder data("\xBE\xBA\xDE\xC0\xEF\xBE\xAD\xDE", 8, std::endian::little);
-    EXPECT_EQ(data.ulonglong(), 0xDEADBEEFC0DEBABE);
-}
+                data.setOffset(1);
+                AssertThat(data.ulonglong(), Equals(0xDEADBEEFC0DEBABE));
+                AssertThat(data.octet(), Equals('!'));
+            });
+            it("little endian()", []() {
+                CORBA::CDRDecoder data("\xBE\xBA\xDE\xC0\xEF\xBE\xAD\xDE", 8, std::endian::little);
+                AssertThat(data.ulonglong(), Equals(0xDEADBEEFC0DEBABE));
+            });
+        });
+    });
+});

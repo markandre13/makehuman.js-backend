@@ -1,63 +1,95 @@
 import std;
-
-#include <gtest/gtest.h>
 #include "../src/corba/coroutine.hh"
+
+#include <bandit/bandit.h>
+
+using namespace snowhouse;
+using namespace bandit;
 
 using namespace std;
 using namespace corba;
 
+vector<string> logger;
+template <class... Args>
+void log(std::format_string<Args...> fmt, Args&&... args) {
+    logger.push_back(format(fmt, args...));
+}
+
 interlock<unsigned, unsigned> my_interlock;
 
 task<const char*> f3() {
-    println("f3 enter");
+    log("f3 enter");
     auto v = co_await my_interlock.suspend(10);
-    println("corba -> {}", v);
-    println("f3 leave");
+    log("corba -> {}", v);
+    log("f3 leave");
     co_return "hello";
 }
 
 task<> f2() {
-    println("f2 enter");
+    log("f2 enter");
     auto text = co_await f3();
-    println("expect 'hello', got '{}'", text);
-    println("f2 leave");
+    log("expect 'hello', got '{}'", text);
+    log("f2 leave");
     co_return;
 }
 
 task<double> f1() {
-    println("f1 enter");
+    log("f1 enter");
     co_await f2();
-    println("f1 middle");
+    log("f1 middle");
     co_await f2();
-    println("f1 leave");
+    log("f1 leave");
     co_return 3.1415;
 }
 
 task<int> f0() {
-    println("f0 enter");
+    log("f0 enter");
     double pi = co_await f1();
-    println("expect 3.1415, got {}", pi);
-    println("f0 leave");
+    log("expect 3.1415, got {}", pi);
+    log("f0 leave");
     co_return 10;
 }
 
+bool fx_done = false;
 task<int> fx() {
-    println("fx enter'n leave");
+    fx_done = true;
     co_return 10;
 }
 
-// TEST(Coroutine, Nested) {
-int main() {
-    {
-        fx().no_wait();
-        f0().no_wait(); 
-        println("--------------------------");
-        my_interlock.resume(10, 2001);
-        println("--------------------------");
-        my_interlock.resume(10, 2010);
-        println("--------------------------");
-    }
-    println("..........................");
-    // println("object_counter = {}", object_counter);
-    return 0;
-}
+go_bandit([]() {
+    describe("coroutine", []() {
+        it("handles many nested co_awaits", []() {
+            f0().no_wait();
+            my_interlock.resume(10, 2001);
+            my_interlock.resume(10, 2010);
+
+            auto expect = vector<string> {{
+                "f0 enter",
+                "f1 enter",
+                "f2 enter",
+                "f3 enter",
+                "corba -> 2001",
+                "f3 leave",
+                "expect 'hello', got 'hello'",
+                "f2 leave",
+                "f1 middle",
+                "f2 enter",
+                "f3 enter",
+                "corba -> 2010",
+                "f3 leave",
+                "expect 'hello', got 'hello'",
+                "f2 leave",
+                "f1 leave",
+                "expect 3.1415, got 3.1415",
+                "f0 leave"
+            }};
+            AssertThat(logger, EqualsContainer(expect));
+        });
+        it("handles no co_await", []() {
+            fx().no_wait();
+            AssertThat(fx_done, Equals(true));
+        });
+    });
+});
+
+

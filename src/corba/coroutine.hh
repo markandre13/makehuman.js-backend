@@ -4,6 +4,7 @@
 #include <map>
 #include <exception>
 #include <stdexcept>
+#include <cassert>
 
 //
 // "You can have peace. Or you can have freedom. Don't ever count on having both at once."

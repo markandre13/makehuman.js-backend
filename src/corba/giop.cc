@@ -172,7 +172,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
                 throw runtime_error("Unknown AddressingDisposition.");
         }
     }
-    cout << "REQUEST objectKey size = " << header->objectKey.length << endl;
+    // cout << "REQUEST objectKey size = " << header->objectKey.length << endl;
 
     // FIXME: rename 'method' into 'operation' as it's named in the CORBA standard
     header->method = buffer.string();

@@ -16,6 +16,7 @@ class CDREncoder {
     protected: 
         std::vector<size_t> sizeStack;
     public:
+        void boolean(bool);
         void octet(u_int8_t);
         void ushort(uint16_t);
         void ulong(uint32_t);

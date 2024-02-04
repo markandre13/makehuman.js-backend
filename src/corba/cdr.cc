@@ -8,6 +8,13 @@ using namespace std;
 
 namespace CORBA {
 
+void CDREncoder::boolean(bool value) {
+    _data.resize(offset + 1);
+    auto ptr = reinterpret_cast<uint8_t *>(_data.data() + offset);
+    offset += 1;
+    *ptr = value ? 1 : 0;
+}
+
 void CDREncoder::octet(uint8_t value) {
     _data.resize(offset + 1);
     auto ptr = reinterpret_cast<uint8_t *>(_data.data() + offset);

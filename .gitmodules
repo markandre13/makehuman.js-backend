@@ -1,0 +1,3 @@
+[submodule "upstream/bandit"]
+	path = upstream/bandit
+	url = git@github.com:markandre13/bandit.git
