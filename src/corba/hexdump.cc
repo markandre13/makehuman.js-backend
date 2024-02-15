@@ -2,23 +2,23 @@
 
 using namespace std;
 
-void hexdump(unsigned char *buffer, int received) {
-    int data = 0;
-    while (data < received) {
+void _hexdump(const unsigned char *buffer, std::size_t nbytes) {
+    size_t pos = 0;
+    while (pos < nbytes) {
         for (int x = 0; x < 16; x++) {
-            if (data < received)
-                printf("%02x ", (int)buffer[data]);
+            if (pos < nbytes)
+                printf("%02x ", (unsigned)buffer[pos]);
             else
                 printf("   ");
-            data++;
+            pos++;
         }
-        data -= 16;
+        pos -= 16;
         for (int x = 0; x < 16; x++) {
-            if (data < received)
-                printf("%c", buffer[data] >= 32 && buffer[data] <= 127 ? buffer[data] : '.');
+            if (pos < nbytes)
+                printf("%c", buffer[pos] >= 32 && buffer[pos] <= 127 ? buffer[pos] : '.');
             else
                 printf(" ");
-            data++;
+            pos++;
         }
         printf("\n");
     }

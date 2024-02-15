@@ -1,6 +1,7 @@
-#include <bandit/bandit.h>
+import std;
+using namespace std;
 
-int
-main(int argc, char* argv[]) {
-    return bandit::run(argc, argv);
-}
+#include "kaffeeklatsch.hh"
+using namespace kaffeeklatsch;
+
+int main(int argc, char *argv[]) { return kaffeeklatsch::run(argc, argv); }

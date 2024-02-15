@@ -1,3 +1,6 @@
-[submodule "upstream/bandit"]
-	path = upstream/bandit
-	url = git@github.com:markandre13/bandit.git
+[submodule "upstream/kaffeeklatsch"]
+	path = upstream/kaffeeklatsch
+	url = git@github.com:markandre13/kaffeeklatsch.git
+[submodule "upstream/cpptask"]
+	path = upstream/cpptask
+	url = git@github.com:markandre13/cpptask.git

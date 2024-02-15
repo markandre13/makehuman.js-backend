@@ -1,3 +1,4 @@
+#include "orb.hh"
 #include "corba.hh"
 
 #include <format>
@@ -15,7 +16,7 @@ using namespace std;
 namespace CORBA {
 
 static ORB *currentORB = nullptr;
-
+ 
 void ORB::run() {
     currentORB = this;
     wsInit();

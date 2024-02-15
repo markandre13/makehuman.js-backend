@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include "corba.hh"
+#include "hexdump.hh"
 
 using namespace std;
 
@@ -114,6 +115,78 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
     }
 }
 
+void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected)
+{
+    skipGIOPHeader();
+
+    if (majorVersion == 1 && minorVersion <= 1) {
+        serviceContext();
+    }
+    ulong(requestId);
+    if (majorVersion == 1 && minorVersion <= 1) {
+        octet(responseExpected ? 1 : 0);
+    } else {
+        octet(responseExpected ? 3 : 0);
+    }
+    buffer.offset += 3;
+
+    if (majorVersion == 1 && minorVersion <= 1) {
+        blob(objectKey);
+    } else {
+        ushort(GIOP_KEY_ADDR);
+        blob(objectKey);
+    }
+
+    string(operation);
+    if (majorVersion == 1 && minorVersion <= 1) {
+        ulong(0); // Requesting Principal length
+    } else {
+        serviceContext();
+        ulonglong(8);  // alignAndReserve(8);
+    }
+}
+
+void GIOPEncoder::serviceContext() {
+// TODO: remove this, this happens only in tests
+        // if (connection == nullptr) {
+            ulong(0);
+            return;
+        // }
+
+        // auto count = 1;
+        // let initialToken
+        // if (this.connection.orb.outgoingAuthenticator) {
+        //     initialToken = this.connection.orb.outgoingAuthenticator(this.connection)
+        //     if (initialToken) {
+        //         ++count
+        //     }
+        // }
+
+        // ulong(count); // count
+
+        // CORBA 3.4 Part 2, 9.8.1 Bi-directional IIOP Service Context
+        // TODO: send listen point only once per connection
+        // beginEncapsulation(ServiceId.BI_DIR_IIOP);
+        // ulong(1); // number of listen points
+        // string(connection->getLocalAddress());
+        // ushort(connection->getLocalPort());
+        // endEncapsulation();
+
+        // if (initialToken) {
+        //     this.establishSecurityContext(initialToken);
+        // }
+
+        /*
+        this.beginEncapsulation(ServiceId.CodeSets)
+        // this.ulong(0x00010001) // ISO-8859-1
+        this.ulong(0x05010001) // charset_id : UTF-8
+        this.ulong(0x00010109) // wcharset_id: UTF-16
+        this.endEncapsulation()
+        */
+}
+
+////////////////////////////////////////////
+
 GIOPMessageType GIOPDecoder::scanGIOPHeader() {
     auto header = reinterpret_cast<const GIOPHeader*>(buffer.data());
     if (memcmp(header->id, "GIOP", 4) != 0) {
@@ -162,11 +235,11 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
-            case KeyAddr:
+            case GIOP_KEY_ADDR:
                 header->objectKey = buffer.blob();
                 break;
-            case ProfileAddr:
-            case ReferenceAddr:
+            case GIOP_PROFILE_ADDR:
+            case GIOP_REFERENCE_ADDR:
                 throw runtime_error("Unsupported AddressingDisposition.");
             default:
                 throw runtime_error("Unknown AddressingDisposition.");
@@ -190,23 +263,35 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
     auto requestId = buffer.ulong();
-    CDRDecoder objectKey;
+    string objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
         objectKey = buffer.blob();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
-            case KeyAddr:
+            case GIOP_KEY_ADDR:
                 objectKey = buffer.blob();
                 break;
-            case ProfileAddr:
-            case ReferenceAddr:
+            case GIOP_PROFILE_ADDR:
+            case GIOP_REFERENCE_ADDR:
                 throw runtime_error("Unsupported AddressingDisposition.");
             default:
                 throw runtime_error("Unknown AddressingDisposition.");
         }
     }
-    return new LocateRequest(requestId, objectKey);
+    return new LocateRequest(requestId, objectKey);  // unique_ptr
+}
+
+unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
+    if (majorVersion == 1 && minorVersion <= 1) {
+        serviceContext();
+    }
+    auto requestId = buffer.ulong();
+    auto replyStatus = static_cast<GIOPReplyStatus>(buffer.ulong());
+    if (majorVersion == 1 && minorVersion >= 2) {
+        serviceContext();
+    }
+    return make_unique<ReplyHeader>(requestId, replyStatus);
 }
 
 void GIOPDecoder::serviceContext() {
@@ -244,7 +329,7 @@ void GIOPDecoder::encapsulation(std::function<void(uint32_t type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-void* GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = false) {
+void* GIOPDecoder::object(ORB* orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.offset - 4;
 
@@ -269,7 +354,7 @@ void* GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = 
         //     return this.connection.orb.servants.get(ref.objectKey)
         // }
 
-        cerr << "GOT OBJECT " << ref->oid << " " << ref->objectKey.toString() << endl;
+        cerr << "GOT OBJECT " << ref->oid << " " << ref->objectKey << endl;
 
         // HAVE A LOOK AT WHAT ORGINAL CORBA RETURNS HERE, ME THINKS IT'S JUST THE OBJECT REFERENCE
         // AND THE REST IS DONE IN _narrow()
@@ -311,43 +396,41 @@ struct ORBTypeName {
         const char* name;
 };
 
-static array<ORBTypeName, 35> orbTypeNames {{
-    {0x48500000, 0x4850000f, "Hewlett Packard"},
-    {0x49424d00, 0x49424d0f, "IBM"},
-    {0x494c5500, 0x494c55ff, "Xerox"},
-    {0x49534900, 0x4953490f, "AdNovum Informatik AG"},
-    {0x56495300, 0x5649530f, "Borland (VisiBroker)"},
-    {0x4f495300, 0x4f4953ff, "Objective Interface Systems"},
-    {0x46420000, 0x4642000f, "FloorBoard Software"},
-    {0x4E4E4E56, 0x4E4E4E56, "Rogue Wave"},
-    {0x4E550000, 0x4E55000f, "Nihon Unisys, Ltd"},
-    {0x4A424B52, 0x4A424B52, "SilverStream Software"},
-    {0x54414f00, 0x54414f00, "Center for Distributed Object Computing, Washington University"},
-    {0x4C434200, 0x4C43420F, "2AB"},
-    {0x41505831, 0x41505831, "Informatik 4, Univ. of Erlangen-Nuernberg"},
-    {0x4f425400, 0x4f425400, "ORBit"},
-    {0x47534900, 0x4753490f, "GemStone Systems, Inc."},
-    {0x464a0000, 0x464a000f, "Fujitsu Limited"},
-    {0x4E534440, 0x4E53444F, "Compaq Computer"},
-    {0x4f425f00, 0x4f425f0f, "TIBCO"},
-    {0x4f414b00, 0x4f414b0f, "Camros Corporation"},
-    {0x41545400, 0x4154540f, "AT&T Laboratories, Cambridge (OmniORB)"},
-    {0x4f4f4300, 0x4f4f430f, "IONA Technologies"},
-    {0x4e454300, 0x4e454303, "NEC Corporation"},
-    {0x424c5500, 0x424c550f, "Berry Software"},
-    {0x56495400, 0x564954ff, "Vitra"},
-    {0x444f4700, 0x444f47ff, "Exoffice Technologies"},
-    {0xcb0e0000, 0xcb0e00ff, "Chicago Board of Exchange (CBOE)"},
-    {0x4A414300, 0x4A41430f, "FU Berlin Institut für Informatik (JAC)"},
-    {0x58545240, 0x5854524F, "Xtradyne Technologies AG"},
-    {0x54475800, 0x54475803, "Top Graph'X"},
-    {0x41646100, 0x41646103, "AdaOS project"},
-    {0x4e4f4b00, 0x4e4f4bff, "Nokia"},
-    {0x53414E00, 0x53414E0f, "Sankhya Technologies Private Limited, India"},
-    {0x414E4400, 0x414E440f, "Androsoft GmbH"},
-    {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
-    {0x4d313300, 0x4d313300, "corba.js"}
-}};
+static array<ORBTypeName, 35> orbTypeNames{{{0x48500000, 0x4850000f, "Hewlett Packard"},
+                                            {0x49424d00, 0x49424d0f, "IBM"},
+                                            {0x494c5500, 0x494c55ff, "Xerox"},
+                                            {0x49534900, 0x4953490f, "AdNovum Informatik AG"},
+                                            {0x56495300, 0x5649530f, "Borland (VisiBroker)"},
+                                            {0x4f495300, 0x4f4953ff, "Objective Interface Systems"},
+                                            {0x46420000, 0x4642000f, "FloorBoard Software"},
+                                            {0x4E4E4E56, 0x4E4E4E56, "Rogue Wave"},
+                                            {0x4E550000, 0x4E55000f, "Nihon Unisys, Ltd"},
+                                            {0x4A424B52, 0x4A424B52, "SilverStream Software"},
+                                            {0x54414f00, 0x54414f00, "Center for Distributed Object Computing, Washington University"},
+                                            {0x4C434200, 0x4C43420F, "2AB"},
+                                            {0x41505831, 0x41505831, "Informatik 4, Univ. of Erlangen-Nuernberg"},
+                                            {0x4f425400, 0x4f425400, "ORBit"},
+                                            {0x47534900, 0x4753490f, "GemStone Systems, Inc."},
+                                            {0x464a0000, 0x464a000f, "Fujitsu Limited"},
+                                            {0x4E534440, 0x4E53444F, "Compaq Computer"},
+                                            {0x4f425f00, 0x4f425f0f, "TIBCO"},
+                                            {0x4f414b00, 0x4f414b0f, "Camros Corporation"},
+                                            {0x41545400, 0x4154540f, "AT&T Laboratories, Cambridge (OmniORB)"},
+                                            {0x4f4f4300, 0x4f4f430f, "IONA Technologies"},
+                                            {0x4e454300, 0x4e454303, "NEC Corporation"},
+                                            {0x424c5500, 0x424c550f, "Berry Software"},
+                                            {0x56495400, 0x564954ff, "Vitra"},
+                                            {0x444f4700, 0x444f47ff, "Exoffice Technologies"},
+                                            {0xcb0e0000, 0xcb0e00ff, "Chicago Board of Exchange (CBOE)"},
+                                            {0x4A414300, 0x4A41430f, "FU Berlin Institut für Informatik (JAC)"},
+                                            {0x58545240, 0x5854524F, "Xtradyne Technologies AG"},
+                                            {0x54475800, 0x54475803, "Top Graph'X"},
+                                            {0x41646100, 0x41646103, "AdaOS project"},
+                                            {0x4e4f4b00, 0x4e4f4bff, "Nokia"},
+                                            {0x53414E00, 0x53414E0f, "Sankhya Technologies Private Limited, India"},
+                                            {0x414E4400, 0x414E440f, "Androsoft GmbH"},
+                                            {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
+                                            {0x4d313300, 0x4d313300, "corba.js"}}};
 
 // returns ObjectReference
 unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
@@ -366,7 +449,7 @@ unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
             switch (profileId) {
                 // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
                 case TAG_INTERNET_IOP: {
-                        // console.log(`Internet IOP Component, length=${profileLength}`)
+                    // console.log(`Internet IOP Component, length=${profileLength}`)
                     auto iiopMajorVersion = buffer.octet();
                     auto iiopMinorVersion = buffer.octet();
                     // if (iiopMajorVersion !== 1 || iiopMinorVersion > 1) {

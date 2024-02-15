@@ -4,6 +4,7 @@
 #include <cctype>
 #include <string>
 #include <vector>
+#include <format>
 
 namespace CORBA {
 
@@ -24,8 +25,8 @@ class CDREncoder {
 
         void string(const char *string);
         void string(const char *buffer, size_t size);
-        void string(std::string_view &string);
-        void string(std::string &string);
+        void string(const std::string_view &string);
+        void string(const std::string &string);
         void blob(const char *buffer, size_t size) { string(buffer, size); }
         void endian();
 
@@ -66,7 +67,9 @@ class CDRDecoder {
         CDRDecoder(const char *data, size_t length, std::endian endian = (std::endian)0) : _data(data), offset(0), length(length), _endian(endian) {}
         CDRDecoder(CDREncoder &encoder) : _data(encoder.data()), offset(0), length(encoder.length()), _endian(std::endian::native) {}
         std::string_view toString() const { return std::string_view(_data, length); }
+        std::string str() const {return std::string(_data, length);}
 
+        void endian() { setLittleEndian(octet() & 1); }
         bool boolean();
         uint8_t octet();
         char8_t character();
@@ -78,9 +81,9 @@ class CDRDecoder {
         // longlong
         // float
         // double
-        CDRDecoder blob();
-        std::string_view string();
-        std::string_view string(size_t length);
+        std::string blob();
+        std::string string();
+        std::string string(size_t length);
         // sequence
         // value
         // object
@@ -125,7 +128,7 @@ class CDRDecoder {
             auto ptr = _data + offset;
             offset += 4;
             if (offset > length) {
-                throw std::out_of_range("out of range");
+                throw std::out_of_range(std::format("out of range in CDRDecoder::ptr4(): offset {} > length {}", offset, length));
             }
             return ptr;
         }

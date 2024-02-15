@@ -1,8 +1,7 @@
 #include "cdr.hh"
 
 #include <iostream>
-
-void hexdump(unsigned char *buffer, int received);
+#include <format>
 
 using namespace std;
 
@@ -54,19 +53,19 @@ void CDREncoder::string(const char *string, size_t size) {
     memcpy(_data.data() + offset, string, size);
     offset += size;
 }
-void CDREncoder::string(std::string_view &string) {
-    ulong(string.size() + 1);
-    _data.resize(offset + string.size() + 1);
-    memcpy(_data.data() + offset, string.data(), string.size());
+void CDREncoder::string(const std::string_view &value) {
+    ulong(value.size() + 1);
+    _data.resize(offset + value.size() + 1);
+    memcpy(_data.data() + offset, value.data(), value.size());
     _data[_data.size() - 1] = 0;
-    offset += string.size() + 1;
+    offset += value.size() + 1;
 }
-void CDREncoder::string(std::string &string) {
-    ulong(string.size() + 1);
-    _data.resize(offset + string.size() + 1);
-    memcpy(_data.data() + offset, string.data(), string.size());
+void CDREncoder::string(const std::string &value) {
+    ulong(value.size() + 1);
+    _data.resize(offset + value.size() + 1);
+    memcpy(_data.data() + offset, value.data(), value.size());
     _data[_data.size() - 1] = 0;
-    offset += string.size() + 1;
+    offset += value.size() + 1;
 }
 void CDREncoder::endian() { octet(endian::native == endian::big ? 0 : 1); }
 
@@ -144,9 +143,9 @@ uint64_t CDRDecoder::ulonglong() {
     return value;
 }
 
-CDRDecoder CDRDecoder::blob() {
+string CDRDecoder::blob() {
     size_t len = ulong();
-    CDRDecoder result(_data + offset, len);
+    std::string result(_data + offset, len);
     offset += len;
     if (offset > length) {
         throw std::out_of_range("out of range");
@@ -154,12 +153,12 @@ CDRDecoder CDRDecoder::blob() {
     return result;
 }
 
-std::string_view CDRDecoder::string() {
+std::string CDRDecoder::string() {
     return string(ulong());
 }
 
-std::string_view CDRDecoder::string(size_t len) {
-    std::string_view result(_data + offset, len - 1);
+std::string CDRDecoder::string(size_t len) {
+    std::string result(_data + offset, len - 1);
     offset += len;
     if (offset > length) {
         throw std::out_of_range("out of range");

@@ -61,13 +61,7 @@ enum ServiceId {
 };
 
 // CORBA 3.3 Part 2: 7.6.4 Standard IOR Profiles
-enum ProfileId {
-    TAG_INTERNET_IOP = 0,
-    TAG_MULTIPLE_COMPONENTS = 1,
-    TAG_SCCP_IOP = 2,
-    TAG_UIPMC = 3,
-    TAG_MOBILE_TERMINAL_IOP = 4
-};
+enum ProfileId { TAG_INTERNET_IOP = 0, TAG_MULTIPLE_COMPONENTS = 1, TAG_SCCP_IOP = 2, TAG_UIPMC = 3, TAG_MOBILE_TERMINAL_IOP = 4 };
 
 // CORBA 3.3 Part 2: 7.6.6 Standard IOP Components
 enum ComponentId {
@@ -113,6 +107,12 @@ enum ComponentId {
     TAG_INET_SEC_TRANS = 123
 };
 
+enum AddressingDisposition {
+    GIOP_KEY_ADDR = 0,
+    GIOP_PROFILE_ADDR = 1,
+    GIOP_REFERENCE_ADDR = 2
+};
+
 struct GIOPHeader {
         char id[4];
         uint8_t majorVersion;
@@ -127,30 +127,37 @@ struct Blob {
         char data[];
 };
 
-enum AddressingDisposition { KeyAddr = 0, ProfileAddr = 1, ReferenceAddr = 2 };
-
 struct RequestHeader {
         uint32_t requestId;
         bool responseExpected;
-        CDRDecoder objectKey;
-        std::string_view method;
+        std::string objectKey;
+        std::string method;
+};
+
+struct ReplyHeader {
+        uint32_t requestId;
+        GIOPReplyStatus replyStatus;
 };
 
 struct LocateRequest {
         uint32_t requestId;
-        CDRDecoder objectKey;
-        LocateRequest(uint32_t requestId, CDRDecoder objectKey) : requestId(requestId), objectKey(objectKey) {}
+        std::string objectKey;
+        LocateRequest(uint32_t requestId, const std::string &objectKey) : requestId(requestId), objectKey(objectKey) {}
 };
 
 struct ObjectReference {
-    std::string oid;
-    std::string host;
-    uint16_t port;
-    CDRDecoder objectKey;
-    // toString(): string {
-    //     return `ObjectReference(oid=${this.oid}, host=${this.host}, port=${this.port}, objectKey=${this.objectKey}')`
-    // }
+        std::string oid;
+        std::string host;
+        uint16_t port;
+        std::string objectKey;
+        // toString(): string {
+        //     return `ObjectReference(oid=${this.oid}, host=${this.host}, port=${this.port}, objectKey=${this.objectKey}')`
+        // }
 };
+
+namespace detail {
+struct Connection;
+}
 
 class GIOPBase {
     public:
@@ -159,6 +166,8 @@ class GIOPBase {
 
         const unsigned ENDIAN_LITTLE = 0;
         const unsigned ENDIAN_BIG = 1;
+
+        detail::Connection *connection = nullptr;
 
         // const FLOAT64_MAX = 1.7976931348623157e+308;
         // const FLOAT64_MIN = 2.2250738585072014e-308;
@@ -171,7 +180,28 @@ class ObjectBase;
 
 class GIOPEncoder : public GIOPBase {
     public:
+        GIOPEncoder(detail::Connection *connection = nullptr) {
+            this->connection = connection;
+        }
+
         CDREncoder buffer;
+        inline void boolean(bool value) { buffer.boolean(value); }
+        void octet(u_int8_t value) { buffer.octet(value); }
+        void ushort(uint16_t value) { buffer.ushort(value); }
+        void ulong(uint32_t value) { buffer.ulong(value); }
+        void ulonglong(uint64_t value) { buffer.ulonglong(value); }
+
+        void string(const char *value) { buffer.string(value); }
+        void string(const char *value, size_t size) { buffer.string(value); }
+        void string(const std::string_view &value) { buffer.string(value); }
+        void string(const std::string &value) { buffer.string(value); }
+        void blob(const char *value, size_t size) { buffer.blob(value, size); }
+        void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
+        void endian() { buffer.endian(); }
+
+        void reserveSize() { buffer.reserveSize(); }
+        void fillInSize() { buffer.fillInSize(); }
+
         void object(const ObjectBase *object);
         void reference(const ObjectBase *object);
         void encapsulation(uint32_t type, std::function<void()> closure);
@@ -179,6 +209,8 @@ class GIOPEncoder : public GIOPBase {
         void skipReplyHeader();
         void setGIOPHeader(GIOPMessageType type);
         void setReplyHeader(uint32_t requestId, uint32_t replyStatus);
+        void encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected);
+        void serviceContext();
 };
 
 class GIOPDecoder : public GIOPBase {
@@ -191,6 +223,7 @@ class GIOPDecoder : public GIOPBase {
         GIOPMessageType scanGIOPHeader();
         const RequestHeader *scanRequestHeader();
         const LocateRequest *scanLocateRequest();
+        std::unique_ptr<ReplyHeader> scanReplyHeader();
 
         void serviceContext();
 
@@ -198,8 +231,9 @@ class GIOPDecoder : public GIOPBase {
         // Used for ServiceContext, Profile and Component
         void encapsulation(std::function<void(uint32_t type)> closure);
 
-        void *object(CORBA::ORB*);  // const string typeInfo, bool isValue = false) {
+        void *object(CORBA::ORB *);  // const string typeInfo, bool isValue = false) {
         std::unique_ptr<ObjectReference> reference(size_t length);
+        std::unique_ptr<ObjectReference> reference() { return reference(buffer.ulong()); }
 };
 
 }  // namespace CORBA

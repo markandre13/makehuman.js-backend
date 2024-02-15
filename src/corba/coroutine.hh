@@ -1,20 +1,24 @@
 #pragma once
 
-#include <coroutine>
-#include <map>
-#include <exception>
-#include <stdexcept>
 #include <cassert>
+#include <coroutine>
+#include <exception>
+#include <map>
+#include <print>
+#include <stdexcept>
 
 //
-// "You can have peace. Or you can have freedom. Don't ever count on having both at once."
-//                                                                  -- Robert A. Heinlein.
+// "you can have peace. or you can have freedom. don't ever count on having both at once."
+//                                                                   -- robert a. heinlein
 //
-// while C++ 20/23 coroutines provide a lot of freedom to accommodate many different use
+// while c++20/23 coroutines provide a lot of freedom to accommodate many different use
 // cases and hardware platforms, actually _using_ them does not provide much peace of mind.
 //
-// the C++ coroutine support below is a bare minimum for javascript style await's and provides
-// the two classes 'task' and 'interlock'.
+// a lot of examples on the web do use a class named 'task' along with coroutines, but it's
+// actually not part of the c++ standard. my guess that it's a reference to the cppcoro library.
+//
+// this file contains a variation of cppcoro's 'task' class and tweaks it to be usable without
+// the rest of the cppcoro library.
 //
 // TASK
 //
@@ -30,8 +34,8 @@
 //     int fun0() {
 //       fun1().no_wait();
 //     }
-//   with no_wait() preventing the coroutine's state from being deleted.
-//   instead it will be deleted once the coroutine is finished.
+//   with no_wait() preventing the coroutine's state from being deleted along with the
+//   task in case it is still running and instead deleted it once it's finished.
 // * the coroutine is immediately executed
 //
 // INTERLOCK
@@ -46,8 +50,15 @@
 //
 // resumes it along with providing a value.
 //
+// TODO
+//
+// [ ] for the full 'javascript' experience, add then() and catch() methods to 'task'
+// [ ] try to move the 'return !m_coroutine.done();' from awaitable_base from
+//     await_suspend() into await_ready() to improve performance.
 
-namespace corba {
+// #define _COROUTINE_DEBUG 1
+
+namespace CORBA {
 
 template <typename T>
 class task;
@@ -66,33 +77,108 @@ class broken_resume : public std::logic_error {
         explicit broken_resume(const char* what) : logic_error(what) {}
 };
 
+#ifdef _COROUTINE_DEBUG
+extern unsigned promise_sn_counter;
+extern unsigned task_sn_counter;
+extern unsigned awaitable_sn_counter;
+extern unsigned promise_use_counter;
+extern unsigned task_use_counter;
+extern unsigned awaitable_use_counter;
+extern std::coroutine_handle<> global_continuation;
+unsigned getSNforHandle(std::coroutine_handle<> handle);
+inline void resetCounters() { promise_sn_counter = task_sn_counter = awaitable_sn_counter = promise_use_counter = task_use_counter = awaitable_use_counter = 0; }
+#endif
+
 namespace detail {
 
 class task_promise_base {
-        std::coroutine_handle<> m_continuation;
+        std::coroutine_handle<> m_parent;
         struct final_awaitable {
+#ifdef _COROUTINE_DEBUG
+                unsigned sn;
+                final_awaitable(unsigned sn) : sn(sn) {
+                    ++awaitable_use_counter;
+                    std::println("  awaitable #{} created", sn);
+                }
+                ~final_awaitable() {
+                    --awaitable_use_counter;
+                    std::println("awaitable #{}: destroyed", sn);
+                }
+                bool await_ready() const noexcept {
+                    std::println("final_awaitable #{}: await_ready -> false", sn);
+                    return false;
+                }
+#else
                 bool await_ready() const noexcept { return false; }
+#endif
                 template <typename PROMISE>
                 std::coroutine_handle<> await_suspend(std::coroutine_handle<PROMISE> coro) noexcept {
-                    auto continuation = coro.promise().m_continuation;
+                    auto continuation = coro.promise().m_parent;
                     if (!continuation) {
-                        coro.destroy();
+#ifdef _COROUTINE_DEBUG
+                        std::println("final_awaitable #{}: await_suspend() -> done, consider destroying promise #{}", sn, getSNforHandle(coro));
+#endif
+                        // this is the right location to destroy coro but "if (!continuation)" can't be used as the parent
+                        // is set later... maybe either task must deleted it when there never was a suspend or when the
+                        // associated task had an no_wait() call, then the promise was marked for deletion and it's being
+                        // deleted here?
+                        if (coro.promise().drop && coro.done()) {
+                            std::println("DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP ");
+                            coro.destroy();
+                        }
                         return std::noop_coroutine();
                     }
-                    coro.promise().m_continuation = nullptr;
+                    coro.promise().m_parent = nullptr;
+#ifdef _COROUTINE_DEBUG
+                    std::println("awaitable #{}: await_suspend() -> continue with promise #{}", sn, getSNforHandle(continuation));
+#endif
                     return continuation;
                 }
-                void await_resume() noexcept {}
+                void await_resume() noexcept {
+#ifdef _COROUTINE_DEBUG
+                    std::println("awaitable #{}: await_resume()", sn);
+#endif
+                }
         };
 
     public:
+        bool drop = false;
+#ifdef _COROUTINE_DEBUG
+        unsigned sn;
+        task_promise_base() noexcept {
+            ++promise_use_counter;
+            sn = ++promise_sn_counter;
+            // std::println("  create task_promise_base #{}", sn);
+        }
+        ~task_promise_base() {
+            --promise_use_counter;
+            std::println("promise #{}: destroyed", sn);
+        }
+#else
         task_promise_base() noexcept {}
+#endif
+
         // set the coroutine to proceed with after this coroutine is finished
-        void set_continuation(std::coroutine_handle<> continuation) noexcept { m_continuation = continuation; }
+        void set_parent(std::coroutine_handle<> parent) noexcept { m_parent = parent; }
 
         std::suspend_never initial_suspend() { return {}; }
-        final_awaitable final_suspend() noexcept { return {}; }
+        final_awaitable final_suspend() noexcept {
+#ifdef _COROUTINE_DEBUG
+            auto asn = ++awaitable_sn_counter;
+            std::println("promise #{}: final_suspend() -> create and return final awaitable #{}", sn, asn);
+            return {asn};
+#else
+            return {};
+#endif
+        }
 };
+}  // namespace detail
+
+#ifdef _COROUTINE_DEBUG
+inline unsigned getSNforHandle(std::coroutine_handle<> handle) { return ((std::coroutine_handle<detail::task_promise_base>*)&handle)->promise().sn; }
+#endif
+
+namespace detail {
 
 // the VALUE specialisation of task_promise_base
 template <typename T>
@@ -153,11 +239,21 @@ class task_promise final : public task_promise_base {
 template <>
 class task_promise<void> : public task_promise_base {
     public:
-        task_promise() noexcept = default;
-        task<void> get_return_object() noexcept;
-        void return_void() noexcept {}
+        task_promise() noexcept {
+#ifdef _COROUTINE_DEBUG
+        // std::println("  create task_promise<> #{}", sn);
+#endif
+        } task<void> get_return_object() noexcept;
+        void return_void() noexcept { 
+#ifdef _COROUTINE_DEBUG
+            std::println("promise #{}: return_void()", sn);
+#endif
+        }
         void unhandled_exception() noexcept { m_exception = std::current_exception(); }
         void result() {
+#ifdef _COROUTINE_DEBUG
+            std::println("promise #{}: result()", sn);
+#endif
             if (m_exception) {
                 std::rethrow_exception(m_exception);
             }
@@ -197,17 +293,62 @@ class [[nodiscard]] task {
 
     private:
         handle_type m_coroutine;
+#ifdef _COROUTINE_DEBUG
+    public:
+        unsigned sn;
+
+    private:
+#endif
         struct awaitable_base {
                 handle_type m_coroutine;
+                unsigned sn;
+#ifdef _COROUTINE_DEBUG
+                awaitable_base(handle_type coroutine, unsigned sn) noexcept : m_coroutine(coroutine), sn(sn) {
+                    ++awaitable_use_counter;
+                    // std::println("   create awaitable_base(coroutine) #{}", this->sn);
+                }
+                ~awaitable_base() { --awaitable_use_counter; }
+                bool await_ready() const noexcept {
+                    std::println("awaitable #{} for promise #{}: await_ready() -> false", this->sn, getSNforHandle(m_coroutine));
+                    return false;
+                }
+#else
                 awaitable_base(handle_type coroutine) noexcept : m_coroutine(coroutine) {}
                 bool await_ready() const noexcept { return false; }
-                void await_suspend(std::coroutine_handle<> awaitingCoroutine) noexcept { m_coroutine.promise().set_continuation(awaitingCoroutine); }
+#endif
+                bool await_suspend(std::coroutine_handle<> parent) noexcept {
+#ifdef _COROUTINE_DEBUG
+                    std::println("awaitable #{} for promise #{}: await_suspend() -> set promise #{} as parent and suspend", this->sn,
+                                 getSNforHandle(m_coroutine), getSNforHandle(parent));
+#endif
+                    m_coroutine.promise().set_parent(parent);
+                    return !m_coroutine.done();
+                }
         };
 
     public:
-        task() noexcept : m_coroutine(nullptr) {}
-        explicit task(handle_type coroutine) : m_coroutine(coroutine) {}
-        task(task&& t) noexcept : m_coroutine(t.m_coroutine) { t.m_coroutine = nullptr; }
+        task() noexcept : m_coroutine(nullptr) {
+#ifdef _COROUTINE_DEBUG
+            ++task_use_counter;
+            sn = ++task_sn_counter;
+            // std::println("  create task<>() #{}", sn);
+#endif
+        }
+        explicit task(handle_type coroutine) : m_coroutine(coroutine) {
+#ifdef _COROUTINE_DEBUG
+            ++task_use_counter;
+            sn = ++task_sn_counter;
+            // std::println("  create task<>(coroutine) #{}", sn);
+#endif
+        }
+        task(task&& t) noexcept : m_coroutine(t.m_coroutine) {
+#ifdef _COROUTINE_DEBUG
+            ++task_use_counter;
+            sn = ++task_sn_counter;
+            // std::println("  create task<>()&& #{} from #{}", sn, t.sn);
+#endif
+            t.m_coroutine = nullptr;
+        }
 
     private:
         task(const task&) = delete;
@@ -215,6 +356,14 @@ class [[nodiscard]] task {
 
     public:
         ~task() {
+#ifdef _COROUTINE_DEBUG
+            --task_use_counter;
+            if (m_coroutine) {
+                std::println("task #{} destroyed, also destroy promise #{}", sn, getSNforHandle(m_coroutine));
+            } else {
+                std::println("task #{} destroyed, no promise to destroy", sn);
+            }
+#endif
             if (m_coroutine) {
                 m_coroutine.destroy();
             }
@@ -238,10 +387,20 @@ class [[nodiscard]] task {
                         if (!this->m_coroutine) {
                             throw broken_promise{};
                         }
+#ifdef _COROUTINE_DEBUG
+                        std::println("awaitable #{} for co_await()&: await_resume() -> return value from promise #{}", this->sn,
+                                     getSNforHandle(this->m_coroutine));
+#endif
                         return this->m_coroutine.promise().result();
                     }
             };
+#ifdef _COROUTINE_DEBUG
+            auto asn = ++awaitable_sn_counter;
+            std::println("task #{} co_await&: create awaitable #{} for promise #{}", sn, asn, getSNforHandle(m_coroutine));
+            return awaitable{m_coroutine, asn};
+#else
             return awaitable{m_coroutine};
+#endif
         }
         auto operator co_await() const&& noexcept {
             struct awaitable : awaitable_base {
@@ -250,27 +409,55 @@ class [[nodiscard]] task {
                         if (!this->m_coroutine) {
                             throw broken_promise{};
                         }
+#ifdef _COROUTINE_DEBUG
+                        std::println("awaitable #{} for co_await()&&: await_resume() -> return value from promise #{}", this->sn,
+                                     getSNforHandle(this->m_coroutine));
+#endif
                         return std::move(this->m_coroutine.promise()).result();
                     }
             };
+#ifdef _COROUTINE_DEBUG
+            auto asn = ++awaitable_sn_counter;
+            std::println("task #{} co_await&&: create awaitable #{} for promise #{}", sn, asn, getSNforHandle(m_coroutine));
+            return awaitable{m_coroutine, asn};
+#else
             return awaitable{m_coroutine};
+#endif
         }
-        bool is_ready() const noexcept { return !m_coroutine || m_coroutine.done(); }
-        void no_wait() { m_coroutine = nullptr; }
+        void no_wait() {
+            if (!m_coroutine.done()) {
+                m_coroutine.promise().drop = true;
+                m_coroutine = nullptr;
+            }
+        }
 };
 
 namespace detail {
 
 template <typename T>
 task<T> task_promise<T>::get_return_object() noexcept {
-    return task<T>{std::coroutine_handle<task_promise>::from_promise(*this)};
+    auto t = task<T>{std::coroutine_handle<task_promise>::from_promise(*this)};
+#ifdef _COROUTINE_DEBUG
+    std::println("before entering function: created task<T> #{} with promise #{}", t.sn, sn);
+#endif
+    return t;
 }
 
-inline task<void> task_promise<void>::get_return_object() noexcept { return task<void>{std::coroutine_handle<task_promise>::from_promise(*this)}; }
+inline task<void> task_promise<void>::get_return_object() noexcept {
+    auto t = task<void>{std::coroutine_handle<task_promise>::from_promise(*this)};
+#ifdef _COROUTINE_DEBUG
+    std::println("before entering function: created task<void> #{} with promise #{}", t.sn, sn);
+#endif
+    return t;
+}
 
 template <typename T>
 task<T&> task_promise<T&>::get_return_object() noexcept {
-    return task<T&>{std::coroutine_handle<task_promise>::from_promise(*this)};
+    auto t = task<T&>{std::coroutine_handle<task_promise>::from_promise(*this)};
+#ifdef _COROUTINE_DEBUG
+    std::println("before entering function: created task<T&> #{} with promise #{}", t.sn, sn);
+#endif
+    return t;
 }
 
 }  // namespace detail
@@ -284,10 +471,16 @@ class interlock {
                 bool await_ready() const noexcept { return false; }
                 template <typename T>
                 bool await_suspend(std::coroutine_handle<detail::task_promise<T>> awaitingCoroutine) noexcept {
+#ifdef _COROUTINE_DEBUG
+                    std::println("interlock::awaitable::await_suspend()");
+#endif
                     _this->suspended[id] = *((std::coroutine_handle<detail::task_promise_base>*)&awaitingCoroutine);
                     return true;
                 }
                 V await_resume() {
+#ifdef _COROUTINE_DEBUG
+                    std::println("interlock::awaitable::await_resume() return result");
+#endif
                     auto it = _this->result.find(id);
                     if (it == _this->result.end()) {
                         throw broken_resume("broken resume: did not find value");
@@ -315,9 +508,10 @@ class interlock {
             suspended.erase(it);
             if (!continuation.done()) {
                 this->result[id] = result;
+                std::println("interlock::resume() -> resume promise #{}", getSNforHandle(continuation));
                 continuation.resume();
             }
         }
 };
 
-}  // namespace corba
+}  // namespace CORBA
