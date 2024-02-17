@@ -5,6 +5,7 @@ using namespace std;
 void _hexdump(const unsigned char *buffer, std::size_t nbytes) {
     size_t pos = 0;
     while (pos < nbytes) {
+        printf("%04x ", pos);
         for (int x = 0; x < 16; x++) {
             if (pos < nbytes)
                 printf("%02x ", (unsigned)buffer[pos]);

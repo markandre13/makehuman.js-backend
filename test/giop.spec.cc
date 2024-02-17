@@ -12,7 +12,7 @@ using namespace std;
 kaffeeklatsch_spec([] {
     describe("GIOPEncoder", [] {
         describe("IIOP 1.2", [] {
-                fit("Request", [] {
+                it("Request", [] {
                     CORBA::GIOPEncoder encoder;
                     encoder.majorVersion = 1;
                     encoder.minorVersion = 2;
@@ -26,11 +26,11 @@ kaffeeklatsch_spec([] {
                     CORBA::CDRDecoder cdr(encoder.buffer.data(), length);
                     CORBA::GIOPDecoder decoder(cdr);
                     auto type = decoder.scanGIOPHeader();
-                    expect(decoder.type).to.equal(type);
-                    expect(decoder.type).to.equal(CORBA::GIOP_REQUEST);
+                    expect(decoder.m_type).to.equal(type);
+                    expect(decoder.m_type).to.equal(CORBA::GIOP_REQUEST);
                     expect(decoder.majorVersion).to.equal(1);
                     expect(decoder.minorVersion).to.equal(2);
-                    expect(decoder.length + 12).to.equal(length);
+                    expect(decoder.m_length + 12).to.equal(length);
 
                     auto request = decoder.scanRequestHeader();
                     expect(request->requestId).to.equal(4);
@@ -60,10 +60,10 @@ kaffeeklatsch_spec([] {
 
             auto type = decoder.scanGIOPHeader();
             expect(type).equals(CORBA::GIOP_LOCATE_REQUEST);
-            expect(decoder.type).equals(CORBA::GIOP_LOCATE_REQUEST);
+            expect(decoder.m_type).equals(CORBA::GIOP_LOCATE_REQUEST);
             expect(decoder.majorVersion).equals(1);
             expect(decoder.minorVersion).equals(2);
-            expect(decoder.length + 12).equals(data.size());
+            expect(decoder.m_length + 12).equals(data.size());
             expect(dataview.getOffset()).equals(12);
 
             auto locateRequest = decoder.scanLocateRequest();
@@ -93,10 +93,10 @@ kaffeeklatsch_spec([] {
 
             auto type = decoder.scanGIOPHeader();
             expect(type).equals(CORBA::GIOP_REQUEST);
-            expect(decoder.type).equals(CORBA::GIOP_REQUEST);
+            expect(decoder.m_type).equals(CORBA::GIOP_REQUEST);
             expect(decoder.majorVersion).equals(1);
             expect(decoder.minorVersion).equals(2);
-            expect(decoder.length + 12).equals(data.size());
+            expect(decoder.m_length + 12).equals(data.size());
             expect(dataview.getOffset()).equals(12);
 
             auto request = decoder.scanRequestHeader();
@@ -116,10 +116,10 @@ kaffeeklatsch_spec([] {
 
             auto type = decoder.scanGIOPHeader();
             expect(type).equals(CORBA::GIOP_REPLY);
-            expect(decoder.type).equals(CORBA::GIOP_REPLY);
+            expect(decoder.m_type).equals(CORBA::GIOP_REPLY);
             expect(decoder.majorVersion).equals(1);
             expect(decoder.minorVersion).equals(2);
-            expect(decoder.length + 12).equals(data.size());
+            expect(decoder.m_length + 12).equals(data.size());
             expect(dataview.getOffset()).equals(12);
 
             auto reply = decoder.scanReplyHeader();

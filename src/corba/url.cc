@@ -1,6 +1,7 @@
 #include "url.hh"
 #include "cdr.hh"
 #include "giop.hh"
+#include "corba.hh"
 
 #include <format>
 #include <charconv>

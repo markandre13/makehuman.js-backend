@@ -1,6 +1,7 @@
 #include "MakeHumanHandler.hh"
 #include "wslay_event.h"
 #include "../corba.hh"
+#include "../orb.hh"
 #include "../hexdump.hh"
 
 using namespace std;

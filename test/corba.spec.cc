@@ -2,22 +2,30 @@ import std;
 
 #include "../src/corba/corba.hh"
 
+#include <charconv>
+#include <cstring>
+
 #include "../src/corba/orb.hh"
 #include "../src/corba/url.hh"
-#include "util.hh"
-
 #include "kaffeeklatsch.hh"
-
-#include <charconv>
+#include "util.hh"
 
 using namespace kaffeeklatsch;
 
 using namespace std;
 
+class TcpFakeConnection;
+
 struct FakeTcpProtocol : public CORBA::detail::Protocol {
-        CORBA::task<CORBA::detail::Connection *> connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port);
+        FakeTcpProtocol(const string &localAddress, uint16_t localPort) : m_localAddress(localAddress), m_localPort(localPort) {}
+
+        CORBA::detail::Connection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port);
         CORBA::task<void> close();
 
+        std::string m_localAddress;
+        uint16_t m_localPort;
+
+        static TcpFakeConnection *sender;
         static void *buffer;
         static size_t size;
 };
@@ -29,8 +37,8 @@ class TcpFakeConnection : public CORBA::detail::Connection {
         uint16_t m_remotePort;
 
     public:
-        TcpFakeConnection(const string &remoteAddress, uint16_t remotePort)
-            : m_localAddress("localhost"), m_localPort(1111), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
+        TcpFakeConnection(const string &localAddress, uint16_t localPort, const string &remoteAddress, uint16_t remotePort)
+            : m_localAddress(localAddress), m_localPort(localPort), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
 
         std::string localAddress() const { return m_localAddress; }
         uint16_t localPort() const { return m_localPort; }
@@ -41,19 +49,29 @@ class TcpFakeConnection : public CORBA::detail::Connection {
         void send(void *buffer, size_t nbyte);
 };
 
-CORBA::task<CORBA::detail::Connection *> FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
+CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
     println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
-    co_return new TcpFakeConnection(hostname, port);
+    auto conn = new TcpFakeConnection(m_localAddress, m_localPort, hostname, port);
+                printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n",
+                static_cast<void*>(conn),
+                conn->localAddress().c_str(),
+                conn->localPort(),
+                conn->remoteAddress().c_str(),
+                conn->remotePort(),
+                conn->requestId);
+    return conn;
 }
 
 CORBA::task<void> FakeTcpProtocol::close() { co_return; }
 
+TcpFakeConnection *FakeTcpProtocol::sender;
 void *FakeTcpProtocol::buffer = nullptr;
 size_t FakeTcpProtocol::size = 0;
 
 void TcpFakeConnection::close() {}
 void TcpFakeConnection::send(void *buffer, size_t nbyte) {
-    println("TcpFakeConnection::send(...)");
+    println("TcpFakeConnection::send(...) from {}:{} to {}:{}", m_localAddress, m_localPort, m_remoteAddress, m_remotePort);
+    FakeTcpProtocol::sender = this;
     if (FakeTcpProtocol::buffer) {
         free(FakeTcpProtocol::buffer);
     }
@@ -62,20 +80,77 @@ void TcpFakeConnection::send(void *buffer, size_t nbyte) {
     FakeTcpProtocol::size = nbyte;
 }
 
-class Backend_skel : public CORBA::Skeleton {
+class Backend_stub;
+
+class Backend {
+    public:
+        virtual CORBA::task<string> hello(const string &hello) = 0;
+        static shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object);
+};
+
+class Backend_stub : public CORBA::Stub {
+    public:
+        Backend_stub(CORBA::ORB *orb, const std::string &objectKey, CORBA::detail::Connection *connection) : Stub(orb, objectKey, connection) {}
+        CORBA::task<string> hello(const string &word) {
+            string result = co_await get_ORB()->twowayCall<string>(
+                this, "hello",
+                [word](CORBA::GIOPEncoder &encoder) {
+                    encoder.string(word);
+                },
+                [](CORBA::GIOPDecoder &decoder) {
+                    return decoder.buffer.string();
+                });
+            co_return result;
+        }
+};
+
+shared_ptr<Backend_stub> Backend::_narrow(shared_ptr<CORBA::Object> object) {
+    println("Backend::_narrow() ENTER");
+    auto ptr = object.get();
+    auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
+    if (ref) {
+        if (std::strcmp(ref->repository_id(), "IDL:Server:1.0") != 0) {  // todo: ref->_is_a("IDL:Server:1.0")
+            println("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Server:1.0");
+            throw runtime_error(format("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Server:1.0"));
+        }
+        CORBA::ORB *orb = ref->get_ORB();
+        CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
+        auto stub = make_shared<Backend_stub>(orb, ref->objectKey, conn);
+        println("Backend::_narrow() LEAVE WITH STUB");
+        // return dynamic_pointer_cast<Backend, Backend_stub>(stub);
+        return stub;
+    }
+    throw runtime_error("not implemented yet");
+}
+
+class Backend_skel : public CORBA::Skeleton, Backend {
     public:
         Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
+        const char *repository_id() const override { return "IDL:Server:1.0"; }
+
+    protected:
+        CORBA::task<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
 
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
-
-    protected:
-        void _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder);
+        virtual CORBA::task<string> hello(const string &word) override {
+            println("Backend_impl::hello(\"{}\")", word);
+            co_return word + " world.";
+        }
 };
 
-void Backend_impl::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {}
+CORBA::task<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+    println("Backend_skel::_call(\"{}\", decoder, encoder)", operation);
+    if (operation == "hello") {
+        auto word = decoder.buffer.string();
+        auto result = co_await hello(word);  // FIXME: we don't want to copy the string
+        encoder.string(result);
+        co_return;
+    }
+    throw runtime_error(std::format("bad operation: '{}' does not exist", operation));
+}
 
 kaffeeklatsch_spec([] {
     describe("URL", [] {
@@ -193,26 +268,66 @@ kaffeeklatsch_spec([] {
     });
     describe("integration tests", [] {
         fit("play ping pong", [] {
-            auto protocol = new FakeTcpProtocol();
-
             // SERVER
             auto serverORB = make_shared<CORBA::ORB>();
-            serverORB->registerProtocol(protocol);
-            serverORB->bind("Backend", make_shared<Backend_impl>(serverORB.get()));
+            auto serverProtocol = new FakeTcpProtocol("backend.local", 8080);
+            serverORB->registerProtocol(serverProtocol);
+
+            auto backend = make_shared<Backend_impl>(serverORB.get());
+
+            serverORB->bind("Backend", backend);
 
             // CLIENT
-            auto clientORB = make_shared<CORBA::ORB>();
-            clientORB->registerProtocol(protocol);
 
-            auto task = [clientORB]() -> CORBA::task<> {
-                println("STEP 0");
-                int num = co_await clientORB->stringToObject("corbaname::localhost:9001#Backend");
-                println("STEP 1: GOT {}", num);
+            auto clientORB = make_shared<CORBA::ORB>();
+            auto clientProtocol = new FakeTcpProtocol("frontend.local", 32768);
+            clientORB->registerProtocol(clientProtocol);
+
+            [&]() -> CORBA::task<> {
+                println("STEP 0: RESOLVE OBJECT");
+                auto object = co_await clientORB->stringToObject("corbaname::backend.local:8080#Backend");
+                println("STEP 1: GOT OBJECT");
+                auto backend = Backend::_narrow(object);
+                println("STEP 2: CALL OBJECT");
+                auto reply = co_await backend->hello("hello");
+                cerr << "GOT " << reply << endl;
                 co_return;
-            }();
-            task.no_wait();
-            println("TO RECEIVER");
-            serverORB->_socketRcvd((const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+            }()
+                         .no_wait();
+
+            [&]() -> CORBA::task<> {
+                println("REQUEST TO BACKEND resolve_str() ================================================");
+                auto clientConn = FakeTcpProtocol::sender;
+                auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
+
+            printf("clientConn %p %s:%u -> %s:%u requestId=%u\n",
+                static_cast<void*>(clientConn),
+                clientConn->localAddress().c_str(),
+                clientConn->localPort(),
+                clientConn->remoteAddress().c_str(),
+                clientConn->remotePort(),
+                clientConn->requestId);
+            printf("serverConn %p %s:%u -> %s:%u requestId=%u\n",
+                static_cast<void*>(serverConn),
+                serverConn->localAddress().c_str(),
+                serverConn->localPort(),
+                serverConn->remoteAddress().c_str(),
+                serverConn->remotePort(),
+                serverConn->requestId);
+
+                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                println("REPLY TO FRONTEND resolve_str() =================================================");
+                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                println("REQUEST TO BACKEND hello() ================================================");
+                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                println("REPLY TO FRONTEND hello() =================================================");
+                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+            }()
+                         .no_wait();
         });
     });
 });
+
+// websocket protocol
+// exceptions
+// value types

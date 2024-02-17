@@ -7,12 +7,13 @@
 
 #include "corba.hh"
 #include "hexdump.hh"
+#include "orb.hh"
 
 using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const ObjectBase* object) {
+void GIOPEncoder::object(const Object* object) {
     cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
         buffer.ulong(0);
@@ -27,25 +28,21 @@ void GIOPEncoder::object(const ObjectBase* object) {
         reference(object);
         return;
     }
-
     throw runtime_error("Can not serialize value type yet.");
 }
 
 // Interoperable Object Reference (IOR)
-void GIOPEncoder::reference(const ObjectBase* object) {
-    cerr << "GIOPEncoder::reference(...)" << endl;
+void GIOPEncoder::reference(const Object* object) {
+    cerr << "GIOPEncoder::reference(...) ENTER" << endl;
     // const className = (object.constructor as any)._idlClassName()
-    auto className = object->_idlClassName();
+    auto className = object->repository_id();
     if (className == nullptr) {
+        cerr << "GIOPEncoder::reference(...) [1]" << endl;
         throw runtime_error("GIOPEncoder::reference(): _idlClassName() must not return nullptr");
     }
 
-    auto host = "localhost";
-    auto port = 9001;
-    auto oid = format("IDL:{}:1.0", className);
-
     // type id
-    buffer.string(oid);
+    buffer.string(className);
 
     // tagged profile sequence
     buffer.ulong(1);  // profileCount
@@ -58,10 +55,13 @@ void GIOPEncoder::reference(const ObjectBase* object) {
     buffer.octet(majorVersion);
     buffer.octet(minorVersion);
 
-    // FIXME: the object should know where it is located, at least, if it's a stub, skeleton is local
-    buffer.string(host);
-    buffer.ushort(port);
-    buffer.blob((const char*)object->id.data(), object->id.size());
+    if (connection == nullptr) {
+        cerr << "GIOPEncoder::reference(...) [2]" << endl;
+        throw runtime_error("GIOPEncoder::reference(...): the encoder has no connection and can not be reached over the network");
+    }
+    buffer.string(connection->localAddress());
+    buffer.ushort(connection->localPort());
+    buffer.blob((const char*)object->objectKey.data(), object->objectKey.size());
 
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
@@ -71,6 +71,7 @@ void GIOPEncoder::reference(const ObjectBase* object) {
         });
     }
     buffer.fillInSize();
+    cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
 }
 
 void GIOPEncoder::encapsulation(uint32_t type, std::function<void()> closure) {
@@ -115,8 +116,7 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
     }
 }
 
-void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected)
-{
+void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected) {
     skipGIOPHeader();
 
     if (majorVersion == 1 && minorVersion <= 1) {
@@ -139,50 +139,50 @@ void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, ui
 
     string(operation);
     if (majorVersion == 1 && minorVersion <= 1) {
-        ulong(0); // Requesting Principal length
+        ulong(0);  // Requesting Principal length
     } else {
         serviceContext();
-        ulonglong(8);  // alignAndReserve(8);
+        buffer.align8();  // alignAndReserve(8);
     }
 }
 
 void GIOPEncoder::serviceContext() {
-// TODO: remove this, this happens only in tests
-        // if (connection == nullptr) {
-            ulong(0);
-            return;
-        // }
+    // TODO: remove this, this happens only in tests
+    // if (connection == nullptr) {
+    ulong(0);
+    return;
+    // }
 
-        // auto count = 1;
-        // let initialToken
-        // if (this.connection.orb.outgoingAuthenticator) {
-        //     initialToken = this.connection.orb.outgoingAuthenticator(this.connection)
-        //     if (initialToken) {
-        //         ++count
-        //     }
-        // }
+    // auto count = 1;
+    // let initialToken
+    // if (this.connection.orb.outgoingAuthenticator) {
+    //     initialToken = this.connection.orb.outgoingAuthenticator(this.connection)
+    //     if (initialToken) {
+    //         ++count
+    //     }
+    // }
 
-        // ulong(count); // count
+    // ulong(count); // count
 
-        // CORBA 3.4 Part 2, 9.8.1 Bi-directional IIOP Service Context
-        // TODO: send listen point only once per connection
-        // beginEncapsulation(ServiceId.BI_DIR_IIOP);
-        // ulong(1); // number of listen points
-        // string(connection->getLocalAddress());
-        // ushort(connection->getLocalPort());
-        // endEncapsulation();
+    // CORBA 3.4 Part 2, 9.8.1 Bi-directional IIOP Service Context
+    // TODO: send listen point only once per connection
+    // beginEncapsulation(ServiceId.BI_DIR_IIOP);
+    // ulong(1); // number of listen points
+    // string(connection->getLocalAddress());
+    // ushort(connection->getLocalPort());
+    // endEncapsulation();
 
-        // if (initialToken) {
-        //     this.establishSecurityContext(initialToken);
-        // }
+    // if (initialToken) {
+    //     this.establishSecurityContext(initialToken);
+    // }
 
-        /*
-        this.beginEncapsulation(ServiceId.CodeSets)
-        // this.ulong(0x00010001) // ISO-8859-1
-        this.ulong(0x05010001) // charset_id : UTF-8
-        this.ulong(0x00010109) // wcharset_id: UTF-16
-        this.endEncapsulation()
-        */
+    /*
+    this.beginEncapsulation(ServiceId.CodeSets)
+    // this.ulong(0x00010001) // ISO-8859-1
+    this.ulong(0x05010001) // charset_id : UTF-8
+    this.ulong(0x00010109) // wcharset_id: UTF-16
+    this.endEncapsulation()
+    */
 }
 
 ////////////////////////////////////////////
@@ -197,9 +197,9 @@ GIOPMessageType GIOPDecoder::scanGIOPHeader() {
     minorVersion = buffer.octet();
     auto flags = buffer.octet();
     buffer.setLittleEndian(flags & 1);
-    type = static_cast<GIOPMessageType>(buffer.octet());
-    length = buffer.ulong();
-    return type;
+    m_type = static_cast<GIOPMessageType>(buffer.octet());
+    m_length = buffer.ulong();
+    return m_type;
 }
 
 const RequestHeader* GIOPDecoder::scanRequestHeader() {
@@ -331,7 +331,7 @@ void GIOPDecoder::encapsulation(std::function<void(uint32_t type)> closure) {
 
 void* GIOPDecoder::object(ORB* orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
-    auto objectOffset = buffer.offset - 4;
+    auto objectOffset = buffer.m_offset - 4;
 
     if (code == 0) {
         cerr << "[2]" << endl;
@@ -432,20 +432,26 @@ static array<ORBTypeName, 35> orbTypeNames{{{0x48500000, 0x4850000f, "Hewlett Pa
                                             {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
                                             {0x4d313300, 0x4d313300, "corba.js"}}};
 
-// returns ObjectReference
-unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
-    auto data = make_unique<ObjectReference>();
+struct Reference {
+        std::string oid;
+        std::string host;
+        uint16_t port;
+        std::string objectKey;
+};
+
+shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
+    Reference data;
+    // auto data = make_sunique<ObjectReference>();
 
     // struct IOR, field: string type_id ???
-    data->oid = buffer.string(length);
+    data.oid = buffer.string(length);
     // console.log(`IOR: oid: '${data.oid}'`)
 
     // struct IOR, field: TaggedProfileSeq profiles ???
     auto profileCount = buffer.ulong();
     // console.log(`oid: '${oid}', tag count=${tagCount}`)
     for (uint32_t i = 0; i < profileCount; ++i) {
-        auto _data = data.get();
-        encapsulation([this, _data](uint32_t profileId) {
+        encapsulation([this, &data](uint32_t profileId) {
             switch (profileId) {
                 // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
                 case TAG_INTERNET_IOP: {
@@ -456,9 +462,9 @@ unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                     //     throw Error(`Unsupported IIOP ${iiopMajorVersion}.${iiopMinorVersion}. Currently only IIOP
                     //     ${GIOPBase.MAJOR_VERSION}.${GIOPBase.MINOR_VERSION} is implemented.`)
                     // }
-                    _data->host = buffer.string();
-                    _data->port = buffer.ushort();
-                    _data->objectKey = buffer.blob();
+                    data.host = buffer.string();
+                    data.port = buffer.ushort();
+                    data.objectKey = buffer.blob();
                     // console.log(`IOR: IIOP(version: ${iiopMajorVersion}.${iiopMinorVersion}, host: ${data.host}:${data.port}, objectKey: ${data.objectKey})`)
                     // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
                     if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {
@@ -468,7 +474,7 @@ unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                         for (uint32_t i = 0; i < n; ++i) {
                             auto id = buffer.ulong();
                             auto length = buffer.ulong();
-                            auto nextOffset = buffer.offset + length;
+                            auto nextOffset = buffer.m_offset + length;
                             switch (id) {
                                 case TAG_ORB_TYPE: {
                                     auto typeCount = buffer.ulong();
@@ -498,7 +504,7 @@ unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                                 default:
                                     // console.log(`IOR: component[${i}] = ${id} (0x${id.toString(16)})`)
                             }
-                            buffer.offset = nextOffset;
+                            buffer.m_offset = nextOffset;
                         }
                     }
                 } break;
@@ -507,7 +513,7 @@ unique_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
             }
         });
     }
-    return data;
+    return make_shared<ObjectReference>(nullptr, data.oid, data.host, data.port, data.objectKey);
 }
 
 }  // namespace CORBA

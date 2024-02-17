@@ -24,7 +24,9 @@ struct Connection {
         ORB *orb;
 
         // request id's are per connection
-        uint32_t requestId;
+        uint32_t requestId = 0;
+
+        interlock<uint32_t, GIOPDecoder*> interlock;
 
         // bi-directional service context needs only to be send once
         bool didSendBiDirIIOP = false;
@@ -54,7 +56,7 @@ struct Connection {
 
 struct Protocol {
         // hm... do we return something or do we call ORB?
-        virtual task<Connection*> connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
+        virtual Connection* connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
         virtual task<void> close() = 0;
 };
 
@@ -70,20 +72,24 @@ class ORB : public std::enable_shared_from_this<ORB> {
 
         std::vector<detail::Protocol*> protocols;
         std::vector<detail::Connection*> connections;
-        task<detail::Connection*> getConnection(std::string host, uint16_t port);
 
     public:
+        detail::Connection * getConnection(std::string host, uint16_t port);
         ORB();
         void run();
 
         inline void registerProtocol(detail::Protocol *protocol) { protocols.push_back(protocol); }
 
         static void socketRcvd(const uint8_t *buffer, size_t size);
-        void _socketRcvd(const uint8_t *buffer, size_t size);
+        CORBA::task<> _socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size);
 
-        task<int> stringToObject(const std::string &iorString);
+        task<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
 
+        // register servant and create and assign a new objectKey
         std::string registerServant(Skeleton *skeleton);
+        // register servant with the given objectKey
+        std::string registerServant(Skeleton *skeleton, const std::string &objectKey);
+
         template <typename T>
         task<T> twowayCall(
             Stub *stub,
@@ -91,9 +97,8 @@ class ORB : public std::enable_shared_from_this<ORB> {
             std::function<void(GIOPEncoder &)> encode,
             std::function<T(GIOPDecoder &)> decode)
         {
-            std::unique_ptr<CDRDecoder> ptr = co_await _twowayCall(stub, method, encode);
-            GIOPDecoder decoder(*ptr);
-            co_return decode(decoder);
+            auto decoder = co_await _twowayCall(stub, method, encode);
+            co_return decode(*decoder);
         }
 
         //
@@ -102,7 +107,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         void bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj);
 
     protected:
-        task<std::unique_ptr<CDRDecoder>> _twowayCall(Stub *stub, const char *method, std::function<void(GIOPEncoder &)> encode);
+        task<GIOPDecoder*> _twowayCall(Stub *stub, const char *method, std::function<void(GIOPEncoder &)> encode);
 };
 
 }  // namespace CORBA

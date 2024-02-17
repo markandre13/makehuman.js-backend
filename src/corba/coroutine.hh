@@ -123,7 +123,7 @@ class task_promise_base {
                         // associated task had an no_wait() call, then the promise was marked for deletion and it's being
                         // deleted here?
                         if (coro.promise().drop && coro.done()) {
-                            std::println("DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP ");
+                            // std::println("DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP DROP ");
                             coro.destroy();
                         }
                         return std::noop_coroutine();
@@ -474,15 +474,15 @@ class interlock {
 #ifdef _COROUTINE_DEBUG
                     std::println("interlock::awaitable::await_suspend()");
 #endif
-                    _this->suspended[id] = *((std::coroutine_handle<detail::task_promise_base>*)&awaitingCoroutine);
+                    _this->suspended_map[id] = *((std::coroutine_handle<detail::task_promise_base>*)&awaitingCoroutine);
                     return true;
                 }
                 V await_resume() {
 #ifdef _COROUTINE_DEBUG
                     std::println("interlock::awaitable::await_resume() return result");
 #endif
-                    auto it = _this->result.find(id);
-                    if (it == _this->result.end()) {
+                    auto it = _this->result_map.find(id);
+                    if (it == _this->result_map.end()) {
                         throw broken_resume("broken resume: did not find value");
                     }
                     return it->second;
@@ -494,23 +494,32 @@ class interlock {
         };
 
         // TODO: use only one map
-        std::map<K, std::coroutine_handle<detail::task_promise_base>> suspended;
-        std::map<K, V> result;
+        std::map<K, std::coroutine_handle<detail::task_promise_base>> suspended_map;
+        std::map<K, V> result_map;
 
     public:
+        void print() {
+            std::println("interlock::print(): i have {} entries with these keys:", suspended_map.size());
+            for(auto &pair: suspended_map) {
+                std::println("  {}", pair.first);
+            }
+        }
         auto suspend(K id) { return awaiter{id, this}; }
-        void resume(K id, V result) {
-            auto it = suspended.find(id);
-            if (it == suspended.end()) {
-                throw broken_resume("broken resume: did not find task");
+        bool resume(K id, V result) {
+            auto it = suspended_map.find(id);
+            if (it == suspended_map.end()) {
+                return false;
             }
             auto continuation = it->second;
-            suspended.erase(it);
+            suspended_map.erase(it);
             if (!continuation.done()) {
-                this->result[id] = result;
+                this->result_map[id] = result;
+#ifdef _COROUTINE_DEBUG
                 std::println("interlock::resume() -> resume promise #{}", getSNforHandle(continuation));
+#endif
                 continuation.resume();
             }
+            return true;
         }
 };
 

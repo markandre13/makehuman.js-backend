@@ -10,6 +10,8 @@
 namespace CORBA {
 
 class ORB;
+class Object;
+class ObjectReference;
 
 enum GIOPMessageType {
     GIOP_REQUEST,
@@ -107,11 +109,7 @@ enum ComponentId {
     TAG_INET_SEC_TRANS = 123
 };
 
-enum AddressingDisposition {
-    GIOP_KEY_ADDR = 0,
-    GIOP_PROFILE_ADDR = 1,
-    GIOP_REFERENCE_ADDR = 2
-};
+enum AddressingDisposition { GIOP_KEY_ADDR = 0, GIOP_PROFILE_ADDR = 1, GIOP_REFERENCE_ADDR = 2 };
 
 struct GIOPHeader {
         char id[4];
@@ -145,29 +143,20 @@ struct LocateRequest {
         LocateRequest(uint32_t requestId, const std::string &objectKey) : requestId(requestId), objectKey(objectKey) {}
 };
 
-struct ObjectReference {
-        std::string oid;
-        std::string host;
-        uint16_t port;
-        std::string objectKey;
-        // toString(): string {
-        //     return `ObjectReference(oid=${this.oid}, host=${this.host}, port=${this.port}, objectKey=${this.objectKey}')`
-        // }
-};
-
 namespace detail {
 struct Connection;
 }
 
 class GIOPBase {
     public:
+        GIOPBase(detail::Connection *connection = nullptr) : connection(connection) {}
         unsigned majorVersion = 1;
         unsigned minorVersion = 2;
 
         const unsigned ENDIAN_LITTLE = 0;
         const unsigned ENDIAN_BIG = 1;
 
-        detail::Connection *connection = nullptr;
+        detail::Connection *connection;
 
         // const FLOAT64_MAX = 1.7976931348623157e+308;
         // const FLOAT64_MIN = 2.2250738585072014e-308;
@@ -176,13 +165,9 @@ class GIOPBase {
         // const TWO_TO_52 = 4503599627370496;
 };
 
-class ObjectBase;
-
 class GIOPEncoder : public GIOPBase {
     public:
-        GIOPEncoder(detail::Connection *connection = nullptr) {
-            this->connection = connection;
-        }
+        GIOPEncoder(detail::Connection *connection = nullptr) : GIOPBase(connection) { this->connection = connection; }
 
         CDREncoder buffer;
         inline void boolean(bool value) { buffer.boolean(value); }
@@ -193,7 +178,6 @@ class GIOPEncoder : public GIOPBase {
 
         void string(const char *value) { buffer.string(value); }
         void string(const char *value, size_t size) { buffer.string(value); }
-        void string(const std::string_view &value) { buffer.string(value); }
         void string(const std::string &value) { buffer.string(value); }
         void blob(const char *value, size_t size) { buffer.blob(value, size); }
         void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
@@ -202,8 +186,8 @@ class GIOPEncoder : public GIOPBase {
         void reserveSize() { buffer.reserveSize(); }
         void fillInSize() { buffer.fillInSize(); }
 
-        void object(const ObjectBase *object);
-        void reference(const ObjectBase *object);
+        void object(const Object *object);
+        void reference(const Object *object);
         void encapsulation(uint32_t type, std::function<void()> closure);
         void skipGIOPHeader();
         void skipReplyHeader();
@@ -216,8 +200,8 @@ class GIOPEncoder : public GIOPBase {
 class GIOPDecoder : public GIOPBase {
     public:
         CDRDecoder &buffer;
-        GIOPMessageType type;
-        size_t length;
+        GIOPMessageType m_type;
+        size_t m_length;
 
         GIOPDecoder(CDRDecoder &buffer) : buffer(buffer) {}
         GIOPMessageType scanGIOPHeader();
@@ -232,8 +216,8 @@ class GIOPDecoder : public GIOPBase {
         void encapsulation(std::function<void(uint32_t type)> closure);
 
         void *object(CORBA::ORB *);  // const string typeInfo, bool isValue = false) {
-        std::unique_ptr<ObjectReference> reference(size_t length);
-        std::unique_ptr<ObjectReference> reference() { return reference(buffer.ulong()); }
+        std::shared_ptr<ObjectReference> reference(size_t length);
+        std::shared_ptr<ObjectReference> reference() { return reference(buffer.ulong()); }
 };
 
 }  // namespace CORBA

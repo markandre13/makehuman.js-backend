@@ -6,7 +6,7 @@ CXX=/usr/local/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
 	-mmacosx-version-min=12.0 \
 	-Wall -Wextra -Wno-deprecated-anon-enum-enum-conversion \
-	-Werror\=return-type \
+	-Werror=return-type -Werror=shadow \
 	-Wno-unused-parameter \
 	-I/usr/local/opt/llvm/include/c++ \
 	-I../upstream/kaffeeklatsch/src
@@ -58,23 +58,26 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-cdr_decoder.o: ../src/corba/cdr.hh
-cdr_encoder.o: ../src/corba/cdr.hh
-giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
-corba.spec.o: ../src/corba/corba.hh ../src/corba/giop.hh ../src/corba/cdr.hh
-corba.spec.o: ../src/corba/coroutine.hh ../src/corba/orb.hh
-corba.spec.o: ../src/corba/url.hh
-util.o: util.hh
+cdr_decoder.spec.o: ../src/corba/cdr.hh
+cdr_encoder.spec.o: ../src/corba/cdr.hh
+giop.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
+giop.spec.o: ../src/corba/hexdump.hh
+corba.spec.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+corba.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
+corba.spec.o: ../src/corba/url.hh util.hh ../src/corba/hexdump.hh
+util.o: util.hh ../src/corba/hexdump.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
 ../src/corba/orb.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/orb.o: ../src/corba/corba.hh ../src/corba/hexdump.hh
 ../src/corba/orb.o: ../src/corba/url.hh ../src/corba/ws/EventHandler.hh
-../src/corba/skeleton.o: ../src/corba/corba.hh ../src/corba/giop.hh
-../src/corba/skeleton.o: ../src/corba/cdr.hh ../src/corba/coroutine.hh
+../src/corba/skeleton.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+../src/corba/skeleton.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/skeleton.o: ../src/corba/orb.hh
 ../src/corba/url.o: ../src/corba/url.hh ../src/corba/cdr.hh
-../src/corba/url.o: ../src/corba/giop.hh
+../src/corba/url.o: ../src/corba/giop.hh ../src/corba/corba.hh
+../src/corba/url.o: ../src/corba/coroutine.hh
 ../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/giop.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+../src/corba/giop.o: ../src/corba/hexdump.hh ../src/corba/orb.hh
 ../src/corba/cdr.o: ../src/corba/cdr.hh

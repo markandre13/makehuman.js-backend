@@ -44,29 +44,14 @@ void CDREncoder::ulonglong(uint64_t value) {
     offset += 8;
     *ptr = value;
 }
-void CDREncoder::string(const char *buffer) {
-    string(buffer, strlen(buffer) +1 );
+
+void CDREncoder::blob(const char *value, size_t nbytes) {
+    ulong(nbytes);
+    _data.resize(offset + nbytes);
+    memcpy(_data.data() + offset, value, nbytes);
+    offset += nbytes;
 }
-void CDREncoder::string(const char *string, size_t size) {
-    ulong(size);
-    _data.resize(offset + size);
-    memcpy(_data.data() + offset, string, size);
-    offset += size;
-}
-void CDREncoder::string(const std::string_view &value) {
-    ulong(value.size() + 1);
-    _data.resize(offset + value.size() + 1);
-    memcpy(_data.data() + offset, value.data(), value.size());
-    _data[_data.size() - 1] = 0;
-    offset += value.size() + 1;
-}
-void CDREncoder::string(const std::string &value) {
-    ulong(value.size() + 1);
-    _data.resize(offset + value.size() + 1);
-    memcpy(_data.data() + offset, value.data(), value.size());
-    _data[_data.size() - 1] = 0;
-    offset += value.size() + 1;
-}
+
 void CDREncoder::endian() { octet(endian::native == endian::big ? 0 : 1); }
 
 void CDREncoder::reserveSize() {
@@ -101,20 +86,20 @@ bool CDRDecoder::operator==(const CDRDecoder &rhs) const {
 }
 
 bool CDRDecoder::boolean() {
-    auto value = _data[offset] != 0;
-    offset += 1;
+    auto value = _data[m_offset] != 0;
+    m_offset += 1;
     return value;
 }
 
 uint8_t CDRDecoder::octet() {
-    auto value = _data[offset];
-    offset += 1;
+    auto value = _data[m_offset];
+    m_offset += 1;
     return value;
 }
 
 char8_t CDRDecoder::character() {
-    auto value = (char8_t)_data[offset];
-    offset += 1;
+    auto value = (char8_t)_data[m_offset];
+    m_offset += 1;
     return value;
 }
 
@@ -145,9 +130,9 @@ uint64_t CDRDecoder::ulonglong() {
 
 string CDRDecoder::blob() {
     size_t len = ulong();
-    std::string result(_data + offset, len);
-    offset += len;
-    if (offset > length) {
+    std::string result(_data + m_offset, len);
+    m_offset += len;
+    if (m_offset > length) {
         throw std::out_of_range("out of range");
     }
     return result;
@@ -158,9 +143,9 @@ std::string CDRDecoder::string() {
 }
 
 std::string CDRDecoder::string(size_t len) {
-    std::string result(_data + offset, len - 1);
-    offset += len;
-    if (offset > length) {
+    std::string result(_data + m_offset, len - 1);
+    m_offset += len;
+    if (m_offset > length) {
         throw std::out_of_range("out of range");
     }
     return result;
