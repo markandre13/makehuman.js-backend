@@ -1,11 +1,10 @@
 #include "ws.hh"
+
+#include "../orb.hh"
 #include "ws/createAcceptKey.hh"
 #include "ws/socket.hh"
 
-#include "../orb.hh"
-
 // #include <ev.h>
-#include <wslay/wslay.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -13,6 +12,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <wslay/wslay.h>
 
 #include <iostream>
 #include <print>
@@ -27,9 +27,9 @@ static ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, s
 static void wslay_msg_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data);
 
 struct accept_handler_t {
-    ev_io watcher;
-    struct ev_loop *loop;
-    CORBA::ORB *orb;
+        ev_io watcher;
+        struct ev_loop *loop;
+        CORBA::ORB *orb;
 };
 
 enum state_t { STATE_HTTP, STATE_WS };
@@ -63,27 +63,41 @@ void MyProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string
     ev_io_start(loop, &accept_watcher->watcher);
 }
 
-MyConnection *MyProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
-    return nullptr;
-}
-CORBA::task<void> MyProtocol::close() {
-    co_return;
-}
+MyConnection *MyProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) { return nullptr; }
+CORBA::task<void> MyProtocol::close() { co_return; }
 
-
-void MyConnection::close() {};
+void MyConnection::close(){};
 
 void MyConnection::send(void *buffer, size_t nbyte) {
     println("MyConnection::send(..., {})", nbyte);
-    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)buffer, nbyte};
+    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t *)buffer, nbyte};
     int r0 = wslay_event_queue_msg(this->handler->ctx, &msgarg);
     println("wslay_event_queue_msg() -> {}", r0);
-    int r1 = wslay_event_send(this->handler->ctx);
-    println("wslay_event_send() -> {}", r1);
+    switch (r0) {
+        case 0: {
+            // send queued messages
+            int r1 = wslay_event_send(this->handler->ctx);
+            println("wslay_event_send() -> {}", r1);
+        } break;
+        case WSLAY_ERR_NO_MORE_MSG:
+            cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
+                 << "The one of possible reason is that close control frame has been queued/sent" << endl
+                 << "and no further queueing message is not allowed." << endl;
+        case WSLAY_ERR_INVALID_ARGUMENT:
+            cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
+            break;
+        case WSLAY_ERR_NOMEM:
+            cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
+            break;
+        default:
+            cout << "failed to queue wslay message" << endl;
+            //     std::cout << "SEND FACE " << r << std::endl;
+            break;
+    }
 }
 
 void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
-    auto handler = reinterpret_cast<accept_handler_t*>(watcher);
+    auto handler = reinterpret_cast<accept_handler_t *>(watcher);
     puts("got client");
     if (EV_ERROR & revents) {
         perror("got invalid event");
@@ -191,7 +205,7 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
 ssize_t wslay_send_callback(wslay_event_context_ptr ctx, const uint8_t *data, size_t len, int flags, void *user_data) {
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
     println("wslay_send_callback");
-    auto r = send(handler->watcher.fd, (void*)data, len, 0);
+    auto r = send(handler->watcher.fd, (void *)data, len, 0);
     println("send() -> {}", r);
     return r;
 }
