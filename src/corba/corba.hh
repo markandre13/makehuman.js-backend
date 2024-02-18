@@ -12,7 +12,7 @@
 namespace CORBA {
 
 namespace detail {
-struct Connection;
+class Connection;
 }
 
 // okay, i'm not sure about how thy ol' CORBA vendors did it, here's what i could do:

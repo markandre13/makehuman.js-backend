@@ -4,7 +4,8 @@ APP=backend
 
 CXX=/usr/local/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules \
-	-Wall -Wextra -Wno-deprecated-anon-enum-enum-conversion \
+	-Wall -Wextra -Werror=return-type -Werror=shadow \
+	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-O0 -g -I/usr/local/opt/llvm/include/c++
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
 
@@ -15,18 +16,23 @@ PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
 MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
-LIB=-lwslay -lnettle
+LIB=-lev -lwslay -lnettle
 
 
 SRC = main.cc \
-	chordata.cc \
 	corba/corba.cc corba/orb.cc corba/url.cc \
 	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
 	corba/hexdump.cc \
-	corba/ws/socket.cc \
-	corba/ws/ListenEventHandler.cc corba/ws/EventHandler.cc corba/ws/createAcceptKey.cc \
-	corba/ws/HttpHandshakeSendHandler.cc corba/ws/HttpHandshakeRecvHandler.cc \
-	corba/ws/MakeHumanHandler.cc
+	corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
+
+X =	chordata.cc \
+	corba/corba.cc corba/orb.cc corba/url.cc \
+	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
+	corba/hexdump.cc \
+	corba/net/ws/ws.cc corba/net/ws/socket.cc \
+	corba/net/ws/ListenEventHandler.cc corba/net/ws/EventHandler.cc corba/net/ws/createAcceptKey.cc \
+	corba/net/ws/HttpHandshakeSendHandler.cc corba/net/ws/HttpHandshakeRecvHandler.cc \
+	corba/net/ws/CorbaHandler.cc
 
 OBJ = $(SRC:.cc=.o)
 
@@ -54,31 +60,16 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: ../mediapipe/framework/formats/landmark.pb.h gmod_api.h
-main.o: corba/corba.hh corba/giop.hh corba/cdr.hh corba/coroutine.hh
-main.o: corba/giop.hh
-chordata.o: corba/ws/MakeHumanHandler.hh corba/ws/EventHandler.hh
-corba/corba.o: corba/corba.hh corba/giop.hh corba/cdr.hh corba/coroutine.hh
-corba/corba.o: corba/ws/EventHandler.hh
-corba/orb.o: corba/cdr.hh corba/corba.hh corba/giop.hh corba/coroutine.hh
-corba/orb.o: corba/ws/EventHandler.hh corba/hexdump.hh
+main.o: corba/net/ws/createAcceptKey.hh corba/net/ws/socket.hh corba/corba.hh
+main.o: corba/coroutine.hh corba/giop.hh corba/cdr.hh corba/orb.hh
+corba/corba.o: corba/orb.hh corba/coroutine.hh corba/giop.hh corba/cdr.hh
+corba/orb.o: corba/orb.hh corba/coroutine.hh corba/giop.hh corba/cdr.hh
+corba/orb.o: corba/corba.hh corba/hexdump.hh corba/url.hh corba/protocol.hh
+corba/url.o: corba/url.hh corba/cdr.hh corba/giop.hh corba/corba.hh
+corba/url.o: corba/coroutine.hh
+corba/skeleton.o: corba/corba.hh corba/coroutine.hh corba/giop.hh
+corba/skeleton.o: corba/cdr.hh corba/orb.hh
 corba/giop.o: corba/giop.hh corba/cdr.hh corba/corba.hh corba/coroutine.hh
+corba/giop.o: corba/hexdump.hh corba/orb.hh corba/protocol.hh
 corba/cdr.o: corba/cdr.hh
-corba/ws/ListenEventHandler.o: corba/ws/ListenEventHandler.hh
-corba/ws/ListenEventHandler.o: corba/ws/EventHandler.hh
-corba/ws/ListenEventHandler.o: corba/ws/HttpHandshakeRecvHandler.hh
-corba/ws/ListenEventHandler.o: corba/ws/socket.hh
-corba/ws/EventHandler.o: corba/ws/EventHandler.hh
-corba/ws/EventHandler.o: corba/ws/ListenEventHandler.hh corba/ws/socket.hh
-corba/ws/createAcceptKey.o: corba/ws/createAcceptKey.hh
-corba/ws/HttpHandshakeSendHandler.o: corba/ws/HttpHandshakeSendHandler.hh
-corba/ws/HttpHandshakeSendHandler.o: corba/ws/EventHandler.hh
-corba/ws/HttpHandshakeSendHandler.o: corba/ws/MakeHumanHandler.hh
-corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeRecvHandler.hh
-corba/ws/HttpHandshakeRecvHandler.o: corba/ws/EventHandler.hh
-corba/ws/HttpHandshakeRecvHandler.o: corba/ws/HttpHandshakeSendHandler.hh
-corba/ws/HttpHandshakeRecvHandler.o: corba/ws/createAcceptKey.hh
-corba/ws/MakeHumanHandler.o: corba/ws/MakeHumanHandler.hh
-corba/ws/MakeHumanHandler.o: corba/ws/EventHandler.hh corba/ws/wslay_event.h
-corba/ws/MakeHumanHandler.o: corba/corba.hh corba/giop.hh corba/cdr.hh
-corba/ws/MakeHumanHandler.o: corba/coroutine.hh corba/hexdump.hh
+corba/net/ws/createAcceptKey.o: corba/net/ws/createAcceptKey.hh

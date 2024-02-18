@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "MakeHumanHandler.hh"
+#include "CorbaHandler.hh"
 
 HttpHandshakeSendHandler::HttpHandshakeSendHandler(int fd, const std::string &accept_key)
     : fd_(fd),
@@ -53,7 +53,7 @@ EventHandler *HttpHandshakeSendHandler::next() {
     if (finish()) {
         int fd = fd_;
         fd_ = -1;
-        return new MakeHumanHandler(fd);
+        return new CorbaHandler(fd);
     } else {
         return 0;
     }

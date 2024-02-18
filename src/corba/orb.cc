@@ -11,11 +11,8 @@
 #include "corba.hh"
 #include "giop.hh"
 #include "hexdump.hh"
-#include "hexdump.hh"
 #include "url.hh"
-#include "ws/EventHandler.hh"
-
-void sendChordata(void *data, size_t size);
+#include "protocol.hh"
 
 using namespace std;
 

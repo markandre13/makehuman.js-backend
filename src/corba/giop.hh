@@ -144,7 +144,7 @@ struct LocateRequest {
 };
 
 namespace detail {
-struct Connection;
+class Connection;
 }
 
 class GIOPBase {

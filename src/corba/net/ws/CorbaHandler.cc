@@ -1,8 +1,8 @@
-#include "MakeHumanHandler.hh"
+#include "CorbaHandler.hh"
 #include "wslay_event.h"
-#include "../corba.hh"
-#include "../orb.hh"
-#include "../hexdump.hh"
+#include "../../corba.hh"
+#include "../../orb.hh"
+#include "../../hexdump.hh"
 
 using namespace std;
 
@@ -17,7 +17,7 @@ static ssize_t send_callback(wslay_event_context_ptr ctx, const uint8_t* data, s
 static ssize_t recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, int flags, void* user_data);
 static void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg* arg, void* user_data);
 
-MakeHumanHandler::MakeHumanHandler(int fd) : fd_(fd) {
+CorbaHandler::CorbaHandler(int fd) : fd_(fd) {
     struct wslay_event_callbacks callbacks = {
         recv_callback,        // called when wslay wants to read data
         send_callback,        // called when wslay wants to send data
@@ -30,14 +30,14 @@ MakeHumanHandler::MakeHumanHandler(int fd) : fd_(fd) {
     wslay_event_context_server_init(&ctx_, &callbacks, this);
 }
 
-MakeHumanHandler::~MakeHumanHandler() {
-    std::cout << "MakeHumanHandler: close" << std::endl;
+CorbaHandler::~CorbaHandler() {
+    std::cout << "CorbaHandler: close" << std::endl;
     wslay_event_context_free(ctx_);
     shutdown(fd_, SHUT_WR);
     close(fd_);
 }
 
-ssize_t MakeHumanHandler::send_data(const uint8_t* data, size_t len, int flags) {
+ssize_t CorbaHandler::send_data(const uint8_t* data, size_t len, int flags) {
     // std::cout << "EchoWebSocketHandler::send_data(...," << len << "," << flags << ")" << std::endl;
     ssize_t r;
     int sflags = 0;
@@ -51,7 +51,7 @@ ssize_t MakeHumanHandler::send_data(const uint8_t* data, size_t len, int flags) 
     return r;
 }
 
-ssize_t MakeHumanHandler::recv_data(uint8_t* data, size_t len, int flags) {
+ssize_t CorbaHandler::recv_data(uint8_t* data, size_t len, int flags) {
     ssize_t r;
     while ((r = recv(fd_, data, len, 0)) == -1 && errno == EINTR)
         ;
@@ -60,7 +60,7 @@ ssize_t MakeHumanHandler::recv_data(uint8_t* data, size_t len, int flags) {
 }
 
 ssize_t send_callback(wslay_event_context_ptr ctx, const uint8_t* data, size_t len, int flags, void* user_data) {
-    MakeHumanHandler* sv = (MakeHumanHandler*)user_data;
+    CorbaHandler* sv = (CorbaHandler*)user_data;
     ssize_t r = sv->send_data(data, len, flags);
     if (r == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -73,7 +73,7 @@ ssize_t send_callback(wslay_event_context_ptr ctx, const uint8_t* data, size_t l
 }
 
 ssize_t recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, int flags, void* user_data) {
-    MakeHumanHandler* sv = (MakeHumanHandler*)user_data;
+    CorbaHandler* sv = (CorbaHandler*)user_data;
     ssize_t r = sv->recv_data(data, len, flags);
     if (r == -1) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -88,76 +88,6 @@ ssize_t recv_callback(wslay_event_context_ptr ctx, uint8_t* data, size_t len, in
     return r;
 }
 
-static bool faceRequest = false;
-bool isFaceRequested() { return faceRequest; }
-
-static bool chordataRequest = false;
-bool isChordataRequested() { return chordataRequest; }
-
-wslay_event_context_ptr _ctx;
-
-void sendChordata(void* data, size_t size) {
-    cout << "chordata send " << size << " octets, ctx=" << _ctx << endl;
-    hexdump((unsigned char*)data, size);
-    chordataRequest = false;
-    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)data, size};
-    int r = wslay_event_queue_msg(_ctx, &msgarg);
-    switch (r) {
-        case WSLAY_ERR_NO_MORE_MSG:
-            cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
-                 << "The one of possible reason is that close control frame has been queued/sent" << endl
-                 << "and no further queueing message is not allowed." << endl;
-
-            //   return ctx->write_enabled && (ctx->close_status & WSLAY_CLOSE_QUEUED) == 0;
-
-            if (!_ctx->write_enabled) {
-                cout << "    WRITE IS NOT ENABLED" << endl;
-            }
-            if (!(_ctx->close_status & WSLAY_CLOSE_QUEUED)) {
-                cout << "    CLOSE HAS BEEN QUEUED" << endl;
-            }
-            break;
-        case WSLAY_ERR_INVALID_ARGUMENT:
-            cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
-            break;
-        case WSLAY_ERR_NOMEM:
-            cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
-            break;
-            // default:
-            //     std::cout << "SEND FACE " << r << std::endl;
-    }
-}
-
-void sendFace(float* float_array, int size) {
-    faceRequest = false;
-    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)float_array, size * sizeof(float)};
-    int r = wslay_event_queue_msg(_ctx, &msgarg);
-    switch (r) {
-        case WSLAY_ERR_NO_MORE_MSG:
-            cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
-                 << "The one of possible reason is that close control frame has been queued/sent" << endl
-                 << "and no further queueing message is not allowed." << endl;
-
-            //   return ctx->write_enabled && (ctx->close_status & WSLAY_CLOSE_QUEUED) == 0;
-
-            if (!_ctx->write_enabled) {
-                cout << "    WRITE IS NOT ENABLED" << endl;
-            }
-            if (!(_ctx->close_status & WSLAY_CLOSE_QUEUED)) {
-                cout << "    CLOSE HAS BEEN QUEUED" << endl;
-            }
-            break;
-        case WSLAY_ERR_INVALID_ARGUMENT:
-            cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
-            break;
-        case WSLAY_ERR_NOMEM:
-            cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
-            break;
-            // default:
-            //     std::cout << "SEND FACE " << r << std::endl;
-    }
-}
-
 void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg* arg, void* user_data) {
     // cout << "on_msg_recv_callback() = '" << arg->opcode << "'" << endl;
     if (wslay_is_ctrl_frame(arg->opcode)) {
@@ -166,8 +96,9 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
     switch (arg->opcode) {
         case WSLAY_BINARY_FRAME: {
             cout << "got " << arg->msg_length << " bytes" << endl;
-            _ctx = ctx;
-            CORBA::ORB::socketRcvd(arg->msg, arg->msg_length);
+            // connection->recv(arg->msg, arg->msg_length);
+            // _ctx = ctx;
+            // CORBA::ORB::socketRcvd(arg->msg, arg->msg_length);
             // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
             // // cout << "WSLAY_BINARY_FRAME '" << msg << "'" << endl;
             // // auto msg = string((const char*)arg->msg, 0, arg->msg_length);
@@ -189,7 +120,7 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
         } break;
         case WSLAY_CONNECTION_CLOSE: {
             cout << "CLOSE" << endl;
-    //             std::cout << "MakeHumanHandler: close" << std::endl;
+    //             std::cout << "CorbaHandler: close" << std::endl;
     // wslay_event_context_free(ctx_);
     // shutdown(fd_, SHUT_WR);
     // close(fd_);
@@ -200,4 +131,74 @@ void on_msg_recv_callback(wslay_event_context_ptr ctx, const struct wslay_event_
             auto msg = string((const char*)arg->msg, 0, arg->msg_length);
             cout << "'" << msg << "'" << endl;
     }
+}
+
+static bool faceRequest = false;
+bool isFaceRequested() { return faceRequest; }
+
+static bool chordataRequest = false;
+bool isChordataRequested() { return chordataRequest; }
+
+// wslay_event_context_ptr _ctx;
+
+void sendChordata(void* data, size_t size) {
+    // cout << "chordata send " << size << " octets, ctx=" << _ctx << endl;
+    // hexdump((unsigned char*)data, size);
+    // chordataRequest = false;
+    // struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)data, size};
+    // int r = wslay_event_queue_msg(_ctx, &msgarg);
+    // switch (r) {
+    //     case WSLAY_ERR_NO_MORE_MSG:
+    //         cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
+    //              << "The one of possible reason is that close control frame has been queued/sent" << endl
+    //              << "and no further queueing message is not allowed." << endl;
+
+    //         //   return ctx->write_enabled && (ctx->close_status & WSLAY_CLOSE_QUEUED) == 0;
+
+    //         if (!_ctx->write_enabled) {
+    //             cout << "    WRITE IS NOT ENABLED" << endl;
+    //         }
+    //         if (!(_ctx->close_status & WSLAY_CLOSE_QUEUED)) {
+    //             cout << "    CLOSE HAS BEEN QUEUED" << endl;
+    //         }
+    //         break;
+    //     case WSLAY_ERR_INVALID_ARGUMENT:
+    //         cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
+    //         break;
+    //     case WSLAY_ERR_NOMEM:
+    //         cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
+    //         break;
+    //         // default:
+    //         //     std::cout << "SEND FACE " << r << std::endl;
+    // }
+}
+
+void sendFace(float* float_array, int size) {
+    // faceRequest = false;
+    // struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t*)float_array, size * sizeof(float)};
+    // int r = wslay_event_queue_msg(_ctx, &msgarg);
+    // switch (r) {
+    //     case WSLAY_ERR_NO_MORE_MSG:
+    //         cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
+    //              << "The one of possible reason is that close control frame has been queued/sent" << endl
+    //              << "and no further queueing message is not allowed." << endl;
+
+    //         //   return ctx->write_enabled && (ctx->close_status & WSLAY_CLOSE_QUEUED) == 0;
+
+    //         if (!_ctx->write_enabled) {
+    //             cout << "    WRITE IS NOT ENABLED" << endl;
+    //         }
+    //         if (!(_ctx->close_status & WSLAY_CLOSE_QUEUED)) {
+    //             cout << "    CLOSE HAS BEEN QUEUED" << endl;
+    //         }
+    //         break;
+    //     case WSLAY_ERR_INVALID_ARGUMENT:
+    //         cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
+    //         break;
+    //     case WSLAY_ERR_NOMEM:
+    //         cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
+    //         break;
+    //         // default:
+    //         //     std::cout << "SEND FACE " << r << std::endl;
+    // }
 }

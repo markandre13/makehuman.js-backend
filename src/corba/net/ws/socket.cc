@@ -16,7 +16,7 @@ void ignore_sig_pipe() {
     sigaction(SIGPIPE, &act, 0);
 }
 
-int create_listen_socket(const char *service) {
+int create_listen_socket(const char *hostname, uint16_t port) {
     struct addrinfo hints;
     int sfd = -1;
     int r;
@@ -25,7 +25,8 @@ int create_listen_socket(const char *service) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
     struct addrinfo *res;
-    r = getaddrinfo(0, service, &hints, &res);
+    auto service = std::to_string(port);
+    r = getaddrinfo(0, service.c_str(), &hints, &res);
     if (r != 0) {
         std::cerr << "getaddrinfo: " << gai_strerror(r) << std::endl;
         return -1;

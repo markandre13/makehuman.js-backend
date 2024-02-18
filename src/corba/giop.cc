@@ -8,6 +8,7 @@
 #include "corba.hh"
 #include "hexdump.hh"
 #include "orb.hh"
+#include "protocol.hh"
 
 using namespace std;
 

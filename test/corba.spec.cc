@@ -267,7 +267,7 @@ kaffeeklatsch_spec([] {
         });
     });
     describe("integration tests", [] {
-        fit("play ping pong", [] {
+        it("play ping pong", [] {
             // SERVER
             auto serverORB = make_shared<CORBA::ORB>();
             auto serverProtocol = new FakeTcpProtocol("backend.local", 8080);
@@ -328,6 +328,11 @@ kaffeeklatsch_spec([] {
     });
 });
 
+// CORBA:
 // websocket protocol
 // exceptions
+// oneway
 // value types
+
+// coroutine:
+// exceptions
