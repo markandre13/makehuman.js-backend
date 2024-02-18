@@ -23,6 +23,7 @@ SRC = main.cc \
 	corba/corba.cc corba/orb.cc corba/url.cc \
 	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
 	corba/hexdump.cc \
+	corba/net/ws.cc \
 	corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
 
 X =	chordata.cc \

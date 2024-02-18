@@ -1,19 +1,18 @@
 #pragma once
 
 #include "../protocol.hh"
+#include <ev.h>
 
-struct corba_handler_t;
+struct client_handler_t;
 
-namespace CORBA {
-
-class WsConnection : public detail::Connection {
+class MyConnection : public CORBA::detail::Connection {
         std::string m_localAddress;
         uint16_t m_localPort;
         std::string m_remoteAddress;
         uint16_t m_remotePort;
 
     public:
-        WsConnection(const std::string &localAddress, uint16_t localPort, const std::string &remoteAddress, uint16_t remotePort)
+        MyConnection(const std::string &localAddress, uint16_t localPort, const std::string &remoteAddress, uint16_t remotePort)
             : m_localAddress(localAddress), m_localPort(localPort), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
 
         std::string localAddress() const override { return m_localAddress; }
@@ -24,21 +23,15 @@ class WsConnection : public detail::Connection {
         void close() override;
         void send(void *buffer, size_t nbyte) override;
 
-        corba_handler_t * handler;
+        client_handler_t * handler;
 };
 
-/**
- * WebSocket protocol adapter
- */
-struct WsProtocol : public detail::Protocol {
+struct MyProtocol : public CORBA::detail::Protocol {
         std::string m_localAddress;
         uint16_t m_localPort;
 
-        WsProtocol(CORBA::ORB *orb);
-        void listen(const std::string &hostname, uint16_t port);
+        void listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port);
 
-        WsConnection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
-        task<void> close() override;
+        MyConnection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
+        CORBA::task<void> close() override;
 };
-
-}  // namespace CORBA
