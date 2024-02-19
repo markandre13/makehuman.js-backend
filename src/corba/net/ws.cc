@@ -54,6 +54,9 @@ struct client_handler_t {
         // void libuv_read_cb(ssize_t nbytes, const uv_buf_t *buf);
 };
 
+/**
+ * Add a listen socket for the specified hostname and port to the libev loop
+ */
 void MyProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port) {
     int fd = create_listen_socket("localhost", 9001);
     auto accept_watcher = new accept_handler_t;
@@ -115,6 +118,7 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     client_handler->loop = loop;
     client_handler->orb = handler->orb;
     client_handler->connection = new MyConnection("localhost", 9001, "frontend", 2);
+    client_handler->connection->requestId = 1; // InitialResponderRequestIdBiDirectionalIIOP
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &client_handler->watcher);

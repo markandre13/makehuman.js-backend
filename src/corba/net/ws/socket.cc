@@ -24,14 +24,14 @@ int create_listen_socket(const char *hostname, uint16_t port) {
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
-    struct addrinfo *res;
+    struct addrinfo *addrinfo;
     auto service = std::to_string(port);
-    r = getaddrinfo(0, service.c_str(), &hints, &res);
+    r = getaddrinfo(0, service.c_str(), &hints, &addrinfo);
     if (r != 0) {
         std::cerr << "getaddrinfo: " << gai_strerror(r) << std::endl;
         return -1;
     }
-    for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
+    for (struct addrinfo *rp = addrinfo; rp; rp = rp->ai_next) {
         sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (sfd == -1) {
             continue;
@@ -45,7 +45,7 @@ int create_listen_socket(const char *hostname, uint16_t port) {
         }
         close(sfd);
     }
-    freeaddrinfo(res);
+    freeaddrinfo(addrinfo);
     if (listen(sfd, 16) == -1) {
         perror("listen");
         close(sfd);

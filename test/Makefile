@@ -64,13 +64,14 @@ giop.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
 giop.spec.o: ../src/corba/hexdump.hh
 corba.spec.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
 corba.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
-corba.spec.o: ../src/corba/url.hh util.hh ../src/corba/hexdump.hh
+corba.spec.o: ../src/corba/url.hh ../src/corba/protocol.hh util.hh
+corba.spec.o: ../src/corba/hexdump.hh
 util.o: util.hh ../src/corba/hexdump.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
 ../src/corba/orb.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/orb.o: ../src/corba/corba.hh ../src/corba/hexdump.hh
-../src/corba/orb.o: ../src/corba/url.hh ../src/corba/ws/EventHandler.hh
+../src/corba/orb.o: ../src/corba/protocol.hh ../src/corba/url.hh
 ../src/corba/skeleton.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
 ../src/corba/skeleton.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/skeleton.o: ../src/corba/orb.hh
@@ -80,4 +81,5 @@ util.o: util.hh ../src/corba/hexdump.hh
 ../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/giop.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
 ../src/corba/giop.o: ../src/corba/hexdump.hh ../src/corba/orb.hh
+../src/corba/giop.o: ../src/corba/protocol.hh
 ../src/corba/cdr.o: ../src/corba/cdr.hh

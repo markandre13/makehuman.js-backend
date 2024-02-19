@@ -18,22 +18,11 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
 LIB=-lev -lwslay -lnettle
 
-
 SRC = main.cc \
 	corba/corba.cc corba/orb.cc corba/url.cc \
 	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
 	corba/hexdump.cc \
-	corba/net/ws.cc \
-	corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
-
-X =	chordata.cc \
-	corba/corba.cc corba/orb.cc corba/url.cc \
-	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
-	corba/hexdump.cc \
-	corba/net/ws/ws.cc corba/net/ws/socket.cc \
-	corba/net/ws/ListenEventHandler.cc corba/net/ws/EventHandler.cc corba/net/ws/createAcceptKey.cc \
-	corba/net/ws/HttpHandshakeSendHandler.cc corba/net/ws/HttpHandshakeRecvHandler.cc \
-	corba/net/ws/CorbaHandler.cc
+	corba/net/ws.cc corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
 
 OBJ = $(SRC:.cc=.o)
 

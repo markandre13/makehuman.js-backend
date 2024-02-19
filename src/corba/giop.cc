@@ -263,8 +263,8 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 }
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
-    auto requestId = buffer.ulong();
-    string objectKey;
+    this->requestId = buffer.ulong();
+    std::string objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
         objectKey = buffer.blob();
     } else {
@@ -280,19 +280,19 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
                 throw runtime_error("Unknown AddressingDisposition.");
         }
     }
-    return new LocateRequest(requestId, objectKey);  // unique_ptr
+    return new LocateRequest(this->requestId, objectKey);  // unique_ptr
 }
 
 unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
     if (majorVersion == 1 && minorVersion <= 1) {
         serviceContext();
     }
-    auto requestId = buffer.ulong();
-    auto replyStatus = static_cast<GIOPReplyStatus>(buffer.ulong());
+    this->requestId = buffer.ulong();
+    this->replyStatus = static_cast<GIOPReplyStatus>(buffer.ulong());
     if (majorVersion == 1 && minorVersion >= 2) {
         serviceContext();
     }
-    return make_unique<ReplyHeader>(requestId, replyStatus);
+    return make_unique<ReplyHeader>(this->requestId, this->replyStatus);
 }
 
 void GIOPDecoder::serviceContext() {

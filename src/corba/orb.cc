@@ -11,8 +11,8 @@
 #include "corba.hh"
 #include "giop.hh"
 #include "hexdump.hh"
-#include "url.hh"
 #include "protocol.hh"
+#include "url.hh"
 
 using namespace std;
 
@@ -153,7 +153,7 @@ task<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
     throw runtime_error(format("ORB::stringToObject(\"{}\") failed", iorString));
 }
 
-detail::Connection * ORB::getConnection(string host, uint16_t port) {
+detail::Connection *ORB::getConnection(string host, uint16_t port) {
     if (host == "::1") {
         host = "localhost";
     }
@@ -187,24 +187,42 @@ task<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fun
     }
     auto requestId = stub->connection->requestId;
     stub->connection->requestId += 2;
-    printf("CONNECTION %p %s:%u -> %s:%u requestId=%u\n",
-        static_cast<void*>(stub->connection),
-        stub->connection->localAddress().c_str(),
-        stub->connection->localPort(),
-        stub->connection->remoteAddress().c_str(),
-        stub->connection->remotePort(),
-        stub->connection->requestId);
+    printf("CONNECTION %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(stub->connection), stub->connection->localAddress().c_str(),
+           stub->connection->localPort(), stub->connection->remoteAddress().c_str(), stub->connection->remotePort(), stub->connection->requestId);
     GIOPEncoder encoder(stub->connection);
     auto responseExpected = true;
     encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
     encode(encoder);
     encoder.setGIOPHeader(GIOP_REQUEST);
-    println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}",
-        operation, stub->objectKey, operation, requestId);
+    println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}", operation, stub->objectKey, operation,
+            requestId);
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
     println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
     println("ORB::_twowayCall(stub, \"{}\", ...) LEAVE WITH DECODER", operation);
+
+    switch (decoder->replyStatus) {
+        case GIOP_NO_EXCEPTION:
+            break;
+        case GIOP_USER_EXCEPTION:
+            throw runtime_error(format("User Exception for requestId {}", decoder->requestId));
+            break;
+        case GIOP_SYSTEM_EXCEPTION: {
+            // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
+            auto exceptionId = decoder->string();
+            auto minorCodeValue = decoder->ulong();
+            auto completionStatus = static_cast<CompletionStatus>(decoder->ulong());
+            println("ORB::_socketRcvd(): SYSTEM EXCEPTION: {}", exceptionId);
+            if (exceptionId == "IDL:omg.org/CORBA/BAD_OPERATION:1.0") {
+                throw BAD_OPERATION(minorCodeValue, completionStatus);
+            } else {
+                throw runtime_error(exceptionId);
+            }
+        } break;
+        default:
+            throw runtime_error(format("ReplyStatusType {} is not supported", (unsigned)decoder->replyStatus));
+    }
+
     co_return decoder;
 }
 
@@ -296,10 +314,27 @@ CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *bu
                 CORBA::GIOPEncoder encoder(connection);
                 encoder.skipReplyHeader();
                 std::cerr << "CALL SERVANT" << std::endl;
-                co_await servant->second->_call(request->method, decoder, encoder);
+                try {
+                    co_await servant->second->_call(request->method, decoder, encoder);
+                } catch (CORBA::SystemException &error) {
+                    println("SERVANT THREW SYSTEM EXCEPTION");
+                    if (request->responseExpected) {
+                        encoder.skipReplyHeader();
+                        encoder.string(error.major());
+                        encoder.ulong(error.minor);
+                        encoder.ulong(error.completed);
+                        auto length = encoder.buffer.offset;
+                        encoder.setGIOPHeader(GIOP_REPLY);
+                        encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
+                        connection->send((void *)encoder.buffer.data(), length);
+                    }
+                    break;
+                } catch (...) {
+                    println("SERVANT THREW EXCEPTION");
+                }
                 std::cerr << "CALLED SERVANT" << std::endl;
                 if (request->responseExpected) {
-                    auto length = encoder.buffer.offset; 
+                    auto length = encoder.buffer.offset;
                     encoder.setGIOPHeader(GIOP_REPLY);
                     encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
                     println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
@@ -320,80 +355,10 @@ CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *bu
         case CORBA::GIOP_REPLY: {
             auto _data = decoder.scanReplyHeader();
             if (!connection->interlock.resume(_data->requestId, &decoder)) {
-                println("unexpected reply to requestId {}", _data->requestId);
+                println("ORB::_socketRcvd(): unexpected reply to requestId {}", _data->requestId);
                 connection->interlock.print();
             }
-            // const handler = connection.pendingReplies.get(data.requestId)
-            // if (handler === undefined) {
-            //     console.log(`corba.js: Unexpected reply to requestId ${data.requestId} from ${connection.remoteAddress}:${connection.remotePort}`)
-            //     console.log(connection.pendingReplies)
-            //     return
-            // }
-            // try {
-            //     connection.pendingReplies.delete(data.requestId)
-            //     switch (data.replyStatus) {
-            //         case ReplyStatus.NO_EXCEPTION:
-            //             handler.decode(decoder)
-            //             break
-            //         case ReplyStatus.USER_EXCEPTION:
-            //             throw new Error(`User Exception for requestId ${data.requestId}`)
-            //         case ReplyStatus.SYSTEM_EXCEPTION:
-            //             // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
-            //             const exceptionId = decoder.string()
-            //             const minorCodeValue = decoder.ulong()
-            //             const completionStatus = decoder.ulong() as CompletionStatus
-
-            //             // VMCID
-            //             let vendorList: { [index: number]: string } = {
-            //                 0x41540: "OmniORB",
-            //                 0x47430: "GNU Classpath",
-            //                 0x49424: "IBM",
-            //                 0x49540: "IONA",
-            //                 0x4A430: "JacORB",
-            //                 0x4D313: "corba.js", // not registered
-            //                 0x4F4D0: "OMG",
-            //                 0x53550: "SUN",
-            //                 0x54410: "TAO",
-            //                 0x56420: "Borland (VisiBroker)",
-            //                 0xA11C0: "Adiron"
-            //             }
-            //             const vendorId = (minorCodeValue & 0xFFFFF000) >> 12
-            //             const vendor = vendorId in vendorList ? ` ${vendorList[vendorId]}` : ""
-
-            //             // A.5 Exception Codes
-            //             let explanation = ""
-
-            //             // CORBA 3.4, Part 2, A.5 Exception Codes
-            //             switch (exceptionId) {
-            //                 case "IDL:omg.org/CORBA/MARSHAL:1.0":
-            //                     throw new MARSHAL(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/TRANSIENT:1.0":
-            //                     throw new TRANSIENT(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/BAD_PARAM:1.0":
-            //                     throw new BAD_PARAM(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/BAD_OPERATION:1.0":
-            //                     throw new BAD_OPERATION(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0":
-            //                     throw new OBJECT_NOT_EXIST(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/OBJECT_ADAPTER:1.0":
-            //                     throw new OBJECT_ADAPTER(minorCodeValue, completionStatus)
-            //                 case "IDL:omg.org/CORBA/NO_PERMISSION:1.0":
-            //                     throw new NO_PERMISSION(minorCodeValue, completionStatus)
-            //                 case "IDL:mark13.org/CORBA/GENERIC:1.0":
-            //                     throw new Error(`Remote CORBA exception on ${connection.remoteAddress}:${connection.remotePort}: ${decoder.string()}`)
-            //             }
-            //             throw new Error(`CORBA System Exception ${exceptionId} from
-            //             ${connection.remoteAddress}:${connection.remotePort}:${vendor}${explanation} (0x${minorCodeValue.toString(16)}), operation completed:
-            //             ${CompletionStatus[completionStatus]}`)
-            //         default:
-            //             throw new Error(`ReplyStatusType ${data.replyStatus} is not supported`)
-            //     }
-            // }
-            // catch (e) {
-            //     // console.log(`caught error: ${e}`)
-            //     // FIXME: this works with tcp and tls but not the websocket library
-            //     handler.reject(e)
-            // }
+            break;
         } break;
         default:
             cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST " << type << endl;

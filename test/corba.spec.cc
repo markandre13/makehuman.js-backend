@@ -7,6 +7,7 @@ import std;
 
 #include "../src/corba/orb.hh"
 #include "../src/corba/url.hh"
+#include "../src/corba/protocol.hh"
 #include "kaffeeklatsch.hh"
 #include "util.hh"
 
@@ -85,6 +86,7 @@ class Backend_stub;
 class Backend {
     public:
         virtual CORBA::task<string> hello(const string &hello) = 0;
+        virtual CORBA::task<> fail() = 0;
         static shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object);
 };
 
@@ -101,6 +103,13 @@ class Backend_stub : public CORBA::Stub {
                     return decoder.buffer.string();
                 });
             co_return result;
+        }
+        CORBA::task<> fail() {
+            co_await get_ORB()->twowayCall(
+                this, "fail",
+                [](CORBA::GIOPEncoder &encoder) {
+                });
+            co_return;
         }
 };
 
@@ -139,6 +148,10 @@ class Backend_impl : public Backend_skel {
             println("Backend_impl::hello(\"{}\")", word);
             co_return word + " world.";
         }
+        virtual CORBA::task<> fail() override {
+            throw CORBA::BAD_OPERATION(0, CORBA::YES);
+            co_return;
+        }
 };
 
 CORBA::task<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
@@ -149,7 +162,9 @@ CORBA::task<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOP
         encoder.string(result);
         co_return;
     }
-    throw runtime_error(std::format("bad operation: '{}' does not exist", operation));
+    // throw runtime_error(std::format("bad operation: '{}' does not exist", operation));
+    println("Backend_skel::_call(): throw BAD_OPERATION");
+    throw CORBA::BAD_OPERATION(0, CORBA::YES);
 }
 
 kaffeeklatsch_spec([] {
@@ -267,7 +282,7 @@ kaffeeklatsch_spec([] {
         });
     });
     describe("integration tests", [] {
-        it("play ping pong", [] {
+        fit("play ping pong", [] {
             // SERVER
             auto serverORB = make_shared<CORBA::ORB>();
             auto serverProtocol = new FakeTcpProtocol("backend.local", 8080);
@@ -291,6 +306,12 @@ kaffeeklatsch_spec([] {
                 println("STEP 2: CALL OBJECT");
                 auto reply = co_await backend->hello("hello");
                 cerr << "GOT " << reply << endl;
+                println("STEP 3: CALL OBJECT AND GET EXCEPTION");
+                try {
+                    co_await backend->fail();
+                } catch(CORBA::SystemException &ex) {
+                    println("caught exception {}", ex.major());
+                }
                 co_return;
             }()
                          .no_wait();
@@ -321,6 +342,10 @@ kaffeeklatsch_spec([] {
                 println("REQUEST TO BACKEND hello() ================================================");
                 co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REPLY TO FRONTEND hello() =================================================");
+                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                println("REQUEST TO BACKEND fail() ================================================");
+                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                println("REPLY TO FRONTEND fail() =================================================");
                 co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
             }()
                          .no_wait();

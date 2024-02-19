@@ -171,20 +171,20 @@ class GIOPEncoder : public GIOPBase {
 
         CDREncoder buffer;
         inline void boolean(bool value) { buffer.boolean(value); }
-        void octet(u_int8_t value) { buffer.octet(value); }
-        void ushort(uint16_t value) { buffer.ushort(value); }
-        void ulong(uint32_t value) { buffer.ulong(value); }
-        void ulonglong(uint64_t value) { buffer.ulonglong(value); }
+        inline void octet(u_int8_t value) { buffer.octet(value); }
+        inline void ushort(uint16_t value) { buffer.ushort(value); }
+        inline void ulong(uint32_t value) { buffer.ulong(value); }
+        inline void ulonglong(uint64_t value) { buffer.ulonglong(value); }
 
-        void string(const char *value) { buffer.string(value); }
-        void string(const char *value, size_t size) { buffer.string(value); }
-        void string(const std::string &value) { buffer.string(value); }
-        void blob(const char *value, size_t size) { buffer.blob(value, size); }
-        void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
-        void endian() { buffer.endian(); }
+        inline void string(const char *value) { buffer.string(value); }
+        inline void string(const char *value, size_t size) { buffer.string(value); }
+        inline void string(const std::string &value) { buffer.string(value); }
+        inline void blob(const char *value, size_t size) { buffer.blob(value, size); }
+        inline void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
+        inline void endian() { buffer.endian(); }
 
-        void reserveSize() { buffer.reserveSize(); }
-        void fillInSize() { buffer.fillInSize(); }
+        inline void reserveSize() { buffer.reserveSize(); }
+        inline void fillInSize() { buffer.fillInSize(); }
 
         void object(const Object *object);
         void reference(const Object *object);
@@ -203,6 +203,9 @@ class GIOPDecoder : public GIOPBase {
         GIOPMessageType m_type;
         size_t m_length;
 
+        uint32_t requestId;
+        GIOPReplyStatus replyStatus;
+
         GIOPDecoder(CDRDecoder &buffer) : buffer(buffer) {}
         GIOPMessageType scanGIOPHeader();
         const RequestHeader *scanRequestHeader();
@@ -214,6 +217,26 @@ class GIOPDecoder : public GIOPBase {
         // CORBA 3.4 Part 2, 9.3.3 Encapsulation
         // Used for ServiceContext, Profile and Component
         void encapsulation(std::function<void(uint32_t type)> closure);
+
+        inline void endian() { buffer.endian(); }
+        inline bool boolean() { return buffer.boolean(); }
+        inline uint8_t octet()  { return buffer.octet(); }
+        inline char8_t character() { return buffer.character(); }
+        inline uint16_t ushort() { return buffer.ushort(); }
+        inline uint32_t ulong() { return buffer.ulong(); }
+        inline uint64_t ulonglong() { return buffer.ulonglong(); }
+        // short
+        // long
+        // longlong
+        // float
+        // double
+        inline std::string blob() { return buffer.blob(); }
+        inline std::string string() { return buffer.string(); }
+        inline std::string string(size_t length) { return buffer.string(length); }
+        // sequence
+        // value
+        // object
+        // reference
 
         void *object(CORBA::ORB *);  // const string typeInfo, bool isValue = false) {
         std::shared_ptr<ObjectReference> reference(size_t length);
