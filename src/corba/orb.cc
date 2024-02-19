@@ -201,22 +201,38 @@ task<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fun
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
     println("ORB::_twowayCall(stub, \"{}\", ...) LEAVE WITH DECODER", operation);
 
+    // move parts of this into a separate function so that it can be unit tested
     switch (decoder->replyStatus) {
         case GIOP_NO_EXCEPTION:
             break;
         case GIOP_USER_EXCEPTION:
-            throw runtime_error(format("User Exception for requestId {}", decoder->requestId));
+            throw runtime_error(format("CORBA User Exception from {}:{}", stub->connection->remoteAddress(), stub->connection->remotePort()));
             break;
         case GIOP_SYSTEM_EXCEPTION: {
             // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
             auto exceptionId = decoder->string();
             auto minorCodeValue = decoder->ulong();
             auto completionStatus = static_cast<CompletionStatus>(decoder->ulong());
-            println("ORB::_socketRcvd(): SYSTEM EXCEPTION: {}", exceptionId);
-            if (exceptionId == "IDL:omg.org/CORBA/BAD_OPERATION:1.0") {
+            if (exceptionId == "IDL:omg.org/CORBA/MARSHAL:1.0") {
+                throw MARSHAL(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/NO_PERMISSION:1.0") {
+                throw NO_PERMISSION(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/BAD_PARAM:1.0") {
+                throw BAD_PARAM(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/BAD_OPERATION:1.0") {
                 throw BAD_OPERATION(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0") {
+                throw OBJECT_NOT_EXIST(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/TRANSIENT:1.0") {
+                throw TRANSIENT(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:omg.org/CORBA/OBJECT_ADAPTER:1.0") {
+                throw OBJECT_ADAPTER(minorCodeValue, completionStatus);
+            } else if (exceptionId == "IDL:mark13.org/CORBA/GENERIC:1.0") {
+                throw runtime_error(
+                    format("Remote CORBA exception from {}:{}: {}", stub->connection->remoteAddress(), stub->connection->remotePort(), decoder->string()));
             } else {
-                throw runtime_error(exceptionId);
+                throw runtime_error(
+                    format("CORBA System Exception {} from {}:{}", exceptionId, stub->connection->remoteAddress(), stub->connection->remotePort()));
             }
         } break;
         default:
@@ -263,66 +279,63 @@ CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *bu
             cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << hex << objectKey << "', " << request->method << ")" << endl;
             auto servant = servants.find(objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
-                cerr << "DIDN'T FIND KEY. CURRENTLY " << servants.size() << " SERVANTS REGISTERED" << endl;
-                cerr << "LOOKING FOR" << endl;
-                hexdump((unsigned char *)objectKey.data(), objectKey.size());
-                cerr << "LOOKING HAVE" << endl;
-                for (auto &s : servants) {
-                    cerr << "  '" << s.first << "' ? " << (s.first == objectKey) << endl;
-                    hexdump((unsigned char *)s.first.data(), s.first.size());
-                }
                 if (request->responseExpected) {
-                    // send error message
+                    CORBA::GIOPEncoder encoder(connection);
+                    encoder.skipReplyHeader();
+
+                    encoder.string("IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0");
+                    encoder.ulong(0x4f4d0001);  // Attempt to pass an unactivated (unregistered) value as an object reference.
+                    encoder.ulong(NO);          // completionStatus
+
+                    auto length = encoder.buffer.offset;
+                    encoder.setGIOPHeader(GIOP_REPLY);
+                    encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
+
+                    connection->send((void *)encoder.buffer.data(), length);
                 }
-                cerr << "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0" << endl;
                 co_return;
             }
 
             if (request->method == "_is_a") {
+                auto repositoryId = decoder.string();
+                CORBA::GIOPEncoder encoder(connection);
+                encoder.skipReplyHeader();
+
+                encoder.boolean(repositoryId == servant->second->repository_id());
+
+                auto length = encoder.buffer.offset;
+                encoder.setGIOPHeader(GIOP_REPLY);
+                encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
+                connection->send((void *)encoder.buffer.data(), length);
+
                 co_return;
             }
 
-            // auto method = servant._map.find(request->method);
-            // if (method == servant._map.end()) {
-            //     if (request->responseExpected) {
-            //         // send error message
-            //     }
-            //     return;
-            // }
-
             try {
-                // TODO: now we need the connection this call came in
-                //       since this on the server side, there is quite some
-                //       coding to do the actually get that value.
-                //       * ORB.run() would need to call the protocol to create a server socket
-                //       * when a call comes in, we need to create a connection
-                // how this is done in corba.js
-                //
-                //   const tls = new WsProtocol()
-                //   serverORB.addProtocol(tls)
-                //   await tls.listen(serverORB, 2809)
-                //
-                //   WsProtocolBase.listen(orb, port)
-                //   * adds connections to the orb (what is this for? ah! in case we have host:port
-                //     we can find the connection via ORB.getConnection(host, port), which is then
-                //     used when resolving via stringToObject() or iorToObject()
-                //     the rest is just bookkeeping (add/remove as needed)
-                //   * calls orb.socketRcvd(connection, data)
-                //
-                // okay, in my fake i can take things in my own hand
-
                 CORBA::GIOPEncoder encoder(connection);
                 encoder.skipReplyHeader();
+                // move parts of this into a separate function so that it can be unit tested
                 std::cerr << "CALL SERVANT" << std::endl;
                 try {
                     co_await servant->second->_call(request->method, decoder, encoder);
                 } catch (CORBA::SystemException &error) {
                     println("SERVANT THREW SYSTEM EXCEPTION");
                     if (request->responseExpected) {
-                        encoder.skipReplyHeader();
                         encoder.string(error.major());
                         encoder.ulong(error.minor);
                         encoder.ulong(error.completed);
+                        auto length = encoder.buffer.offset;
+                        encoder.setGIOPHeader(GIOP_REPLY);
+                        encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
+                        connection->send((void *)encoder.buffer.data(), length);
+                    }
+                    break;
+                } catch (std::exception &ex) {
+                    if (request->responseExpected) {
+                        encoder.string("IDL:mark13.org/CORBA/GENERIC:1.0");
+                        encoder.ulong(0);
+                        encoder.ulong(0);
+                        encoder.string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
                         auto length = encoder.buffer.offset;
                         encoder.setGIOPHeader(GIOP_REPLY);
                         encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);

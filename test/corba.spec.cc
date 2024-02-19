@@ -354,10 +354,11 @@ kaffeeklatsch_spec([] {
 });
 
 // CORBA:
-// websocket protocol
-// exceptions
-// oneway
-// value types
+// [X] websocket protocol
+// [X] exceptions
+// [ ] oneway
+// [ ] generate c++ code from idl
+// [ ] value types
 
 // coroutine:
-// exceptions
+// [X] exceptions

@@ -38,6 +38,18 @@ class MARSHAL : public SystemException {
         const char *major() const override { return "IDL:omg.org/CORBA/MARSHAL:1.0"; }
 };
 
+class NO_PERMISSION : public SystemException {
+    public:
+        NO_PERMISSION(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
+        const char *major() const override { return "IDL:omg.org/CORBA/NO_PERMISSION:1.0"; }
+};
+
+class BAD_PARAM : public SystemException {
+    public:
+        BAD_PARAM(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
+        const char *major() const override { return "IDL:omg.org/CORBA/BAD_PARAM:1.0"; }
+};
+
 class BAD_OPERATION : public SystemException {
     public:
         BAD_OPERATION(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
@@ -48,6 +60,18 @@ class OBJECT_NOT_EXIST : public SystemException {
     public:
         OBJECT_NOT_EXIST(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
         const char *major() const override { return "IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0"; }
+};
+
+class TRANSIENT : public SystemException {
+    public:
+        TRANSIENT(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
+        const char *major() const override { return "IDL:omg.org/CORBA/TRANSIENT:1.0"; }
+};
+
+class OBJECT_ADAPTER : public SystemException {
+    public:
+        OBJECT_ADAPTER(uint32_t minor, CompletionStatus completed) : SystemException(minor, completed) {}
+        const char *major() const override { return "IDL:omg.org/CORBA/OBJECT_ADAPTER:1.0"; }
 };
 
 class ORB : public std::enable_shared_from_this<ORB> {
