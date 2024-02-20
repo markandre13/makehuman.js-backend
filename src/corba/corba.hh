@@ -91,7 +91,7 @@ class Skeleton : public Object {
         Skeleton(CORBA::ORB *orb);
         Skeleton(CORBA::ORB *orb, const std::string &objectKey);
         virtual ~Skeleton() override;
-        virtual CORBA::task<> _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
+        virtual CORBA::task<> _call(const std::string &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
 };
 
 }  // namespace CORBA

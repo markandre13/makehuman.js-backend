@@ -25,6 +25,7 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
 
 SRC = coroutine.spec.cc cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc \
+	makehuman.cc \
 	main.cc util.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
  	../src/corba/orb.cc ../src/corba/skeleton.cc ../src/corba/url.cc \
 	../src/corba/giop.cc ../src/corba/cdr.cc  ../src/corba/hexdump.cc
@@ -65,7 +66,12 @@ giop.spec.o: ../src/corba/hexdump.hh
 corba.spec.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
 corba.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
 corba.spec.o: ../src/corba/url.hh ../src/corba/protocol.hh util.hh
-corba.spec.o: ../src/corba/hexdump.hh
+corba.spec.o: ../src/corba/hexdump.hh makehuman.hh ../src/corba/giop.hh
+corba.spec.o: ../src/corba/coroutine.hh makehuman_stub.hh makehuman_skel.hh
+makehuman.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+makehuman.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
+makehuman.o: ../src/corba/giop.hh ../src/corba/coroutine.hh makehuman.hh
+makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh ../src/corba/hexdump.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh

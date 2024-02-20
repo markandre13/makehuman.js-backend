@@ -87,43 +87,14 @@ void TcpFakeConnection::send(void *buffer, size_t nbyte) {
 
 class Backend_stub;
 
-class Backend {
-    public:
-        virtual CORBA::task<string> hello(const string &word) = 0;
-        virtual CORBA::task<> fail() = 0;
-        static shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object);
-};
-
-class Backend_stub : public CORBA::Stub, public Backend {
-    public:
-        Backend_stub(CORBA::ORB *orb, const std::string &objectKey, CORBA::detail::Connection *connection) : Stub(orb, objectKey, connection) {}
-        CORBA::task<string> hello(const string &word) override {
-            return get_ORB()->twowayCall<string>(
-                this, "hello",
-                [word](CORBA::GIOPEncoder &encoder) {
-                    encoder.string(word);
-                },
-                [](CORBA::GIOPDecoder &decoder) {
-                    return decoder.buffer.string();
-                });
-        }
-        CORBA::task<> fail() override {
-            co_await get_ORB()->twowayCall(
-                this, "fail",
-                [](CORBA::GIOPEncoder &encoder) {
-                });
-            co_return;
-        }
-};
-
-shared_ptr<Backend_stub> Backend::_narrow(shared_ptr<CORBA::Object> object) {
+shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object) {
     println("Backend::_narrow() ENTER");
     auto ptr = object.get();
     auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
     if (ref) {
-        if (std::strcmp(ref->repository_id(), "IDL:Server:1.0") != 0) {  // todo: ref->_is_a("IDL:Server:1.0")
-            println("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Server:1.0");
-            throw runtime_error(format("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Server:1.0"));
+        if (std::strcmp(ref->repository_id(), "IDL:Backend:1.0") != 0) {  // todo: ref->_is_a("IDL:Server:1.0")
+            println("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Backend:1.0");
+            throw runtime_error(format("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Backend:1.0"));
         }
         CORBA::ORB *orb = ref->get_ORB();
         CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
@@ -135,19 +106,10 @@ shared_ptr<Backend_stub> Backend::_narrow(shared_ptr<CORBA::Object> object) {
     throw runtime_error("not implemented yet");
 }
 
-class Backend_skel : public CORBA::Skeleton, Backend {
-    public:
-        Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
-        const char *repository_id() const override { return "IDL:Server:1.0"; }
-
-    protected:
-        CORBA::task<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
-};
-
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
-        virtual CORBA::task<string> hello(const string &word) override {
+        virtual CORBA::task<string> hello(string word) override {
             println("Backend_impl::hello(\"{}\")", word);
             co_return word + " world.";
         }
@@ -156,19 +118,6 @@ class Backend_impl : public Backend_skel {
             co_return;
         }
 };
-
-CORBA::task<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    println("Backend_skel::_call(\"{}\", decoder, encoder)", operation);
-    if (operation == "hello") {
-        auto word = decoder.buffer.string();
-        auto result = co_await hello(word);  // FIXME: we don't want to copy the string
-        encoder.string(result);
-        co_return;
-    }
-    // throw runtime_error(std::format("bad operation: '{}' does not exist", operation));
-    println("Backend_skel::_call(): throw BAD_OPERATION");
-    throw CORBA::BAD_OPERATION(0, CORBA::YES);
-}
 
 kaffeeklatsch_spec([] {
     describe("URL", [] {
@@ -305,7 +254,7 @@ kaffeeklatsch_spec([] {
                 println("STEP 0: RESOLVE OBJECT");
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:8080#Backend");
                 println("STEP 1: GOT OBJECT");
-                auto backend = Backend::_narrow(object);
+                auto backend = _narrow(object);
                 println("STEP 2: CALL OBJECT");
                 auto reply = co_await backend->hello("hello");
                 cerr << "GOT " << reply << endl;

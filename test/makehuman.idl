@@ -1,6 +1,6 @@
 // makehuman.js frontend/backend idl
 
-interface Backend2 {
+interface Backend {
     string hello(in string hello);
     void fail();
 };
