@@ -11,5 +11,5 @@ class Backend {
 public:
     virtual CORBA::task<std::string> hello(std::string hello) = 0;
     virtual CORBA::task<void> fail() = 0;
-};
+    static std::shared_ptr<Backend> _narrow(std::shared_ptr<CORBA::Object> pointer);};
 

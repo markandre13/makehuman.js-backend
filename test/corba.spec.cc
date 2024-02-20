@@ -85,27 +85,6 @@ void TcpFakeConnection::send(void *buffer, size_t nbyte) {
     FakeTcpProtocol::size = nbyte;
 }
 
-class Backend_stub;
-
-shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object) {
-    println("Backend::_narrow() ENTER");
-    auto ptr = object.get();
-    auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
-    if (ref) {
-        if (std::strcmp(ref->repository_id(), "IDL:Backend:1.0") != 0) {  // todo: ref->_is_a("IDL:Server:1.0")
-            println("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Backend:1.0");
-            throw runtime_error(format("Backend::_narrow(): \"{}\" != \"{}\"", ref->repository_id(), "IDL:Backend:1.0"));
-        }
-        CORBA::ORB *orb = ref->get_ORB();
-        CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
-        auto stub = make_shared<Backend_stub>(orb, ref->objectKey, conn);
-        println("Backend::_narrow() LEAVE WITH STUB");
-        // return dynamic_pointer_cast<Backend, Backend_stub>(stub);
-        return stub;
-    }
-    throw runtime_error("not implemented yet");
-}
-
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
@@ -254,7 +233,7 @@ kaffeeklatsch_spec([] {
                 println("STEP 0: RESOLVE OBJECT");
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:8080#Backend");
                 println("STEP 1: GOT OBJECT");
-                auto backend = _narrow(object);
+                auto backend = Backend::_narrow(object);
                 println("STEP 2: CALL OBJECT");
                 auto reply = co_await backend->hello("hello");
                 cerr << "GOT " << reply << endl;
