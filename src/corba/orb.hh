@@ -126,6 +126,13 @@ class ORB : public std::enable_shared_from_this<ORB> {
             co_return;
         }
 
+        void onewayCall(
+            Stub *stub,
+            const char *method,
+            std::function<void(GIOPEncoder &)> encode);
+
+
+
         //
         // NameService
         //

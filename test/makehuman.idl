@@ -17,11 +17,10 @@ interface Frontend2 {
     oneway void chordata(in sequence<octet> data);
     oneway void mediapipe(in sequence<octet> data);
 };
-
+*/
 interface Backend2 {
-    void registerFrontend(in Frontend2 frontend);
+    // void registerFrontend(in Frontend2 frontend);
     oneway void chordata(in boolean on);
     // oneway void mediapipe(in bool on, in MediaType type);
     oneway void mediapipe(in boolean on);
 };
-*/

@@ -243,6 +243,20 @@ task<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fun
     co_return decoder;
 }
 
+void ORB::onewayCall(Stub *stub, const char *operation, std::function<void(GIOPEncoder &)> encode) {
+    if (stub->connection == nullptr) {
+        throw runtime_error("ORB::onewayCall(): the stub has no connection");
+    }
+    auto requestId = stub->connection->requestId;
+    stub->connection->requestId += 2;
+    GIOPEncoder encoder(stub->connection);
+    auto responseExpected = true;
+    encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
+    encode(encoder);
+    encoder.setGIOPHeader(GIOP_REQUEST);
+    stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
+}
+
 string ORB::registerServant(Skeleton *servant) {
     println("ORB::registerServant(servant)");
     string objectKey = format("OID:{:x}", ++servantIdCounter);

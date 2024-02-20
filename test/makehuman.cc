@@ -4,7 +4,8 @@
 #include "../src/corba/orb.hh"
 #include "../src/corba/giop.hh"
 #include "../src/corba/coroutine.hh"
-#include <cstring>#include <vector>
+#include <cstring>
+#include <vector>
 #include <map>
 #include <functional>
 #include "makehuman.hh"
@@ -15,16 +16,26 @@ static CORBA::task<> _hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GI
     auto result = co_await obj->hello(decoder.string());
     encoder.string(result);
 }
+CORBA::task<std::string> Backend_stub::hello(std::string hello) {
+    return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
+        encoder.string(hello);
+    },
+    [&](CORBA::GIOPDecoder &decoder) { return decoder.string(); });
+}
 static CORBA::task<> _fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
 }
-std::map<std::string, std::function<CORBA::task<>(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _operations = {
+CORBA::task<void> Backend_stub::fail() {
+    return get_ORB()->twowayCall(this, "fail", [&](CORBA::GIOPEncoder &encoder) {
+    });
+}
+std::map<std::string, std::function<CORBA::task<>(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend = {
     {"hello", _hello},
     {"fail", _fail},
 };
 CORBA::task<> Backend_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    auto it = _operations.find(operation);
-    if (it == _operations.end()) {
+    auto it = _op_Backend.find(operation);
+    if (it == _op_Backend.end()) {
         throw CORBA::BAD_OPERATION(0, CORBA::YES);
     }
     co_await it->second(this, decoder, encoder);
@@ -47,5 +58,54 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
         return std::dynamic_pointer_cast<Backend>(pointer);
     }
     return std::shared_ptr<Backend>();
+}
+
+static CORBA::task<> _chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+    obj->chordata(decoder.boolean());
+    co_return;
+}
+void Backend2_stub::chordata(bool on) {
+    get_ORB()->onewayCall(this, "chordata", [&](CORBA::GIOPEncoder &encoder) {
+        encoder.boolean(on);
+    });
+}
+static CORBA::task<> _mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+    obj->mediapipe(decoder.boolean());
+    co_return;
+}
+void Backend2_stub::mediapipe(bool on) {
+    get_ORB()->onewayCall(this, "mediapipe", [&](CORBA::GIOPEncoder &encoder) {
+        encoder.boolean(on);
+    });
+}
+std::map<std::string, std::function<CORBA::task<>(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend2 = {
+    {"chordata", _chordata},
+    {"mediapipe", _mediapipe},
+};
+CORBA::task<> Backend2_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+    auto it = _op_Backend2.find(operation);
+    if (it == _op_Backend2.end()) {
+        throw CORBA::BAD_OPERATION(0, CORBA::YES);
+    }
+    co_await it->second(this, decoder, encoder);
+};
+
+std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> pointer) {
+    auto ptr = pointer.get();
+    auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
+    if (ref) {
+        if (std::strcmp(ref->repository_id(), "IDL:Backend2:1.0") != 0) {
+            return std::shared_ptr<Backend2>();
+        }
+        CORBA::ORB *orb = ref->get_ORB();
+        CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
+        auto stub = std::make_shared<Backend2_stub>(orb, ref->objectKey, conn);
+        return std::dynamic_pointer_cast<Backend2>(stub);
+    }
+    auto obj = dynamic_cast<Backend2*>(ptr);
+    if (obj) {
+        return std::dynamic_pointer_cast<Backend2>(pointer);
+    }
+    return std::shared_ptr<Backend2>();
 }
 
