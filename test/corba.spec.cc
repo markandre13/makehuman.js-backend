@@ -11,6 +11,10 @@ import std;
 #include "kaffeeklatsch.hh"
 #include "util.hh"
 
+#include "makehuman.hh"
+#include "makehuman_stub.hh"
+#include "makehuman_skel.hh"
+
 using namespace kaffeeklatsch;
 
 using namespace std;
@@ -85,16 +89,16 @@ class Backend_stub;
 
 class Backend {
     public:
-        virtual CORBA::task<string> hello(const string &hello) = 0;
+        virtual CORBA::task<string> hello(const string &word) = 0;
         virtual CORBA::task<> fail() = 0;
         static shared_ptr<Backend_stub> _narrow(shared_ptr<CORBA::Object> object);
 };
 
-class Backend_stub : public CORBA::Stub {
+class Backend_stub : public CORBA::Stub, public Backend {
     public:
         Backend_stub(CORBA::ORB *orb, const std::string &objectKey, CORBA::detail::Connection *connection) : Stub(orb, objectKey, connection) {}
-        CORBA::task<string> hello(const string &word) {
-            string result = co_await get_ORB()->twowayCall<string>(
+        CORBA::task<string> hello(const string &word) override {
+            return get_ORB()->twowayCall<string>(
                 this, "hello",
                 [word](CORBA::GIOPEncoder &encoder) {
                     encoder.string(word);
@@ -102,9 +106,8 @@ class Backend_stub : public CORBA::Stub {
                 [](CORBA::GIOPDecoder &decoder) {
                     return decoder.buffer.string();
                 });
-            co_return result;
         }
-        CORBA::task<> fail() {
+        CORBA::task<> fail() override {
             co_await get_ORB()->twowayCall(
                 this, "fail",
                 [](CORBA::GIOPEncoder &encoder) {

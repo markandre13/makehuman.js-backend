@@ -24,6 +24,8 @@ enum CompletionStatus { YES, NO, MAYBE };
 
 class Exception: public std::exception {};
 
+class UserException: public Exception {};
+
 class SystemException : public Exception {
     public:
         uint32_t minor;

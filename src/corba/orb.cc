@@ -206,7 +206,8 @@ task<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fun
         case GIOP_NO_EXCEPTION:
             break;
         case GIOP_USER_EXCEPTION:
-            throw runtime_error(format("CORBA User Exception from {}:{}", stub->connection->remoteAddress(), stub->connection->remotePort()));
+            throw UserException();
+            // throw runtime_error(format("CORBA User Exception from {}:{}", stub->connection->remoteAddress(), stub->connection->remotePort()));
             break;
         case GIOP_SYSTEM_EXCEPTION: {
             // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
@@ -318,6 +319,13 @@ CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *bu
                 std::cerr << "CALL SERVANT" << std::endl;
                 try {
                     co_await servant->second->_call(request->method, decoder, encoder);
+                } catch (CORBA::UserException &ex) {
+                    if (request->responseExpected) {
+                        auto length = encoder.buffer.offset;
+                        encoder.setGIOPHeader(GIOP_REPLY);
+                        encoder.setReplyHeader(request->requestId, GIOP_USER_EXCEPTION);
+                        connection->send((void *)encoder.buffer.data(), length);
+                    } break;
                 } catch (CORBA::SystemException &error) {
                     println("SERVANT THREW SYSTEM EXCEPTION");
                     if (request->responseExpected) {
