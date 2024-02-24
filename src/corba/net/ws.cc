@@ -67,7 +67,7 @@ void MyProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string
 }
 
 MyConnection *MyProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) { return nullptr; }
-CORBA::task<void> MyProtocol::close() { co_return; }
+CORBA::async<void> MyProtocol::close() { co_return; }
 
 void MyConnection::close(){};
 

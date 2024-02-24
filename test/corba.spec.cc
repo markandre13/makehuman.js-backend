@@ -25,7 +25,7 @@ struct FakeTcpProtocol : public CORBA::detail::Protocol {
         FakeTcpProtocol(const string &localAddress, uint16_t localPort) : m_localAddress(localAddress), m_localPort(localPort) {}
 
         CORBA::detail::Connection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port);
-        CORBA::task<void> close();
+        CORBA::async<void> close();
 
         std::string m_localAddress;
         uint16_t m_localPort;
@@ -67,7 +67,7 @@ CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, con
     return conn;
 }
 
-CORBA::task<void> FakeTcpProtocol::close() { co_return; }
+CORBA::async<void> FakeTcpProtocol::close() { co_return; }
 
 TcpFakeConnection *FakeTcpProtocol::sender;
 void *FakeTcpProtocol::buffer = nullptr;
@@ -88,11 +88,11 @@ void TcpFakeConnection::send(void *buffer, size_t nbyte) {
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
-        virtual CORBA::task<string> hello(string word) override {
+        virtual CORBA::async<string> hello(string word) override {
             println("Backend_impl::hello(\"{}\")", word);
             co_return word + " world.";
         }
-        virtual CORBA::task<> fail() override {
+        virtual CORBA::async<> fail() override {
             throw CORBA::BAD_OPERATION(0, CORBA::YES);
             co_return;
         }
@@ -213,7 +213,7 @@ kaffeeklatsch_spec([] {
         });
     });
     describe("integration tests", [] {
-        fit("play ping pong", [] {
+        it("play ping pong", [] {
             // SERVER
             auto serverORB = make_shared<CORBA::ORB>();
             auto serverProtocol = new FakeTcpProtocol("backend.local", 8080);
@@ -229,7 +229,7 @@ kaffeeklatsch_spec([] {
             auto clientProtocol = new FakeTcpProtocol("frontend.local", 32768);
             clientORB->registerProtocol(clientProtocol);
 
-            [&]() -> CORBA::task<> {
+            [&]() -> CORBA::async<> {
                 println("STEP 0: RESOLVE OBJECT");
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:8080#Backend");
                 println("STEP 1: GOT OBJECT");
@@ -247,7 +247,7 @@ kaffeeklatsch_spec([] {
             }()
                          .no_wait();
 
-            [&]() -> CORBA::task<> {
+            [&]() -> CORBA::async<> {
                 println("REQUEST TO BACKEND resolve_str() ================================================");
                 auto clientConn = FakeTcpProtocol::sender;
                 auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
@@ -285,7 +285,7 @@ kaffeeklatsch_spec([] {
 });
 
 // CORBA:
-// [X] websocket protocol
+// [X] websocket protocol¸¸¸¸¸
 // [X] exceptions
 // [ ] oneway
 // [ ] generate c++ code from idl

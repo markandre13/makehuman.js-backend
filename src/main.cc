@@ -32,10 +32,10 @@ class Backend_impl : public Backend_skel {
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
 
     protected:
-        CORBA::task<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder);
+        CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder);
 };
 
-CORBA::task<> Backend_impl::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
+CORBA::async<> Backend_impl::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
     println("Backend_impl::_call(\"{}\", decoder, encoder)", operation);
     encoder.ushort(4711);
     co_return;

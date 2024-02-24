@@ -101,7 +101,8 @@ std::optional<unsigned> UrlLexer::number() {
 string _decodeURI(const string &SRC) {
     string ret;
     char ch;
-    int i, ii;
+    size_t i;
+    int ii;
     for (i = 0; i < SRC.length(); i++) {
         if (SRC[i] == '%') {
             sscanf(SRC.substr(i + 1, 2).c_str(), "%x", &ii);

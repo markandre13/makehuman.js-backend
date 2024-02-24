@@ -66,7 +66,7 @@ class NamingContextExtImpl : public Skeleton {
             encoder.object(result.get());
         }
 
-        CORBA::task<> _call(const std::string &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
+        CORBA::async<> _call(const std::string &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
             // cerr << "NamingContextExtImpl::_call(" << operation << ", ...)"
             // << endl;
             if (operation == "resolve") {
@@ -97,7 +97,7 @@ class NamingContextExtStub : public Stub {
 
         // TODO: the argument doesn't match the one in the IDL but for now it's
         // good enough
-        task<shared_ptr<ObjectReference>> resolve_str(const string &name) {
+        async<shared_ptr<ObjectReference>> resolve_str(const string &name) {
             return get_ORB()->twowayCall<shared_ptr<ObjectReference>>(
                 this, "resolve_str",
                 [name](GIOPEncoder &encoder) {
@@ -115,7 +115,7 @@ Object::~Object() {}
 
 ORB::ORB() {}
 
-task<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
+async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
     std::println("ORB::stringToObject(\"{}\"): enter", iorString);
     auto uri = decodeURI(iorString);
     if (std::holds_alternative<IOR>(uri)) {
@@ -180,7 +180,7 @@ detail::Connection *ORB::getConnection(string host, uint16_t port) {
     throw runtime_error(format("failed to allocate connection to {}:{}", host, port));
 }
 
-task<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::function<void(GIOPEncoder &)> encode) {
+async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::function<void(GIOPEncoder &)> encode) {
     println("ORB::_twowayCall(stub, \"{}\", ...) ENTER", operation);
     if (stub->connection == nullptr) {
         throw runtime_error("ORB::_twowayCall(): the stub has no connection");
@@ -279,7 +279,7 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
     namingService->bind(id, obj);
 }
 
-CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size) {
+CORBA::async<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size) {
     cout << "RECEIVED" << endl;
     hexdump(buffer, size);
 
@@ -389,9 +389,11 @@ CORBA::task<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *bu
         } break;
         case CORBA::GIOP_REPLY: {
             auto _data = decoder.scanReplyHeader();
-            if (!connection->interlock.resume(_data->requestId, &decoder)) {
+            try {
+                connection->interlock.resume(_data->requestId, &decoder);
+            }
+            catch(...) {
                 println("ORB::_socketRcvd(): unexpected reply to requestId {}", _data->requestId);
-                connection->interlock.print();
             }
             break;
         } break;

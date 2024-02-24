@@ -33,5 +33,5 @@ struct MyProtocol : public CORBA::detail::Protocol {
         void listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port);
 
         MyConnection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
-        CORBA::task<void> close() override;
+        CORBA::async<void> close() override;
 };

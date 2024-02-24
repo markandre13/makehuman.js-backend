@@ -55,7 +55,7 @@ class Protocol {
     public:
         // hm... do we return something or do we call ORB?
         virtual Connection *connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
-        virtual task<void> close() = 0;
+        virtual async<void> close() = 0;
 };
 
 }  // namespace detail

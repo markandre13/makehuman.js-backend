@@ -12,28 +12,28 @@
 #include "makehuman_skel.hh"
 #include "makehuman_stub.hh"
 
-static CORBA::task<> _hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto result = co_await obj->hello(decoder.string());
     encoder.string(result);
 }
-CORBA::task<std::string> Backend_stub::hello(std::string hello) {
+CORBA::async<std::string> Backend_stub::hello(std::string hello) {
     return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
         encoder.string(hello);
     },
     [&](CORBA::GIOPDecoder &decoder) { return decoder.string(); });
 }
-static CORBA::task<> _fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
 }
-CORBA::task<void> Backend_stub::fail() {
+CORBA::async<void> Backend_stub::fail() {
     return get_ORB()->twowayCall(this, "fail", [&](CORBA::GIOPEncoder &encoder) {
     });
 }
-std::map<std::string, std::function<CORBA::task<>(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend = {
+std::map<std::string, std::function<CORBA::async<>(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend = {
     {"hello", _hello},
     {"fail", _fail},
 };
-CORBA::task<> Backend_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+CORBA::async<> Backend_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto it = _op_Backend.find(operation);
     if (it == _op_Backend.end()) {
         throw CORBA::BAD_OPERATION(0, CORBA::YES);
@@ -60,7 +60,7 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
     return std::shared_ptr<Backend>();
 }
 
-static CORBA::task<> _chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     obj->chordata(decoder.boolean());
     co_return;
 }
@@ -69,7 +69,7 @@ void Backend2_stub::chordata(bool on) {
         encoder.boolean(on);
     });
 }
-static CORBA::task<> _mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     obj->mediapipe(decoder.boolean());
     co_return;
 }
@@ -78,11 +78,11 @@ void Backend2_stub::mediapipe(bool on) {
         encoder.boolean(on);
     });
 }
-std::map<std::string, std::function<CORBA::task<>(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend2 = {
+std::map<std::string, std::function<CORBA::async<>(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend2 = {
     {"chordata", _chordata},
     {"mediapipe", _mediapipe},
 };
-CORBA::task<> Backend2_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+CORBA::async<> Backend2_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto it = _op_Backend2.find(operation);
     if (it == _op_Backend2.end()) {
         throw CORBA::BAD_OPERATION(0, CORBA::YES);

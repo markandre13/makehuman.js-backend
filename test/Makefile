@@ -24,7 +24,7 @@ MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
 
-SRC = coroutine.spec.cc cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc \
+SRC = cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc \
 	makehuman.cc \
 	main.cc util.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
  	../src/corba/orb.cc ../src/corba/skeleton.cc ../src/corba/url.cc \
@@ -64,28 +64,33 @@ cdr_encoder.spec.o: ../src/corba/cdr.hh
 giop.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
 giop.spec.o: ../src/corba/hexdump.hh
 corba.spec.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
-corba.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
-corba.spec.o: ../src/corba/url.hh ../src/corba/protocol.hh util.hh
-corba.spec.o: ../src/corba/hexdump.hh makehuman.hh ../src/corba/giop.hh
-corba.spec.o: ../src/corba/coroutine.hh makehuman_stub.hh makehuman_skel.hh
+corba.spec.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
+corba.spec.o: ../src/corba/cdr.hh ../src/corba/orb.hh ../src/corba/url.hh
+corba.spec.o: ../src/corba/protocol.hh util.hh ../src/corba/hexdump.hh
+corba.spec.o: makehuman.hh ../src/corba/giop.hh ../src/corba/coroutine.hh
+corba.spec.o: makehuman_stub.hh makehuman_skel.hh
 makehuman.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
-makehuman.o: ../src/corba/giop.hh ../src/corba/cdr.hh ../src/corba/orb.hh
-makehuman.o: ../src/corba/giop.hh ../src/corba/coroutine.hh makehuman.hh
-makehuman.o: makehuman_skel.hh makehuman_stub.hh
+makehuman.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
+makehuman.o: ../src/corba/cdr.hh ../src/corba/orb.hh ../src/corba/giop.hh
+makehuman.o: ../src/corba/coroutine.hh makehuman.hh makehuman_skel.hh
+makehuman.o: makehuman_stub.hh
 util.o: util.hh ../src/corba/hexdump.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
-../src/corba/orb.o: ../src/corba/giop.hh ../src/corba/cdr.hh
-../src/corba/orb.o: ../src/corba/corba.hh ../src/corba/hexdump.hh
-../src/corba/orb.o: ../src/corba/protocol.hh ../src/corba/url.hh
+../src/corba/orb.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
+../src/corba/orb.o: ../src/corba/cdr.hh ../src/corba/corba.hh
+../src/corba/orb.o: ../src/corba/hexdump.hh ../src/corba/protocol.hh
+../src/corba/orb.o: ../src/corba/url.hh
 ../src/corba/skeleton.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+../src/corba/skeleton.o: ../upstream/cpptask/src/async.hh
 ../src/corba/skeleton.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/skeleton.o: ../src/corba/orb.hh
 ../src/corba/url.o: ../src/corba/url.hh ../src/corba/cdr.hh
 ../src/corba/url.o: ../src/corba/giop.hh ../src/corba/corba.hh
 ../src/corba/url.o: ../src/corba/coroutine.hh
+../src/corba/url.o: ../upstream/cpptask/src/async.hh
 ../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/giop.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
-../src/corba/giop.o: ../src/corba/hexdump.hh ../src/corba/orb.hh
-../src/corba/giop.o: ../src/corba/protocol.hh
+../src/corba/giop.o: ../upstream/cpptask/src/async.hh ../src/corba/hexdump.hh
+../src/corba/giop.o: ../src/corba/orb.hh ../src/corba/protocol.hh
 ../src/corba/cdr.o: ../src/corba/cdr.hh

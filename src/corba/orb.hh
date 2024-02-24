@@ -96,9 +96,9 @@ class ORB : public std::enable_shared_from_this<ORB> {
         inline void registerProtocol(detail::Protocol *protocol) { protocols.push_back(protocol); }
 
         static void socketRcvd(const uint8_t *buffer, size_t size);
-        CORBA::task<> _socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size);
+        CORBA::async<> _socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size);
 
-        task<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
+        async<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
 
         // register servant and create and assign a new objectKey
         std::string registerServant(Skeleton *skeleton);
@@ -106,7 +106,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         std::string registerServant(Skeleton *skeleton, const std::string &objectKey);
 
         template <typename T>
-        task<T> twowayCall(
+        async<T> twowayCall(
             Stub *stub,
             const char *method,
             std::function<void(GIOPEncoder &)> encode,
@@ -117,7 +117,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         }
 
         // template <typename T>
-        task<void> twowayCall(
+        async<void> twowayCall(
             Stub *stub,
             const char *method,
             std::function<void(GIOPEncoder &)> encode)
@@ -139,7 +139,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         void bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj);
 
     protected:
-        task<GIOPDecoder*> _twowayCall(Stub *stub, const char *method, std::function<void(GIOPEncoder &)> encode);
+        async<GIOPDecoder*> _twowayCall(Stub *stub, const char *method, std::function<void(GIOPEncoder &)> encode);
 };
 
 }  // namespace CORBA

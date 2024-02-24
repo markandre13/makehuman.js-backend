@@ -12,8 +12,8 @@ class Backend_stub: public Backend, public CORBA::Stub {
 public:
     Backend_stub(CORBA::ORB *orb, const std::string &objectKey, CORBA::detail::Connection *connection): Stub(orb, objectKey, connection) {}
     const char *repository_id() const override { return "IDL:Backend:1.0"; }
-    virtual CORBA::task<std::string> hello(std::string hello) override;
-    virtual CORBA::task<void> fail() override;
+    virtual CORBA::async<std::string> hello(std::string hello) override;
+    virtual CORBA::async<void> fail() override;
 };
 
 class Backend2_stub: public Backend2, public CORBA::Stub {
