@@ -4,16 +4,16 @@ import std;
 
 #include <charconv>
 #include <cstring>
+#include <format>
 
 #include "../src/corba/orb.hh"
-#include "../src/corba/url.hh"
 #include "../src/corba/protocol.hh"
+#include "../src/corba/url.hh"
 #include "kaffeeklatsch.hh"
-#include "util.hh"
-
 #include "makehuman.hh"
-#include "makehuman_stub.hh"
 #include "makehuman_skel.hh"
+#include "makehuman_stub.hh"
+#include "util.hh"
 
 using namespace kaffeeklatsch;
 
@@ -57,13 +57,8 @@ class TcpFakeConnection : public CORBA::detail::Connection {
 CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
     println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
     auto conn = new TcpFakeConnection(m_localAddress, m_localPort, hostname, port);
-                printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n",
-                static_cast<void*>(conn),
-                conn->localAddress().c_str(),
-                conn->localPort(),
-                conn->remoteAddress().c_str(),
-                conn->remotePort(),
-                conn->requestId);
+    printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(conn), conn->localAddress().c_str(), conn->localPort(),
+           conn->remoteAddress().c_str(), conn->remotePort(), conn->requestId);
     return conn;
 }
 
@@ -240,7 +235,7 @@ kaffeeklatsch_spec([] {
                 println("STEP 3: CALL OBJECT AND GET EXCEPTION");
                 try {
                     co_await backend->fail();
-                } catch(CORBA::SystemException &ex) {
+                } catch (CORBA::SystemException &ex) {
                     println("caught exception {}", ex.major());
                 }
                 co_return;
@@ -252,20 +247,10 @@ kaffeeklatsch_spec([] {
                 auto clientConn = FakeTcpProtocol::sender;
                 auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
 
-            printf("clientConn %p %s:%u -> %s:%u requestId=%u\n",
-                static_cast<void*>(clientConn),
-                clientConn->localAddress().c_str(),
-                clientConn->localPort(),
-                clientConn->remoteAddress().c_str(),
-                clientConn->remotePort(),
-                clientConn->requestId);
-            printf("serverConn %p %s:%u -> %s:%u requestId=%u\n",
-                static_cast<void*>(serverConn),
-                serverConn->localAddress().c_str(),
-                serverConn->localPort(),
-                serverConn->remoteAddress().c_str(),
-                serverConn->remotePort(),
-                serverConn->requestId);
+                printf("clientConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(clientConn), clientConn->localAddress().c_str(),
+                       clientConn->localPort(), clientConn->remoteAddress().c_str(), clientConn->remotePort(), clientConn->requestId);
+                printf("serverConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(serverConn), serverConn->localAddress().c_str(),
+                       serverConn->localPort(), serverConn->remoteAddress().c_str(), serverConn->remotePort(), serverConn->requestId);
 
                 co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REPLY TO FRONTEND resolve_str() =================================================");
@@ -280,6 +265,26 @@ kaffeeklatsch_spec([] {
                 co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
             }()
                          .no_wait();
+        });
+    });
+
+    describe("c++ playground", [] {
+        // the thing about c++ smart pointers is that they do the reference counting
+        // in the pointer, not the object.
+        // * the advantage of this is that shared_ptr can be used with all objects.
+        // * the disadvantage is that the object itself does not know it's own shared_ptr.
+        //   inheriting from std::enable_shared_from_this add's the method shared_from_this(),
+        //   which returns the objects shared_ptr. BUT it can only be called when there already
+        //   is at least one shared_ptr for the object available.
+        it("shared_ptr", [] {
+            class A : public std::enable_shared_from_this<A> {};
+            auto a = make_shared<A>();
+            expect(a.use_count()).to.equal(1);
+            auto b = a;
+            expect(a.use_count()).to.equal(2);
+
+            auto c = a->shared_from_this();
+            expect(a.use_count()).to.equal(3);
         });
     });
 });
@@ -297,8 +302,10 @@ kaffeeklatsch_spec([] {
 // [ ] the shared_ptr stuff is still whacky
 // [ ]
 // [ ] stabilize the connection handling code
-// [ ] 
+// [ ]
 // [ ] value types
+// [ ] std::array vs std::span
+// [ ] c++11 prohibits std::string being reference counted...
 
 // coroutine:
 // [X] exceptions
