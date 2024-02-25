@@ -21,21 +21,23 @@
 
 using namespace std;
 
-class Backend_skel : public CORBA::Skeleton {
-    public:
-        Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
-        const char *repository_id() const override { return "IDL:Server:1.0"; }
+class Backend {
+};
+
+class Backend_skel: public CORBA::Skeleton, public Backend {
+public:
+    Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
+    const char *repository_id() const override { return "IDL:Backend:1.0"; }
+private:
+    CORBA::async<> _call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
 
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
-
-    protected:
-        CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder);
 };
 
-CORBA::async<> Backend_impl::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
+CORBA::async<> Backend_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
     println("Backend_impl::_call(\"{}\", decoder, encoder)", operation);
     encoder.ushort(4711);
     co_return;
@@ -44,13 +46,14 @@ CORBA::async<> Backend_impl::_call(const std::string_view &operation, CORBA::GIO
 int main(void) {
     printf("running\n");
 
-    auto orb = new CORBA::ORB();
+    auto orb = make_shared<CORBA::ORB>();
     auto protocol = new MyProtocol();
     orb->registerProtocol(protocol);
-    orb->bind("Backend", make_shared<Backend_impl>(orb));
+    auto backend = make_shared<Backend_impl>(orb.get());
+    orb->bind("Backend", backend);
 
     struct ev_loop *loop = EV_DEFAULT;
-    protocol->listen(orb, loop, "localhost", 9001);
+    protocol->listen(orb.get(), loop, "localhost", 9001);
 
     // initialise a timer watcher, then start it
     // simple non-repeating 5.5 second timeout

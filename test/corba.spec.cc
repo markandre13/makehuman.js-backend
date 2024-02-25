@@ -287,8 +287,17 @@ kaffeeklatsch_spec([] {
 // CORBA:
 // [X] websocket protocol¸¸¸¸¸
 // [X] exceptions
-// [ ] oneway
+// [X] oneway
 // [ ] generate c++ code from idl
+//   [X] twoway call
+//   [X] oneway call
+//   [ ] object references
+//   [ ] special handling for octet sequences
+//   [ ] string reference instead of string for 'in'
+// [ ] the shared_ptr stuff is still whacky
+// [ ]
+// [ ] stabilize the connection handling code
+// [ ] 
 // [ ] value types
 
 // coroutine:
