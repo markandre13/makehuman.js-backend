@@ -4,3 +4,6 @@
 [submodule "upstream/cpptask"]
 	path = upstream/cpptask
 	url = git@github.com:markandre13/cpptask.git
+[submodule "upstream/corba.js"]
+	path = upstream/corba.js
+	url = git@github.com:markandre13/corba.js.git

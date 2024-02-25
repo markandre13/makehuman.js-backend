@@ -1,5 +1,7 @@
 import std;
 
+#include "fake.hh"
+
 #include "../src/corba/corba.hh"
 
 #include <charconv>
@@ -18,67 +20,6 @@ import std;
 using namespace kaffeeklatsch;
 
 using namespace std;
-
-class TcpFakeConnection;
-
-struct FakeTcpProtocol : public CORBA::detail::Protocol {
-        FakeTcpProtocol(const string &localAddress, uint16_t localPort) : m_localAddress(localAddress), m_localPort(localPort) {}
-
-        CORBA::detail::Connection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port);
-        CORBA::async<void> close();
-
-        std::string m_localAddress;
-        uint16_t m_localPort;
-
-        static TcpFakeConnection *sender;
-        static void *buffer;
-        static size_t size;
-};
-
-class TcpFakeConnection : public CORBA::detail::Connection {
-        std::string m_localAddress;
-        uint16_t m_localPort;
-        std::string m_remoteAddress;
-        uint16_t m_remotePort;
-
-    public:
-        TcpFakeConnection(const string &localAddress, uint16_t localPort, const string &remoteAddress, uint16_t remotePort)
-            : m_localAddress(localAddress), m_localPort(localPort), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
-
-        std::string localAddress() const { return m_localAddress; }
-        uint16_t localPort() const { return m_localPort; }
-        std::string remoteAddress() const { return m_remoteAddress; }
-        uint16_t remotePort() const { return m_remotePort; }
-
-        void close();
-        void send(void *buffer, size_t nbyte);
-};
-
-CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
-    println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
-    auto conn = new TcpFakeConnection(m_localAddress, m_localPort, hostname, port);
-    printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(conn), conn->localAddress().c_str(), conn->localPort(),
-           conn->remoteAddress().c_str(), conn->remotePort(), conn->requestId);
-    return conn;
-}
-
-CORBA::async<void> FakeTcpProtocol::close() { co_return; }
-
-TcpFakeConnection *FakeTcpProtocol::sender;
-void *FakeTcpProtocol::buffer = nullptr;
-size_t FakeTcpProtocol::size = 0;
-
-void TcpFakeConnection::close() {}
-void TcpFakeConnection::send(void *buffer, size_t nbyte) {
-    println("TcpFakeConnection::send(...) from {}:{} to {}:{}", m_localAddress, m_localPort, m_remoteAddress, m_remotePort);
-    FakeTcpProtocol::sender = this;
-    if (FakeTcpProtocol::buffer) {
-        free(FakeTcpProtocol::buffer);
-    }
-    FakeTcpProtocol::buffer = malloc(nbyte);
-    memcpy(FakeTcpProtocol::buffer, buffer, nbyte);
-    FakeTcpProtocol::size = nbyte;
-}
 
 class Backend_impl : public Backend_skel {
     public:

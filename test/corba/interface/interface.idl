@@ -1,0 +1,3 @@
+interface Interface {
+    boolean callBoolean(in boolean value);
+};

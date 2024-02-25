@@ -9,7 +9,8 @@ CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
 	-Werror=return-type -Werror=shadow \
 	-Wno-unused-parameter \
 	-I/usr/local/opt/llvm/include/c++ \
-	-I../upstream/kaffeeklatsch/src
+	-I../upstream/kaffeeklatsch/src \
+	-I../src
 
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ \
 	-mmacosx-version-min=12.0 \
@@ -24,15 +25,17 @@ MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
 
-SRC = cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc blob.spec.cc \
+SRC = corba/interface/interface.spec.cc corba/interface/interface.cc \
+	cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc blob.spec.cc \
 	makehuman.cc \
-	main.cc util.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
+	main.cc util.cc fake.cc \
+	../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
  	../src/corba/orb.cc ../src/corba/skeleton.cc ../src/corba/url.cc \
 	../src/corba/giop.cc ../src/corba/cdr.cc  ../src/corba/hexdump.cc
 
 OBJ = $(SRC:.cc=.o)
 
-.SUFFIXES: .cc .o
+.SUFFIXES: .idl .cc .hh .o
 
 all: $(APP)
 
@@ -57,13 +60,22 @@ $(APP): $(OBJ)
 	$(CXX) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
 	-c -o $*.o $*.cc
 
+corba/interface/interface.hh: corba/interface/interface.idl
+	bun ../upstream/corba.js/src/idl/idl.ts --cc-all corba/interface/interface.idl
+
 # DO NOT DELETE
 
+corba/interface/interface.spec.o: corba/interface/interface.hh
+corba/interface/interface.spec.o: corba/interface/interface_stub.hh
+corba/interface/interface.spec.o: corba/interface/interface_skel.hh fake.hh
+corba/interface/interface.o: corba/interface/interface.hh
+corba/interface/interface.o: corba/interface/interface_skel.hh
+corba/interface/interface.o: corba/interface/interface_stub.hh
 cdr_decoder.spec.o: ../src/corba/cdr.hh
 cdr_encoder.spec.o: ../src/corba/cdr.hh
 giop.spec.o: ../src/corba/giop.hh ../src/corba/cdr.hh util.hh
 giop.spec.o: ../src/corba/hexdump.hh
-corba.spec.o: ../src/corba/corba.hh ../src/corba/coroutine.hh
+corba.spec.o: fake.hh ../src/corba/corba.hh ../src/corba/coroutine.hh
 corba.spec.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
 corba.spec.o: ../src/corba/cdr.hh ../src/corba/orb.hh
 corba.spec.o: ../src/corba/protocol.hh ../src/corba/url.hh makehuman.hh
@@ -77,6 +89,7 @@ makehuman.o: ../src/corba/cdr.hh ../src/corba/orb.hh ../src/corba/giop.hh
 makehuman.o: ../src/corba/coroutine.hh makehuman.hh makehuman_skel.hh
 makehuman.o: makehuman_stub.hh
 util.o: util.hh ../src/corba/hexdump.hh
+fake.o: fake.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
 ../src/corba/orb.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh

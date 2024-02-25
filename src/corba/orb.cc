@@ -279,6 +279,7 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
     namingService->bind(id, obj);
 }
 
+// WHY IS THIS ASYNC???
 CORBA::async<> ORB::_socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size) {
     cout << "RECEIVED" << endl;
     hexdump(buffer, size);
