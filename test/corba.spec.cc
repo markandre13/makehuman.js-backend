@@ -183,7 +183,7 @@ kaffeeklatsch_spec([] {
             }()
                          .no_wait();
 
-            [&]() -> CORBA::async<> {
+            // [&]() -> CORBA::async<> {
                 println("REQUEST TO BACKEND resolve_str() ================================================");
                 auto clientConn = FakeTcpProtocol::sender;
                 auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
@@ -193,19 +193,19 @@ kaffeeklatsch_spec([] {
                 printf("serverConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(serverConn), serverConn->localAddress().c_str(),
                        serverConn->localPort(), serverConn->remoteAddress().c_str(), serverConn->remotePort(), serverConn->requestId);
 
-                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REPLY TO FRONTEND resolve_str() =================================================");
-                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REQUEST TO BACKEND hello() ================================================");
-                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REPLY TO FRONTEND hello() =================================================");
-                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REQUEST TO BACKEND fail() ================================================");
-                co_await serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
                 println("REPLY TO FRONTEND fail() =================================================");
-                co_await clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-            }()
-                         .no_wait();
+                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+            // }()
+            //              .no_wait();
         });
     });
 
@@ -240,13 +240,21 @@ kaffeeklatsch_spec([] {
 //   [ ] object references
 //   [ ] special handling for octet sequences
 //   [ ] string reference instead of string for 'in'
+//   [ ] ORB::_socketRcvd
+//     [ ] abort coroutines when connection gets lost
+//     [ ] timeout
+//       [ ] connect
+//       [ ] reply timeout (default 0), throws org.omg.CORBA.Timeout
+//       [ ] idle timeout
+//       [ ] accept (default 0)
+//       [ ] fragment (not implemented at all)
 // [ ] the shared_ptr stuff is still whacky
 // [ ]
 // [ ] stabilize the connection handling code
 // [ ]
 // [ ] value types
-// [ ] std::array vs std::span
-// [ ] c++11 prohibits std::string being reference counted...
+// std::array vs std::span
+// c++11 prohibits std::string being reference counted...
 
 // coroutine:
 // [X] exceptions

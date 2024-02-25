@@ -96,7 +96,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         inline void registerProtocol(detail::Protocol *protocol) { protocols.push_back(protocol); }
 
         static void socketRcvd(const uint8_t *buffer, size_t size);
-        CORBA::async<> _socketRcvd(detail::Connection *connection, const uint8_t *buffer, size_t size);
+        void _socketRcvd(detail::Connection *connection, const void *buffer, size_t size);
 
         async<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
 
