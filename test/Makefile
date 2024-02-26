@@ -65,9 +65,9 @@ corba/interface/interface.hh: corba/interface/interface.idl
 
 # DO NOT DELETE
 
-corba/interface/interface.spec.o: corba/interface/interface.hh
+corba/interface/interface.spec.o: corba/interface/interface.hh fake.hh
+corba/interface/interface.spec.o: corba/interface/interface_skel.hh
 corba/interface/interface.spec.o: corba/interface/interface_stub.hh
-corba/interface/interface.spec.o: corba/interface/interface_skel.hh fake.hh
 corba/interface/interface.o: corba/interface/interface.hh
 corba/interface/interface.o: corba/interface/interface_skel.hh
 corba/interface/interface.o: corba/interface/interface_stub.hh

@@ -152,7 +152,7 @@ kaffeeklatsch_spec([] {
         it("play ping pong", [] {
             // SERVER
             auto serverORB = make_shared<CORBA::ORB>();
-            auto serverProtocol = new FakeTcpProtocol("backend.local", 8080);
+            auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 8080);
             serverORB->registerProtocol(serverProtocol);
 
             auto backend = make_shared<Backend_impl>(serverORB.get());
@@ -162,7 +162,7 @@ kaffeeklatsch_spec([] {
             // CLIENT
 
             auto clientORB = make_shared<CORBA::ORB>();
-            auto clientProtocol = new FakeTcpProtocol("frontend.local", 32768);
+            auto clientProtocol = new FakeTcpProtocol(clientORB.get(), "frontend.local", 32768);
             clientORB->registerProtocol(clientProtocol);
 
             [&]() -> CORBA::async<> {
@@ -185,25 +185,25 @@ kaffeeklatsch_spec([] {
 
             // [&]() -> CORBA::async<> {
                 println("REQUEST TO BACKEND resolve_str() ================================================");
-                auto clientConn = FakeTcpProtocol::sender;
-                auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
+                // auto clientConn = FakeTcpProtocol::sender;
+                // auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
 
-                printf("clientConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(clientConn), clientConn->localAddress().c_str(),
-                       clientConn->localPort(), clientConn->remoteAddress().c_str(), clientConn->remotePort(), clientConn->requestId);
-                printf("serverConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(serverConn), serverConn->localAddress().c_str(),
-                       serverConn->localPort(), serverConn->remoteAddress().c_str(), serverConn->remotePort(), serverConn->requestId);
+                // printf("clientConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(clientConn), clientConn->localAddress().c_str(),
+                //        clientConn->localPort(), clientConn->remoteAddress().c_str(), clientConn->remotePort(), clientConn->requestId);
+                // printf("serverConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(serverConn), serverConn->localAddress().c_str(),
+                //        serverConn->localPort(), serverConn->remoteAddress().c_str(), serverConn->remotePort(), serverConn->requestId);
 
-                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                println("REPLY TO FRONTEND resolve_str() =================================================");
-                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                println("REQUEST TO BACKEND hello() ================================================");
-                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                println("REPLY TO FRONTEND hello() =================================================");
-                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                println("REQUEST TO BACKEND fail() ================================================");
-                serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                println("REPLY TO FRONTEND fail() =================================================");
-                clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // println("REPLY TO FRONTEND resolve_str() =================================================");
+                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // println("REQUEST TO BACKEND hello() ================================================");
+                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // println("REPLY TO FRONTEND hello() =================================================");
+                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // println("REQUEST TO BACKEND fail() ================================================");
+                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
+                // println("REPLY TO FRONTEND fail() =================================================");
+                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
             // }()
             //              .no_wait();
         });

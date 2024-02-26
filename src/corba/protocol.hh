@@ -42,9 +42,9 @@ class Connection {
         // BigInt: ContextId
         // initialContextTokens = new Map<BigInt, InitialContextToken>()
 
-        virtual std::string localAddress() const = 0;
+        virtual const std::string& localAddress() const = 0;
         virtual uint16_t localPort() const = 0;
-        virtual std::string remoteAddress() const = 0;
+        virtual const std::string& remoteAddress() const = 0;
         virtual uint16_t remotePort() const = 0;
 
         virtual void close() = 0;

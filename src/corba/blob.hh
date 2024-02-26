@@ -42,7 +42,7 @@ class blob : public std::basic_string<std::byte> {
         // friend ostream &operator<<(ostream &os, const blob_view &dt);
 };
 
-std::ostream &operator<<(std::ostream &os, const blob &dt) {
+inline std::ostream &operator<<(std::ostream &os, const blob &dt) {
     os << std::hex << std::setfill('0');
     for (auto &b : dt) {
         os << std::setw(2) << (unsigned)b;
@@ -50,7 +50,7 @@ std::ostream &operator<<(std::ostream &os, const blob &dt) {
     return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const blob_view &dt) {
+inline std::ostream &operator<<(std::ostream &os, const blob_view &dt) {
     os << std::hex << std::setfill('0');
     for (auto &b : dt) {
         os << std::setw(2) << (unsigned)b;
