@@ -4,4 +4,5 @@ interface Interface {
     unsigned short callUShort(in unsigned short value);
     unsigned long callUnsignedLong(in unsigned long value);
     unsigned long long callUnsignedLongLong(in unsigned long long value);
-};
+    // string callString(in string value);
+}; 

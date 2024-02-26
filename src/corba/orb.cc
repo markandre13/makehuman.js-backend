@@ -342,10 +342,10 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 connection->send((void *)encoder.buffer.data(), length);
                             }
                         },
-                        [&](std::exception &ex) { // FIXME: the references objects won't be available
+                        [&](std::exception_ptr eptr) { // FIXME: the references objects won't be available
                             try {
                                 // std::rethrow_exception(ex);
-                                throw ex;
+                                std::rethrow_exception(eptr);
                             } catch (CORBA::UserException &ex) {
                                 println("SERVANT THREW CORBA::USER EXCEPTION");
                                 if (request->responseExpected) {
