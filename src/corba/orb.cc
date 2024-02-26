@@ -333,7 +333,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 std::cerr << "CALL SERVANT" << std::endl;
                 servant->second->_call(request->method, decoder, encoder)
                     .thenOrCatch(
-                        [&] {
+                        [&] { // FIXME: the references objects won't be available
                             if (request->responseExpected) {
                                 auto length = encoder.buffer.offset;
                                 encoder.setGIOPHeader(GIOP_REPLY);
@@ -342,7 +342,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 connection->send((void *)encoder.buffer.data(), length);
                             }
                         },
-                        [&](std::exception &ex) {
+                        [&](std::exception &ex) { // FIXME: the references objects won't be available
                             try {
                                 // std::rethrow_exception(ex);
                                 throw ex;
