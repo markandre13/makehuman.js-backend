@@ -247,9 +247,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
         }
     }
     // cout << "REQUEST objectKey size = " << header->objectKey.length << endl;
-
-    // FIXME: rename 'method' into 'operation' as it's named in the CORBA standard
-    header->operation = buffer.string();
+    header->operation = buffer.string_view();
 
     if (majorVersion == 1 && minorVersion <= 1) {
         auto requestingPrincipalLength = buffer.ulong();

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "blob.hh"
+
 namespace CORBA {
 
 // Common Data Representation
@@ -84,6 +86,8 @@ class CDRDecoder {
         // double
         std::string blob();
         std::string string();
+        blob_view blob_view();
+        std::string_view string_view();
         std::string string(size_t length);
         // sequence
         // value

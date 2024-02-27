@@ -63,6 +63,9 @@ $(APP): $(OBJ)
 corba/interface/interface.hh: corba/interface/interface.idl
 	bun ../upstream/corba.js/src/idl/idl.ts --cc-all corba/interface/interface.idl
 
+makehuman.hh: makehuman.idl
+	bun ../upstream/corba.js/src/idl/idl.ts --cc-all makehuman.idl
+
 # DO NOT DELETE
 
 corba/interface/interface.spec.o: corba/interface/interface.hh fake.hh

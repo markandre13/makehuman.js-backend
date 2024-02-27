@@ -153,6 +153,19 @@ std::string CDRDecoder::string() {
     return string(ulong());
 }
 
+blob_view CDRDecoder::blob_view() {
+    size_t nbytes = ulong();
+    auto buffer = _data + m_offset;
+    m_offset += nbytes;
+    return CORBA::blob_view(buffer, nbytes);
+}
+std::string_view CDRDecoder::string_view() {
+    size_t nbytes = ulong();
+    auto buffer = _data + m_offset;
+    m_offset += nbytes;
+    return std::string_view(buffer, nbytes - 1);
+}
+
 std::string CDRDecoder::string(size_t len) {
     std::string result(_data + m_offset, len - 1);
     m_offset += len;

@@ -24,9 +24,9 @@ using namespace std;
 class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
-        virtual CORBA::async<string> hello(string word) override {
+        virtual CORBA::async<string> hello(string_view word) override {
             println("Backend_impl::hello(\"{}\")", word);
-            co_return word + " world.";
+            co_return string(word) + " world.";
         }
         virtual CORBA::async<> fail() override {
             throw CORBA::BAD_OPERATION(0, CORBA::YES);

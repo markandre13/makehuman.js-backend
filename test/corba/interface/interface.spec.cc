@@ -22,7 +22,7 @@ class Interface_impl : public Interface_skel {
 
 kaffeeklatsch_spec([] {
     describe("interface", [] {
-        fit("send'n receive", [] {
+        it("send'n receive", [] {
             // SERVER
             auto serverORB = make_shared<ORB>();
             auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 2809);

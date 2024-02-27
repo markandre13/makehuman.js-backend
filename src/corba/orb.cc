@@ -66,7 +66,7 @@ class NamingContextExtImpl : public Skeleton {
             encoder.object(result.get());
         }
 
-        CORBA::async<> _call(const std::string &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
+        CORBA::async<> _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
             // cerr << "NamingContextExtImpl::_call(" << operation << ", ...)"
             // << endl;
             if (operation == "resolve") {
