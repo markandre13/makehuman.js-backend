@@ -291,7 +291,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
             // TODO: move this into a method
             auto request = decoder.scanRequestHeader();
             string objectKey = request->objectKey;  // FIXME: do not copy FIXME: length HACK
-            cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << hex << objectKey << "', " << request->method << ")" << endl;
+            cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << hex << objectKey << "', " << request->operation << ")" << endl;
             auto servant = servants.find(objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
                 if (request->responseExpected) {
@@ -311,7 +311,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 return;
             }
 
-            if (request->method == "_is_a") {
+            if (request->operation == "_is_a") {
                 auto repositoryId = decoder.string();
                 CORBA::GIOPEncoder encoder(connection);
                 encoder.skipReplyHeader();
@@ -327,55 +327,58 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
             }
 
             try {
-                CORBA::GIOPEncoder encoder(connection);
-                encoder.skipReplyHeader();
+                auto encoder = make_shared<CORBA::GIOPEncoder>(connection);
+                encoder->skipReplyHeader();
+                bool responseExpected = request->responseExpected;
+                uint32_t requestId = request->requestId;
+
                 // move parts of this into a separate function so that it can be unit tested
                 std::cerr << "CALL SERVANT" << std::endl;
-                servant->second->_call(request->method, decoder, encoder)
+                servant->second->_call(request->operation, decoder, *encoder)
                     .thenOrCatch(
-                        [&] { // FIXME: the references objects won't be available
-                            if (request->responseExpected) {
-                                auto length = encoder.buffer.offset;
-                                encoder.setGIOPHeader(GIOP_REPLY);
-                                encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
+                        [encoder, connection, responseExpected, requestId] { // FIXME: the references objects won't be available
+                            if (responseExpected) {
+                                auto length = encoder->buffer.offset;
+                                encoder->setGIOPHeader(GIOP_REPLY);
+                                encoder->setReplyHeader(requestId, GIOP_NO_EXCEPTION);
                                 println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
-                                connection->send((void *)encoder.buffer.data(), length);
+                                connection->send((void *)encoder->buffer.data(), length);
                             }
                         },
-                        [&](std::exception_ptr eptr) { // FIXME: the references objects won't be available
+                        [encoder, connection, responseExpected, requestId](std::exception_ptr eptr) { // FIXME: the references objects won't be available
                             try {
                                 // std::rethrow_exception(ex);
                                 std::rethrow_exception(eptr);
                             } catch (CORBA::UserException &ex) {
                                 println("SERVANT THREW CORBA::USER EXCEPTION");
-                                if (request->responseExpected) {
-                                    auto length = encoder.buffer.offset;
-                                    encoder.setGIOPHeader(GIOP_REPLY);
-                                    encoder.setReplyHeader(request->requestId, GIOP_USER_EXCEPTION);
-                                    connection->send((void *)encoder.buffer.data(), length);
+                                if (responseExpected) {
+                                    auto length = encoder->buffer.offset;
+                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setReplyHeader(requestId, GIOP_USER_EXCEPTION);
+                                    connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (CORBA::SystemException &error) {
                                 println("SERVANT THREW CORBA::SYSTEM EXCEPTION");
-                                if (request->responseExpected) {
-                                    encoder.string(error.major());
-                                    encoder.ulong(error.minor);
-                                    encoder.ulong(error.completed);
-                                    auto length = encoder.buffer.offset;
-                                    encoder.setGIOPHeader(GIOP_REPLY);
-                                    encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
-                                    connection->send((void *)encoder.buffer.data(), length);
+                                if (responseExpected) {
+                                    encoder->string(error.major());
+                                    encoder->ulong(error.minor);
+                                    encoder->ulong(error.completed);
+                                    auto length = encoder->buffer.offset;
+                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
+                                    connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (std::exception &ex) {
                                 println("SERVANT THREW STD::EXCEPTION");
-                                if (request->responseExpected) {
-                                    encoder.string("IDL:mark13.org/CORBA/GENERIC:1.0");
-                                    encoder.ulong(0);
-                                    encoder.ulong(0);
-                                    encoder.string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
-                                    auto length = encoder.buffer.offset;
-                                    encoder.setGIOPHeader(GIOP_REPLY);
-                                    encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
-                                    connection->send((void *)encoder.buffer.data(), length);
+                                if (responseExpected) {
+                                    encoder->string("IDL:mark13.org/CORBA/GENERIC:1.0");
+                                    encoder->ulong(0);
+                                    encoder->ulong(0);
+                                    encoder->string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
+                                    auto length = encoder->buffer.offset;
+                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
+                                    connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (...) {
                                 println("SERVANT THREW EXCEPTION");

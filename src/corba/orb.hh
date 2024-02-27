@@ -108,27 +108,27 @@ class ORB : public std::enable_shared_from_this<ORB> {
         template <typename T>
         async<T> twowayCall(
             Stub *stub,
-            const char *method,
+            const char *operation,
             std::function<void(GIOPEncoder &)> encode,
             std::function<T(GIOPDecoder &)> decode)
         {
-            auto decoder = co_await _twowayCall(stub, method, encode);
+            auto decoder = co_await _twowayCall(stub, operation, encode);
             co_return decode(*decoder);
         }
 
         // template <typename T>
         async<void> twowayCall(
             Stub *stub,
-            const char *method,
+            const char *operation,
             std::function<void(GIOPEncoder &)> encode)
         {
-            co_await _twowayCall(stub, method, encode);
+            co_await _twowayCall(stub, operation, encode);
             co_return;
         }
 
         void onewayCall(
             Stub *stub,
-            const char *method,
+            const char *operation,
             std::function<void(GIOPEncoder &)> encode);
 
 
@@ -139,7 +139,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         void bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj);
 
     protected:
-        async<GIOPDecoder*> _twowayCall(Stub *stub, const char *method, std::function<void(GIOPEncoder &)> encode);
+        async<GIOPDecoder*> _twowayCall(Stub *stub, const char *operation, std::function<void(GIOPEncoder &)> encode);
 };
 
 }  // namespace CORBA

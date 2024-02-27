@@ -35,7 +35,7 @@ kaffeeklatsch_spec([] {
                     auto request = decoder.scanRequestHeader();
                     expect(request->requestId).to.equal(4);
                     expect(request->objectKey).to.equal(string("\x01\x02\x03\x04"));
-                    expect(request->method).to.equal("myMethod");
+                    expect(request->operation).to.equal("myMethod");
                     expect(request->responseExpected).to.beTrue();
                 });
         });
@@ -104,8 +104,8 @@ kaffeeklatsch_spec([] {
             expect(request->requestId).equals(4);
             string objectKey(dataview.data() + 28, 20);
             expect(request->objectKey).equals(objectKey);
-            hexdump(request->method);
-            expect(request->method).equals("sendObject");
+            hexdump(request->operation);
+            expect(request->operation).equals("sendObject");
         });
         it("OmniORB Reply", [] {
             auto data = parseOmniDump(R"(

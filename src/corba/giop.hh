@@ -129,7 +129,7 @@ struct RequestHeader {
         uint32_t requestId;
         bool responseExpected;
         std::string objectKey;
-        std::string method;
+        std::string operation;
 };
 
 struct ReplyHeader {
