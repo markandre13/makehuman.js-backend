@@ -25,10 +25,10 @@ class CDREncoder {
         void ulong(uint32_t);
         void ulonglong(uint64_t);
         void blob(const char *buffer, size_t nbytes);
-        void string(const char *cstring, size_t nbytes) {
-            blob(cstring, nbytes + 1);  // strings include the trailing 0
-        }
-        void string(const std::string &value) { string(value.c_str(), value.size()); }
+        void string(const char *buffer);
+        void string(const char *buffer, size_t nbytes);
+        inline void string(const std::string &value) { string(value.data(), value.size()); }
+        inline void string(const std::string_view &value) { string(value.data(), value.size()); }
         void endian();
 
         void reserveSize();

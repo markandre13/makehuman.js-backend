@@ -51,6 +51,17 @@ void CDREncoder::blob(const char *value, size_t nbytes) {
     memcpy(_data.data() + offset, value, nbytes);
     offset += nbytes;
 }
+void CDREncoder::string(const char *value) {
+    string(value, strlen(value));
+}
+void CDREncoder::string(const char *value, size_t nbytes) {
+    ulong(nbytes + 1);
+    _data.resize(offset + nbytes + 1);
+    memcpy(_data.data() + offset, value, nbytes);
+    offset += nbytes;
+    _data[offset] = 0;
+    ++offset;
+}
 
 void CDREncoder::endian() { octet(endian::native == endian::big ? 0 : 1); }
 

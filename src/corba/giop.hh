@@ -177,8 +177,9 @@ class GIOPEncoder : public GIOPBase {
         inline void ulonglong(uint64_t value) { buffer.ulonglong(value); }
 
         inline void string(const char *value) { buffer.string(value); }
-        inline void string(const char *value, size_t size) { buffer.string(value); }
+        inline void string(const char *value, size_t size) { buffer.string(value, size); }
         inline void string(const std::string &value) { buffer.string(value); }
+        inline void string(const std::string_view &value) { buffer.string(value); }
         inline void blob(const char *value, size_t size) { buffer.blob(value, size); }
         inline void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
         inline void endian() { buffer.endian(); }

@@ -17,7 +17,7 @@ class Interface_impl : public Interface_skel {
         async<uint16_t> callUShort(uint16_t value) override { co_return value; }
         async<uint32_t> callUnsignedLong(uint32_t value) override { co_return value; }
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
-        // async<string> callString(string_view value) override { co_return string(value); }
+        async<string> callString(string_view value) override { co_return string(value); }
 };
 
 kaffeeklatsch_spec([] {
@@ -45,6 +45,7 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callUShort(65535)).to.equal(65535);
                 expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
+                expect(co_await backend->callString("hello")).to.equal("hello");
             }()
                                   .thenOrCatch([] {},
                                                [&eptr](std::exception_ptr _eptr) {
