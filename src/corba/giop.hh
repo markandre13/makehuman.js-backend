@@ -128,7 +128,7 @@ struct Blob {
 struct RequestHeader {
         uint32_t requestId;
         bool responseExpected;
-        std::string objectKey;
+        blob_view objectKey;
         std::string_view operation;
 };
 
@@ -139,8 +139,8 @@ struct ReplyHeader {
 
 struct LocateRequest {
         uint32_t requestId;
-        std::string objectKey;
-        LocateRequest(uint32_t requestId, const std::string &objectKey) : requestId(requestId), objectKey(objectKey) {}
+        blob_view objectKey;
+        LocateRequest(uint32_t requestId, const blob_view &objectKey) : requestId(requestId), objectKey(objectKey) {}
 };
 
 namespace detail {

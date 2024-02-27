@@ -80,7 +80,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         bool debug = true;
         NamingContextExtImpl * namingService = nullptr;
         // std::map<std::string, Skeleton*> initialReferences; // name to
-        std::map<std::string, Skeleton *> servants;  // objectId to skeleton
+        std::map<blob, Skeleton *> servants;  // objectId to skeleton
 
         uint64_t servantIdCounter = 0;
 

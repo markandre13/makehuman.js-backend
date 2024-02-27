@@ -260,13 +260,13 @@ void ORB::onewayCall(Stub *stub, const char *operation, std::function<void(GIOPE
 string ORB::registerServant(Skeleton *servant) {
     println("ORB::registerServant(servant)");
     string objectKey = format("OID:{:x}", ++servantIdCounter);
-    servants[objectKey] = servant;
+    servants[blob(objectKey)] = servant;
     return objectKey;
 }
 
 string ORB::registerServant(Skeleton *servant, const string &objectKey) {
     println("ORB::registerServant(servant, \"{}\")", objectKey);
-    servants[objectKey] = servant;
+    servants[blob(objectKey)] = servant;
     return objectKey;
 }
 
@@ -290,9 +290,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
         case CORBA::GIOP_REQUEST: {
             // TODO: move this into a method
             auto request = decoder.scanRequestHeader();
-            string objectKey = request->objectKey;  // FIXME: do not copy FIXME: length HACK
-            cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << hex << objectKey << "', " << request->operation << ")" << endl;
-            auto servant = servants.find(objectKey);  // FIXME: avoid string copy
+            // string objectKey = request->objectKey;  // FIXME: do not copy FIXME: length HACK
+            cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << request->objectKey << "', " << request->operation << ")" << endl;
+            auto servant = servants.find(request->objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
                 if (request->responseExpected) {
                     CORBA::GIOPEncoder encoder(connection);

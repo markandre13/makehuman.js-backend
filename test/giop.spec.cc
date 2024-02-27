@@ -34,7 +34,7 @@ kaffeeklatsch_spec([] {
 
                     auto request = decoder.scanRequestHeader();
                     expect(request->requestId).to.equal(4);
-                    expect(request->objectKey).to.equal(string("\x01\x02\x03\x04"));
+                    expect(request->objectKey).to.equal(CORBA::blob_view("\x01\x02\x03\x04"));
                     expect(request->operation).to.equal("myMethod");
                     expect(request->responseExpected).to.beTrue();
                 });
@@ -68,7 +68,7 @@ kaffeeklatsch_spec([] {
 
             auto locateRequest = decoder.scanLocateRequest();
             expect(locateRequest->requestId).equals(2);
-            string objectKey(dataview.data() + 24, 20);
+            CORBA::blob_view objectKey(dataview.data() + 24, 20);
             expect(locateRequest->objectKey).equals(objectKey);
         });
         it("OmniORB Request", [] {
@@ -102,7 +102,7 @@ kaffeeklatsch_spec([] {
             auto request = decoder.scanRequestHeader();
             expect(request->responseExpected).equals(true);
             expect(request->requestId).equals(4);
-            string objectKey(dataview.data() + 28, 20);
+            CORBA::blob_view objectKey(dataview.data() + 28, 20);
             expect(request->objectKey).equals(objectKey);
             hexdump(request->operation);
             expect(request->operation).equals("sendObject");

@@ -26,8 +26,9 @@ class blob_view : public std::basic_string_view<std::byte> {
         using base_t = std::basic_string_view<std::byte>;
 
     public:
-        blob_view(const char *buffer) : base_t(reinterpret_cast<const std::byte *>(buffer), strlen(buffer)) {}
-        blob_view(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
+        inline blob_view(): base_t() {}
+        inline blob_view(const char *buffer) : base_t(reinterpret_cast<const std::byte *>(buffer), strlen(buffer)) {}
+        inline blob_view(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
         // friend ostream &operator<<(ostream &os, const blob_view &dt);
 };
 
@@ -36,9 +37,10 @@ class blob : public std::basic_string<std::byte> {
         using base_t = std::basic_string<std::byte>;
 
     public:
-        blob(const char *buffer) : base_t(reinterpret_cast<const std::byte *>(buffer), strlen(buffer)) {}
-        blob(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
-        blob(const blob_view &value) : base_t(value) {}
+        inline blob(const char *buffer) : base_t(reinterpret_cast<const std::byte *>(buffer), strlen(buffer)) {}
+        inline blob(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
+        inline blob(const std::string &buffer): base_t(reinterpret_cast<const std::byte *>(buffer.data()), buffer.size()) {}
+        inline blob(const blob_view &value) : base_t(value) {}
         // friend ostream &operator<<(ostream &os, const blob_view &dt);
 };
 

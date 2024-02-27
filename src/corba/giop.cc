@@ -232,12 +232,12 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     buffer.skip(3);  // RequestReserved
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        header->objectKey = buffer.blob();
+        header->objectKey = buffer.blob_view();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                header->objectKey = buffer.blob();
+                header->objectKey = buffer.blob_view();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
@@ -262,14 +262,14 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
     this->requestId = buffer.ulong();
-    std::string objectKey;
+    blob_view objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
-        objectKey = buffer.blob();
+        objectKey = buffer.blob_view();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                objectKey = buffer.blob();
+                objectKey = buffer.blob_view();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
