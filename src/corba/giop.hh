@@ -12,6 +12,7 @@ namespace CORBA {
 class ORB;
 class Object;
 class ObjectReference;
+class blob;
 
 enum GIOPMessageType {
     GIOP_REQUEST,
@@ -180,8 +181,13 @@ class GIOPEncoder : public GIOPBase {
         inline void string(const char *value, size_t size) { buffer.string(value, size); }
         inline void string(const std::string &value) { buffer.string(value); }
         inline void string(const std::string_view &value) { buffer.string(value); }
+
         inline void blob(const char *value, size_t size) { buffer.blob(value, size); }
         inline void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
+        inline void blob(const std::string_view &value) { buffer.blob(value.data(), value.size()); }
+        inline void blob(const CORBA::blob &value) { buffer.blob((const char*)value.data(), value.size()); }
+        inline void blob(const CORBA::blob_view &value) { buffer.blob((const char*)value.data(), value.size()); }
+
         inline void endian() { buffer.endian(); }
 
         inline void reserveSize() { buffer.reserveSize(); }
@@ -194,7 +200,7 @@ class GIOPEncoder : public GIOPBase {
         void skipReplyHeader();
         void setGIOPHeader(GIOPMessageType type);
         void setReplyHeader(uint32_t requestId, uint32_t replyStatus);
-        void encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected);
+        void encodeRequest(const CORBA::blob &objectKey, const std::string &operation, uint32_t requestId, bool responseExpected);
         void serviceContext();
 };
 

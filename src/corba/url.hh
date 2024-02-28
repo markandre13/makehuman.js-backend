@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <variant>
+#include <vector>
 
 namespace CORBA {
 
@@ -40,4 +40,4 @@ struct CorbaName : CorbaLocation {
 
 std::variant<IOR, CorbaLocation, CorbaName> decodeURI(const std::string &uri);
 
-}
+}  // namespace CORBA

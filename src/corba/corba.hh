@@ -34,13 +34,13 @@ class Object {
         CORBA::ORB *orb;
 
     public:
-        Object(CORBA::ORB *orb, const std::string &objectKey) : orb(orb), objectKey(objectKey) {
+        Object(CORBA::ORB *orb, const CORBA::blob_view &objectKey) : orb(orb), objectKey(objectKey) {
             std::println("Object(orb, \"{}\")", this->objectKey);
         }
         virtual ~Object();
 
         // a unique id for this object on this ORB
-        std::string objectKey;
+        CORBA::blob objectKey;
 
         // ORB
         // Connection
@@ -60,7 +60,7 @@ class Object {
 
 class ObjectReference : public Object {
     public:
-        ObjectReference(CORBA::ORB *orb, std::string oid, std::string host, uint16_t port, std::string objectKey)
+        ObjectReference(CORBA::ORB *orb, std::string oid, std::string host, uint16_t port, CORBA::blob_view &objectKey)
             : Object(orb, objectKey), oid(oid), host(host), port(port) {}
         virtual ~ObjectReference() override;
         void setORB(CORBA::ORB *anORB) {this->orb = anORB; }
@@ -79,7 +79,7 @@ class Stub : public Object {
         detail::Connection *connection;
 
     public:
-        Stub(CORBA::ORB *orb, const std::string &objectKey, detail::Connection *connection) : Object(orb, objectKey), connection(connection) {}
+        Stub(CORBA::ORB *orb, const CORBA::blob_view &objectKey, detail::Connection *connection) : Object(orb, objectKey), connection(connection) {}
         virtual ~Stub() override;
 };
 

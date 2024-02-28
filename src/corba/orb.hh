@@ -101,9 +101,9 @@ class ORB : public std::enable_shared_from_this<ORB> {
         async<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
 
         // register servant and create and assign a new objectKey
-        std::string registerServant(Skeleton *skeleton);
+        blob_view registerServant(Skeleton *skeleton);
         // register servant with the given objectKey
-        std::string registerServant(Skeleton *skeleton, const std::string &objectKey);
+        blob_view registerServant(Skeleton *skeleton, const std::string &objectKey);
 
         template <typename T>
         async<T> twowayCall(

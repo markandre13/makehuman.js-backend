@@ -9,6 +9,7 @@
 #include "hexdump.hh"
 #include "orb.hh"
 #include "protocol.hh"
+#include "blob.hh"
 
 using namespace std;
 
@@ -117,7 +118,7 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
     }
 }
 
-void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, uint32_t requestId, bool responseExpected) {
+void GIOPEncoder::encodeRequest(const CORBA::blob &objectKey, const std::string &operation, uint32_t requestId, bool responseExpected) {
     skipGIOPHeader();
 
     if (majorVersion == 1 && minorVersion <= 1) {
@@ -132,10 +133,10 @@ void GIOPEncoder::encodeRequest(std::string objectKey, std::string operation, ui
     buffer.offset += 3;
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        blob(objectKey);
+        this->blob(objectKey);
     } else {
         ushort(GIOP_KEY_ADDR);
-        blob(objectKey);
+        this->blob(objectKey);
     }
 
     string(operation);
@@ -512,7 +513,8 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
             }
         });
     }
-    return make_shared<ObjectReference>(nullptr, data.oid, data.host, data.port, data.objectKey);
+    auto b = blob_view(data.objectKey);
+    return make_shared<ObjectReference>(nullptr, data.oid, data.host, data.port, b);
 }
 
 }  // namespace CORBA

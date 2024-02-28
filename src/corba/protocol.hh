@@ -31,7 +31,7 @@ class Connection {
         // stubs may contain OID received via this connection
         // TODO: WeakMap? refcount tests
         // objectId to stub?
-        std::map<std::string, Stub *> stubsById;
+        std::map<blob, Stub *> stubsById;
 
         // replies to be send back over this connection
         // number: RequestId

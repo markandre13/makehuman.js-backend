@@ -6,6 +6,8 @@
 #include <print>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <variant>
 
 #include "cdr.hh"
 #include "corba.hh"
@@ -22,7 +24,7 @@ class NamingContextExtImpl : public Skeleton {
         std::map<std::string, std::shared_ptr<Object>> name2Object;
 
     public:
-        NamingContextExtImpl(CORBA::ORB *orb, const string &objectKey) : Skeleton(orb, objectKey) {}
+        NamingContextExtImpl(CORBA::ORB *orb, const std::string& objectKey) : Skeleton(orb, objectKey) {}
         const char *repository_id() const override;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
@@ -84,9 +86,12 @@ class NamingContextExtImpl : public Skeleton {
 
 const char *NamingContextExtImpl::repository_id() const { return "omg.org/CosNaming/NamingContextExt"; }
 
+// const blob a("aaa");
+// const blob_view b(a);
+
 class NamingContextExtStub : public Stub {
     public:
-        NamingContextExtStub(CORBA::ORB *orb, const std::string &objectKey, detail::Connection *connection) : Stub(orb, objectKey, connection) {}
+        NamingContextExtStub(CORBA::ORB *orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}
         const char *repository_id() const override;
 
         // static narrow(object: any): NamingContextExtStub {
@@ -257,17 +262,16 @@ void ORB::onewayCall(Stub *stub, const char *operation, std::function<void(GIOPE
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
 }
 
-string ORB::registerServant(Skeleton *servant) {
+blob_view ORB::registerServant(Skeleton *servant) {
     println("ORB::registerServant(servant)");
-    string objectKey = format("OID:{:x}", ++servantIdCounter);
-    servants[blob(objectKey)] = servant;
-    return objectKey;
+    return registerServant(servant, format("OID:{:x}", ++servantIdCounter));
 }
 
-string ORB::registerServant(Skeleton *servant, const string &objectKey) {
+blob_view ORB::registerServant(Skeleton *servant, const string &objectKey) {
     println("ORB::registerServant(servant, \"{}\")", objectKey);
+    auto pos = servants.emplace(std::make_pair(blob(objectKey), servant));
     servants[blob(objectKey)] = servant;
-    return objectKey;
+    return blob_view(std::get<0>(pos)->first);
 }
 
 void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj) {

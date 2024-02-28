@@ -327,7 +327,7 @@ IOR::IOR(const string &ior) {
     host = ref->host;
     port = ref->port;
     oid = ref->oid;
-    objectKey = ref->objectKey;
+    objectKey = string((const char*)ref->objectKey.data(), ref->objectKey.size());
 }
 
 }  // namespace CORBA
