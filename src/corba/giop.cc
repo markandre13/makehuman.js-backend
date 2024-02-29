@@ -233,12 +233,12 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     buffer.skip(3);  // RequestReserved
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        header->objectKey = buffer.blob_view();
+        header->objectKey = buffer.blob();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                header->objectKey = buffer.blob_view();
+                header->objectKey = buffer.blob();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
@@ -265,12 +265,12 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
     this->requestId = buffer.ulong();
     blob_view objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
-        objectKey = buffer.blob_view();
+        objectKey = buffer.blob();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                objectKey = buffer.blob_view();
+                objectKey = buffer.blob();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
@@ -464,7 +464,8 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                     // }
                     data.host = buffer.string();
                     data.port = buffer.ushort();
-                    data.objectKey = buffer.blob();
+                    auto objectKey = buffer.blob();
+                    data.objectKey = std::string((const char *)objectKey.data(), objectKey.size());
                     // console.log(`IOR: IIOP(version: ${iiopMajorVersion}.${iiopMinorVersion}, host: ${data.host}:${data.port}, objectKey: ${data.objectKey})`)
                     // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
                     if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {

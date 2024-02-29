@@ -24,7 +24,7 @@ static void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int reven
 
 static ssize_t wslay_send_callback(wslay_event_context_ptr ctx, const uint8_t *data, size_t len, int flags, void *user_data);
 static ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len, int flags, void *user_data);
-static void wslay_msg_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data);
+static void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data);
 
 struct accept_handler_t {
         ev_io watcher;
@@ -192,9 +192,10 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
                     NULL,                 /* on_frame_recv_start_callback */
                     NULL,                 /* on_frame_recv_callback */
                     NULL,                 /* on_frame_recv_end_callback */
-                    wslay_msg_callback    // message received via wslay
+                    wslay_msg_rcv_callback// message received via wslay
                 };
                 wslay_event_context_server_init(&handler->ctx, &callbacks, handler);
+                // TODO: call wslay_event_context_free(...) when closing connection
             }
 
             printf("message:%s\n", buffer);
@@ -242,8 +243,11 @@ ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t l
     //     ;
     return nbytes;
 }
-void wslay_msg_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data) {
-    println("wslay_msg_callback");
+
+void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data) {
+    println("wslay_msg_rcv_callback");
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
-    handler->orb->_socketRcvd(handler->connection, arg->msg, arg->msg_length).no_wait();
+    const char *buffer = arg->msg;
+    // arg->msg = nullptr; // THIS NEEDS A CHANGE IN WSLAY
+    handler->orb->_socketRcvd(handler->connection, buffer, arg->msg_length);
 }

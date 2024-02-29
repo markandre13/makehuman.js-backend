@@ -12,7 +12,6 @@ namespace CORBA {
 class ORB;
 class Object;
 class ObjectReference;
-class blob;
 
 enum GIOPMessageType {
     GIOP_REQUEST,
@@ -237,7 +236,7 @@ class GIOPDecoder : public GIOPBase {
         // longlong
         // float
         // double
-        inline std::string blob() { return buffer.blob(); }
+        inline CORBA::blob_view blob() { return buffer.blob(); }
         inline std::string string() { return buffer.string(); }
         inline std::string string(size_t length) { return buffer.string(length); }
         // sequence

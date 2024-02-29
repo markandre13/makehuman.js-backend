@@ -50,16 +50,27 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: corba/net/ws/createAcceptKey.hh corba/net/ws/socket.hh corba/corba.hh
-main.o: corba/coroutine.hh corba/giop.hh corba/cdr.hh corba/orb.hh
-corba/corba.o: corba/orb.hh corba/coroutine.hh corba/giop.hh corba/cdr.hh
-corba/orb.o: corba/orb.hh corba/coroutine.hh corba/giop.hh corba/cdr.hh
-corba/orb.o: corba/corba.hh corba/hexdump.hh corba/url.hh corba/protocol.hh
-corba/url.o: corba/url.hh corba/cdr.hh corba/giop.hh corba/corba.hh
-corba/url.o: corba/coroutine.hh
-corba/skeleton.o: corba/corba.hh corba/coroutine.hh corba/giop.hh
-corba/skeleton.o: corba/cdr.hh corba/orb.hh
-corba/giop.o: corba/giop.hh corba/cdr.hh corba/corba.hh corba/coroutine.hh
+main.o: corba/corba.hh corba/coroutine.hh ../upstream/cpptask/src/async.hh
+main.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/orb.hh
+main.o: corba/protocol.hh corba/net/ws.hh corba/protocol.hh
+corba/corba.o: corba/orb.hh corba/coroutine.hh
+corba/corba.o: ../upstream/cpptask/src/async.hh corba/giop.hh corba/cdr.hh
+corba/corba.o: corba/blob.hh
+corba/orb.o: corba/orb.hh corba/coroutine.hh ../upstream/cpptask/src/async.hh
+corba/orb.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
+corba/orb.o: corba/hexdump.hh corba/protocol.hh corba/url.hh
+corba/url.o: corba/url.hh corba/cdr.hh corba/blob.hh corba/giop.hh
+corba/url.o: corba/corba.hh corba/coroutine.hh
+corba/url.o: ../upstream/cpptask/src/async.hh
+corba/skeleton.o: corba/corba.hh corba/coroutine.hh
+corba/skeleton.o: ../upstream/cpptask/src/async.hh corba/giop.hh corba/cdr.hh
+corba/skeleton.o: corba/blob.hh corba/orb.hh
+corba/giop.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
+corba/giop.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
 corba/giop.o: corba/hexdump.hh corba/orb.hh corba/protocol.hh
-corba/cdr.o: corba/cdr.hh
+corba/cdr.o: corba/cdr.hh corba/blob.hh
+corba/net/ws.o: corba/net/ws.hh corba/protocol.hh corba/coroutine.hh
+corba/net/ws.o: ../upstream/cpptask/src/async.hh corba/orb.hh corba/giop.hh
+corba/net/ws.o: corba/cdr.hh corba/blob.hh corba/net/ws/createAcceptKey.hh
+corba/net/ws.o: corba/net/ws/socket.hh
 corba/net/ws/createAcceptKey.o: corba/net/ws/createAcceptKey.hh

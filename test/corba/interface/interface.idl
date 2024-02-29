@@ -5,4 +5,5 @@ interface Interface {
     unsigned long callUnsignedLong(in unsigned long value);
     unsigned long long callUnsignedLongLong(in unsigned long long value);
     string callString(in string value);
+    sequence<octet> callBlob(in sequence<octet> value);
 }; 

@@ -84,9 +84,8 @@ class CDRDecoder {
         // longlong
         // float
         // double
-        std::string blob();
+        CORBA::blob_view blob();
         std::string string();
-        blob_view blob_view();
         std::string_view string_view();
         std::string string(size_t length);
         // sequence

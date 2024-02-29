@@ -7,7 +7,7 @@
 
 using namespace std;
 using namespace kaffeeklatsch;
-using CORBA::async, CORBA::ORB;
+using CORBA::async, CORBA::ORB, CORBA::blob, CORBA::blob_view;
 
 class Interface_impl : public Interface_skel {
     public:
@@ -18,6 +18,7 @@ class Interface_impl : public Interface_skel {
         async<uint32_t> callUnsignedLong(uint32_t value) override { co_return value; }
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
         async<string> callString(string_view value) override { co_return string(value); }
+        async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
 };
 
 kaffeeklatsch_spec([] {
@@ -46,6 +47,7 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
                 expect(co_await backend->callString("hello")).to.equal("hello");
+                expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
             }()
                                   .thenOrCatch([] {},
                                                [&eptr](std::exception_ptr _eptr) {

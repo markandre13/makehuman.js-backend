@@ -29,7 +29,7 @@ public:
     Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
     const char *repository_id() const override { return "IDL:Backend:1.0"; }
 private:
-    CORBA::async<> _call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
+    CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
 
 class Backend_impl : public Backend_skel {
@@ -37,7 +37,7 @@ class Backend_impl : public Backend_skel {
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
 };
 
-CORBA::async<> Backend_skel::_call(const std::string &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
+CORBA::async<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
     println("Backend_impl::_call(\"{}\", decoder, encoder)", operation);
     encoder.ushort(4711);
     co_return;

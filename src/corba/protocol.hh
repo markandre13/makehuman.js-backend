@@ -4,6 +4,7 @@
 #include <map>
 
 #include "coroutine.hh"
+#include "blob.hh"
 
 namespace CORBA {
 
