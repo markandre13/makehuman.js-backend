@@ -17,7 +17,7 @@ class Interface_impl : public Interface_skel {
         async<uint16_t> callUShort(uint16_t value) override { co_return value; }
         async<uint32_t> callUnsignedLong(uint32_t value) override { co_return value; }
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
-        async<string> callString(string_view value) override { co_return string(value); }
+        async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
 };
 

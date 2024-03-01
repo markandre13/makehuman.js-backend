@@ -86,9 +86,6 @@ class NamingContextExtImpl : public Skeleton {
 
 const char *NamingContextExtImpl::repository_id() const { return "omg.org/CosNaming/NamingContextExt"; }
 
-// const blob a("aaa");
-// const blob_view b(a);
-
 class NamingContextExtStub : public Stub {
     public:
         NamingContextExtStub(CORBA::ORB *orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}

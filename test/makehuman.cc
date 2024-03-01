@@ -13,10 +13,10 @@
 #include "makehuman_stub.hh"
 
 static CORBA::async<> _hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    auto result = co_await obj->hello(decoder.string());
+    auto result = co_await obj->hello(decoder.string_view());
     encoder.string(result);
 }
-CORBA::async<std::string> Backend_stub::hello(std::string_view hello) {
+CORBA::async<std::string> Backend_stub::hello(const std::string_view & hello) {
     return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
         encoder.string(hello);
     },

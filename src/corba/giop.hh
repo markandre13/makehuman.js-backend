@@ -236,9 +236,16 @@ class GIOPDecoder : public GIOPBase {
         // longlong
         // float
         // double
-        inline CORBA::blob_view blob() { return buffer.blob(); }
+
+        // WHEN DECODING AS OUT -> string|blob
+        // WHEN DECODING AS IN  -> string_view|blob_view
+        inline CORBA::blob blob() { return buffer.blob(); }
         inline std::string string() { return buffer.string(); }
         inline std::string string(size_t length) { return buffer.string(length); }
+
+        inline CORBA::blob_view blob_view() { return buffer.blob_view(); }
+        inline std::string_view string_view() { return buffer.string_view(); }
+        inline std::string_view string_view(size_t length) { return buffer.string_view(length); }
         // sequence
         // value
         // object

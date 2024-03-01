@@ -9,7 +9,7 @@
 
 class Backend {
 public:
-    virtual CORBA::async<std::string> hello(std::string_view hello) = 0;
+    virtual CORBA::async<std::string> hello(const std::string_view & hello) = 0;
     virtual CORBA::async<void> fail() = 0;
     static std::shared_ptr<Backend> _narrow(std::shared_ptr<CORBA::Object> pointer);
 };

@@ -233,12 +233,12 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     buffer.skip(3);  // RequestReserved
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        header->objectKey = buffer.blob();
+        header->objectKey = buffer.blob_view();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                header->objectKey = buffer.blob();
+                header->objectKey = buffer.blob_view();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
@@ -263,14 +263,14 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
     this->requestId = buffer.ulong();
-    blob_view objectKey;
+    CORBA::blob_view objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
-        objectKey = buffer.blob();
+        objectKey = buffer.blob_view();
     } else {
         auto addressingDisposition = buffer.ushort();
         switch (addressingDisposition) {
             case GIOP_KEY_ADDR:
-                objectKey = buffer.blob();
+                objectKey = buffer.blob_view();
                 break;
             case GIOP_PROFILE_ADDR:
             case GIOP_REFERENCE_ADDR:
@@ -514,7 +514,7 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
             }
         });
     }
-    auto b = blob_view(data.objectKey);
+    auto b = CORBA::blob_view(data.objectKey);
     return make_shared<ObjectReference>(nullptr, data.oid, data.host, data.port, b);
 }
 

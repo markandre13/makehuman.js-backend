@@ -139,7 +139,30 @@ uint64_t CDRDecoder::ulonglong() {
     return value;
 }
 
-CORBA::blob_view CDRDecoder::blob() {
+CORBA::blob CDRDecoder::blob() {
+    size_t len = ulong();
+    auto buffer = _data + m_offset;
+    m_offset += len;
+    if (m_offset > length) {
+        throw std::out_of_range("out of range");
+    }
+    return CORBA::blob(buffer, len);
+}
+
+std::string CDRDecoder::string() {
+    return string(ulong());
+}
+
+std::string CDRDecoder::string(size_t len) {
+    auto buffer = _data + m_offset;
+    m_offset += len;
+    if (m_offset > length) {
+        throw std::out_of_range("out of range");
+    }
+    return std::string(buffer, len-1);
+}
+
+CORBA::blob_view CDRDecoder::blob_view() {
     size_t len = ulong();
     auto buffer = _data + m_offset;
     m_offset += len;
@@ -149,24 +172,17 @@ CORBA::blob_view CDRDecoder::blob() {
     return CORBA::blob_view(buffer, len);
 }
 
-std::string CDRDecoder::string() {
-    return string(ulong());
-}
-
 std::string_view CDRDecoder::string_view() {
-    size_t nbytes = ulong();
-    auto buffer = _data + m_offset;
-    m_offset += nbytes;
-    return std::string_view(buffer, nbytes - 1);
+    return string_view(ulong());
 }
 
-std::string CDRDecoder::string(size_t len) {
-    std::string result(_data + m_offset, len - 1);
+std::string_view CDRDecoder::string_view(size_t len) {
+    auto buffer = _data + m_offset;
     m_offset += len;
     if (m_offset > length) {
         throw std::out_of_range("out of range");
     }
-    return result;
+    return std::string_view(buffer, len-1);
 }
 
 }  // namespace CORBA
