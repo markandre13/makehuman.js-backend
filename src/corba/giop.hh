@@ -120,11 +120,6 @@ struct GIOPHeader {
         uint32_t length;
 };
 
-struct Blob {
-        uint32_t length;
-        char data[];
-};
-
 struct RequestHeader {
         uint32_t requestId;
         bool responseExpected;
