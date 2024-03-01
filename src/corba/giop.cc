@@ -68,7 +68,7 @@ void GIOPEncoder::reference(const Object* object) {
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
         buffer.ulong(1);               // component count = 1
-        encapsulation(0, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+        encapsulation(ComponentId::TAG_ORB_TYPE, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
             buffer.ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
         });
     }
@@ -76,8 +76,22 @@ void GIOPEncoder::reference(const Object* object) {
     cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
 }
 
-void GIOPEncoder::encapsulation(uint32_t type, std::function<void()> closure) {
-    buffer.ulong(type);
+void GIOPEncoder::encapsulation(ComponentId type, std::function<void()> closure) {
+    buffer.ulong(static_cast<u_int32_t>(type));
+    buffer.reserveSize();
+    buffer.endian();
+    closure();
+    buffer.fillInSize();
+}
+void GIOPEncoder::encapsulation(ProfileId type, std::function<void()> closure) {
+    buffer.ulong(static_cast<u_int32_t>(type));
+    buffer.reserveSize();
+    buffer.endian();
+    closure();
+    buffer.fillInSize();
+}
+void GIOPEncoder::encapsulation(ServiceId type, std::function<void()> closure) {
+    buffer.ulong(static_cast<u_int32_t>(type));
     buffer.reserveSize();
     buffer.endian();
     closure();
@@ -297,26 +311,52 @@ unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
 void GIOPDecoder::serviceContext() {
     auto serviceContextListLength = buffer.ulong();
     for (auto i = 0; i < serviceContextListLength; ++i) {
-        encapsulation([](uint32_t serviceId) {
+        encapsulation([](ServiceId serviceId) {
             switch (serviceId) {
-                case CodeSets:
+                case ServiceId::CodeSets:
                     // std::cout << "ServiceContext CodeSets" << std::endl;
                     break;
-                case BI_DIR_IIOP:
+                case ServiceId::BI_DIR_IIOP:
                     cout << "ServiceContext BI_DIR_IIOP" << endl;
                     break;
-                case SecurityAttributeService:
+                case ServiceId::SecurityAttributeService:
                     cout << "ServiceContext SecurityAttributeService" << endl;
                     break;
                 default:
-                    cout << "ServiceContext " << serviceId << endl;
+                    cout << "ServiceContext " << static_cast<unsigned>(serviceId) << endl;
             }
         });
     }
 }
 
-void GIOPDecoder::encapsulation(std::function<void(uint32_t type)> closure) {
-    auto type = buffer.ulong();
+void GIOPDecoder::encapsulation(std::function<void(ComponentId type)> closure) {
+    auto type = static_cast<ComponentId>(buffer.ulong());
+    auto size = buffer.ulong();
+    auto nextOffset = buffer.getOffset() + size;
+    auto lastEndian = buffer._endian;
+    auto flags = buffer.octet();
+    buffer.setLittleEndian(flags & 1);
+
+    closure(type);
+
+    buffer._endian = lastEndian;
+    buffer.setOffset(nextOffset);
+}
+void GIOPDecoder::encapsulation(std::function<void(ProfileId type)> closure) {
+    auto type = static_cast<ProfileId>(buffer.ulong());
+    auto size = buffer.ulong();
+    auto nextOffset = buffer.getOffset() + size;
+    auto lastEndian = buffer._endian;
+    auto flags = buffer.octet();
+    buffer.setLittleEndian(flags & 1);
+
+    closure(type);
+
+    buffer._endian = lastEndian;
+    buffer.setOffset(nextOffset);
+}
+void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
+    auto type = static_cast<ServiceId>(buffer.ulong());
     auto size = buffer.ulong();
     auto nextOffset = buffer.getOffset() + size;
     auto lastEndian = buffer._endian;
@@ -451,10 +491,10 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
     auto profileCount = buffer.ulong();
     // console.log(`oid: '${oid}', tag count=${tagCount}`)
     for (uint32_t i = 0; i < profileCount; ++i) {
-        encapsulation([this, &data](uint32_t profileId) {
+        encapsulation([this, &data](ProfileId profileId) {
             switch (profileId) {
                 // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
-                case TAG_INTERNET_IOP: {
+                case ProfileId::TAG_INTERNET_IOP: {
                     // console.log(`Internet IOP Component, length=${profileLength}`)
                     auto iiopMajorVersion = buffer.octet();
                     auto iiopMinorVersion = buffer.octet();
@@ -473,11 +513,11 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                         auto n = buffer.ulong();
                         // console.log(`IOR: ${n} components`)
                         for (uint32_t i = 0; i < n; ++i) {
-                            auto id = buffer.ulong();
+                            auto id = static_cast<ComponentId>(buffer.ulong()); // TODO: make this a method called componentId
                             auto length = buffer.ulong();
                             auto nextOffset = buffer.m_offset + length;
                             switch (id) {
-                                case TAG_ORB_TYPE: {
+                                case ComponentId::TAG_ORB_TYPE: {
                                     auto typeCount = buffer.ulong();
                                     for (uint32_t j = 0; j < typeCount; ++j) {
                                         auto orbType = buffer.ulong();
@@ -495,11 +535,11 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                                         }
                                     }
                                 } break;
-                                case TAG_CODE_SETS:
+                                case ComponentId::TAG_CODE_SETS:
                                     // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
                                     // console.log(`IOR: component[${i}] = CODE_SETS`)
                                     break;
-                                case TAG_POLICIES:
+                                case ComponentId::TAG_POLICIES:
                                     // console.log(`IOR: component[${i}] = POLICIES`)
                                     break;
                                 default:
@@ -509,8 +549,10 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                         }
                     }
                 } break;
-                default:
-                    cerr << format("IOR: Unhandled profile type={} {:x}", profileId, profileId) << endl;
+                default: {
+                    auto id = static_cast<unsigned>(profileId);
+                    cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
+                }
             }
         });
     }

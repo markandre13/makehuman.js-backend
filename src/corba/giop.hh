@@ -34,7 +34,7 @@ enum class ReplyStatus {
     NEEDS_ADDRESSING_MODE = 5
 };
 
-enum ServiceId {
+enum class ServiceId {
     TransactionService = 0,
     CodeSets = 1,
     ChainBypassCheck = 2,
@@ -63,10 +63,10 @@ enum ServiceId {
 };
 
 // CORBA 3.3 Part 2: 7.6.4 Standard IOR Profiles
-enum ProfileId { TAG_INTERNET_IOP = 0, TAG_MULTIPLE_COMPONENTS = 1, TAG_SCCP_IOP = 2, TAG_UIPMC = 3, TAG_MOBILE_TERMINAL_IOP = 4 };
+enum class ProfileId { TAG_INTERNET_IOP = 0, TAG_MULTIPLE_COMPONENTS = 1, TAG_SCCP_IOP = 2, TAG_UIPMC = 3, TAG_MOBILE_TERMINAL_IOP = 4 };
 
 // CORBA 3.3 Part 2: 7.6.6 Standard IOP Components
-enum ComponentId {
+enum class ComponentId {
     TAG_ORB_TYPE = 0,
     TAG_CODE_SETS = 1,
     TAG_POLICIES = 2,
@@ -194,7 +194,9 @@ class GIOPEncoder : public GIOPBase {
 
         void object(const Object *object);
         void reference(const Object *object);
-        void encapsulation(uint32_t type, std::function<void()> closure);
+        void encapsulation(ComponentId type, std::function<void()> closure);
+        void encapsulation(ProfileId type, std::function<void()> closure);
+        void encapsulation(ServiceId type, std::function<void()> closure);
         void skipGIOPHeader();
         void skipReplyHeader();
         void setGIOPHeader(MessageType type);
@@ -222,7 +224,9 @@ class GIOPDecoder : public GIOPBase {
 
         // CORBA 3.4 Part 2, 9.3.3 Encapsulation
         // Used for ServiceContext, Profile and Component
-        void encapsulation(std::function<void(uint32_t type)> closure);
+        void encapsulation(std::function<void(ComponentId type)> closure);
+        void encapsulation(std::function<void(ProfileId type)> closure);
+        void encapsulation(std::function<void(ServiceId type)> closure);
 
         inline void endian() { buffer.endian(); }
         inline bool boolean() { return buffer.boolean(); }
