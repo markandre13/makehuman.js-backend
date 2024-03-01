@@ -205,13 +205,13 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
 
     // move parts of this into a separate function so that it can be unit tested
     switch (decoder->replyStatus) {
-        case GIOP_NO_EXCEPTION:
+        case ReplyStatus::NO_EXCEPTION:
             break;
-        case GIOP_USER_EXCEPTION:
+        case ReplyStatus::USER_EXCEPTION:
             throw UserException();
             // throw runtime_error(format("CORBA User Exception from {}:{}", stub->connection->remoteAddress(), stub->connection->remotePort()));
             break;
-        case GIOP_SYSTEM_EXCEPTION: {
+        case ReplyStatus::SYSTEM_EXCEPTION: {
             // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
             auto exceptionId = decoder->string();
             auto minorCodeValue = decoder->ulong();
@@ -305,7 +305,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
 
                     auto length = encoder.buffer.offset;
                     encoder.setGIOPHeader(MessageType::REPLY);
-                    encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
+                    encoder.setReplyHeader(request->requestId, ReplyStatus::SYSTEM_EXCEPTION);
 
                     connection->send((void *)encoder.buffer.data(), length);
                 }
@@ -321,7 +321,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
 
                 auto length = encoder.buffer.offset;
                 encoder.setGIOPHeader(MessageType::REPLY);
-                encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
+                encoder.setReplyHeader(request->requestId, ReplyStatus::NO_EXCEPTION);
                 connection->send((void *)encoder.buffer.data(), length);
 
                 return;
@@ -341,7 +341,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                             if (responseExpected) {
                                 auto length = encoder->buffer.offset;
                                 encoder->setGIOPHeader(MessageType::REPLY);
-                                encoder->setReplyHeader(requestId, GIOP_NO_EXCEPTION);
+                                encoder->setReplyHeader(requestId, ReplyStatus::NO_EXCEPTION);
                                 println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
                                 connection->send((void *)encoder->buffer.data(), length);
                             }
@@ -355,7 +355,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 if (responseExpected) {
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
-                                    encoder->setReplyHeader(requestId, GIOP_USER_EXCEPTION);
+                                    encoder->setReplyHeader(requestId,ReplyStatus::USER_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (CORBA::SystemException &error) {
@@ -366,7 +366,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                     encoder->ulong(error.completed);
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
-                                    encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
+                                    encoder->setReplyHeader(requestId, ReplyStatus::SYSTEM_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (std::exception &ex) {
@@ -378,7 +378,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                     encoder->string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
-                                    encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
+                                    encoder->setReplyHeader(requestId, ReplyStatus::SYSTEM_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (...) {

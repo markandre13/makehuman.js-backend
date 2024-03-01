@@ -124,7 +124,7 @@ kaffeeklatsch_spec([] {
 
             auto reply = decoder.scanReplyHeader();
             expect(reply->requestId).to.equal(4);
-            expect(reply->replyStatus).to.equal(CORBA::GIOP_NO_EXCEPTION);
+            expect(reply->replyStatus).to.equal(CORBA::ReplyStatus::NO_EXCEPTION);
         });
     });
 });

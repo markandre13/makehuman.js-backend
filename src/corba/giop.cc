@@ -103,7 +103,7 @@ void GIOPEncoder::setGIOPHeader(MessageType type) {
     buffer.ulong(offset - 12);
     buffer.offset = offset;
 }
-void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
+void GIOPEncoder::setReplyHeader(uint32_t requestId, ReplyStatus replyStatus) {
     skipGIOPHeader();
     // fixme: create and use version methods like isVersionLessThan(1,2) or isVersionVersionGreaterEqual(1,2)
     if (majorVersion == 1 && minorVersion < 2) {
@@ -111,7 +111,7 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, uint32_t replyStatus) {
         buffer.ulong(0);  // skipReplyHeader needs a fixed size service context
     }
     buffer.ulong(requestId);
-    buffer.ulong(replyStatus);
+    buffer.ulong(static_cast<uint32_t>(replyStatus));
     if (majorVersion == 1 && minorVersion >= 2) {
         // this.serviceContext();
         buffer.ulong(0);  // skipReplyHeader needs a fixed size service context
@@ -287,7 +287,7 @@ unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
         serviceContext();
     }
     this->requestId = buffer.ulong();
-    this->replyStatus = static_cast<GIOPReplyStatus>(buffer.ulong());
+    this->replyStatus = static_cast<ReplyStatus>(buffer.ulong());
     if (majorVersion == 1 && minorVersion >= 2) {
         serviceContext();
     }

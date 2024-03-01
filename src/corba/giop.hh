@@ -24,14 +24,14 @@ enum class MessageType {
     FRAGMENT = 7
 };
 
-enum GIOPReplyStatus {
-    GIOP_NO_EXCEPTION = 0,
-    GIOP_USER_EXCEPTION = 1,
-    GIOP_SYSTEM_EXCEPTION = 2,
-    GIOP_LOCATION_FORWARD = 3,
+enum class ReplyStatus {
+    NO_EXCEPTION = 0,
+    USER_EXCEPTION = 1,
+    SYSTEM_EXCEPTION = 2,
+    LOCATION_FORWARD = 3,
     // since GIOP 1.2
-    GIOP_LOCATION_FORWARD_PERM = 4,
-    GIOP_NEEDS_ADDRESSING_MODE = 5
+    LOCATION_FORWARD_PERM = 4,
+    NEEDS_ADDRESSING_MODE = 5
 };
 
 enum ServiceId {
@@ -134,7 +134,7 @@ struct RequestHeader {
 
 struct ReplyHeader {
         uint32_t requestId;
-        GIOPReplyStatus replyStatus;
+        ReplyStatus replyStatus;
 };
 
 struct LocateRequest {
@@ -198,7 +198,7 @@ class GIOPEncoder : public GIOPBase {
         void skipGIOPHeader();
         void skipReplyHeader();
         void setGIOPHeader(MessageType type);
-        void setReplyHeader(uint32_t requestId, uint32_t replyStatus);
+        void setReplyHeader(uint32_t requestId, CORBA::ReplyStatus replyStatus);
         void encodeRequest(const CORBA::blob &objectKey, const std::string &operation, uint32_t requestId, bool responseExpected);
         void serviceContext();
 };
@@ -210,7 +210,7 @@ class GIOPDecoder : public GIOPBase {
         size_t m_length;
 
         uint32_t requestId;
-        GIOPReplyStatus replyStatus;
+        ReplyStatus replyStatus;
 
         GIOPDecoder(CDRDecoder &buffer) : buffer(buffer) {}
         MessageType scanGIOPHeader();
