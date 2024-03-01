@@ -195,7 +195,7 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
     auto responseExpected = true;
     encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
     encode(encoder);
-    encoder.setGIOPHeader(GIOP_REQUEST);
+    encoder.setGIOPHeader(MessageType::REQUEST);
     println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}", operation, stub->objectKey, operation,
             requestId);
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
@@ -255,7 +255,7 @@ void ORB::onewayCall(Stub *stub, const char *operation, std::function<void(GIOPE
     auto responseExpected = true;
     encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
     encode(encoder);
-    encoder.setGIOPHeader(GIOP_REQUEST);
+    encoder.setGIOPHeader(MessageType::REQUEST);
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
 }
 
@@ -284,11 +284,11 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
     cout << "RECEIVED" << endl;
     hexdump(buffer, size);
 
-    CORBA::CDRDecoder data((const char *)buffer, size);
-    CORBA::GIOPDecoder decoder(data);
+    CDRDecoder data((const char *)buffer, size);
+    GIOPDecoder decoder(data);
     auto type = decoder.scanGIOPHeader();
     switch (type) {
-        case CORBA::GIOP_REQUEST: {
+        case MessageType::REQUEST: {
             // TODO: move this into a method
             auto request = decoder.scanRequestHeader();
             // string objectKey = request->objectKey;  // FIXME: do not copy FIXME: length HACK
@@ -304,7 +304,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                     encoder.ulong(NO);          // completionStatus
 
                     auto length = encoder.buffer.offset;
-                    encoder.setGIOPHeader(GIOP_REPLY);
+                    encoder.setGIOPHeader(MessageType::REPLY);
                     encoder.setReplyHeader(request->requestId, GIOP_SYSTEM_EXCEPTION);
 
                     connection->send((void *)encoder.buffer.data(), length);
@@ -320,7 +320,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 encoder.boolean(repositoryId == servant->second->repository_id());
 
                 auto length = encoder.buffer.offset;
-                encoder.setGIOPHeader(GIOP_REPLY);
+                encoder.setGIOPHeader(MessageType::REPLY);
                 encoder.setReplyHeader(request->requestId, GIOP_NO_EXCEPTION);
                 connection->send((void *)encoder.buffer.data(), length);
 
@@ -340,7 +340,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                         [encoder, connection, responseExpected, requestId] { // FIXME: the references objects won't be available
                             if (responseExpected) {
                                 auto length = encoder->buffer.offset;
-                                encoder->setGIOPHeader(GIOP_REPLY);
+                                encoder->setGIOPHeader(MessageType::REPLY);
                                 encoder->setReplyHeader(requestId, GIOP_NO_EXCEPTION);
                                 println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
                                 connection->send((void *)encoder->buffer.data(), length);
@@ -354,7 +354,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 println("SERVANT THREW CORBA::USER EXCEPTION");
                                 if (responseExpected) {
                                     auto length = encoder->buffer.offset;
-                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setGIOPHeader(MessageType::REPLY);
                                     encoder->setReplyHeader(requestId, GIOP_USER_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
@@ -365,7 +365,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                     encoder->ulong(error.minor);
                                     encoder->ulong(error.completed);
                                     auto length = encoder->buffer.offset;
-                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setGIOPHeader(MessageType::REPLY);
                                     encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
@@ -377,7 +377,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                     encoder->ulong(0);
                                     encoder->string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
                                     auto length = encoder->buffer.offset;
-                                    encoder->setGIOPHeader(GIOP_REPLY);
+                                    encoder->setGIOPHeader(MessageType::REPLY);
                                     encoder->setReplyHeader(requestId, GIOP_SYSTEM_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
@@ -397,7 +397,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 cerr << "ORB::_socketRcvd: EXCEPTION: " << e.what() << endl;
             }
         } break;
-        case CORBA::GIOP_REPLY: {
+        case MessageType::REPLY: {
             auto _data = decoder.scanReplyHeader();
             try {
                 connection->interlock.resume(_data->requestId, &decoder);
@@ -407,7 +407,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
             break;
         } break;
         default:
-            cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST " << type << endl;
+            cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST " << static_cast<unsigned>(type) << endl;
             break;
     }
 }

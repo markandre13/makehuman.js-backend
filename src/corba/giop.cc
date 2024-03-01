@@ -88,7 +88,7 @@ void GIOPEncoder::skipGIOPHeader() { buffer.offset = 10; }
 void GIOPEncoder::skipReplyHeader() {
     buffer.offset = 24;  // this does not work!!! anymore with having a variable length service context!!!
 }
-void GIOPEncoder::setGIOPHeader(GIOPMessageType type) {
+void GIOPEncoder::setGIOPHeader(MessageType type) {
     auto offset = buffer.offset;
     buffer.offset = 0;
     buffer.octet('G');
@@ -98,7 +98,7 @@ void GIOPEncoder::setGIOPHeader(GIOPMessageType type) {
     buffer.octet(majorVersion);
     buffer.octet(minorVersion);
     buffer.endian();
-    buffer.octet(type);
+    buffer.octet(static_cast<u_int8_t>(type));
     cout << "GIOPHeader length = " << hex << offset - 12 << endl;
     buffer.ulong(offset - 12);
     buffer.offset = offset;
@@ -189,7 +189,7 @@ void GIOPEncoder::serviceContext() {
 
 ////////////////////////////////////////////
 
-GIOPMessageType GIOPDecoder::scanGIOPHeader() {
+MessageType GIOPDecoder::scanGIOPHeader() {
     auto header = reinterpret_cast<const GIOPHeader*>(buffer.data());
     if (memcmp(header->id, "GIOP", 4) != 0) {
         throw std::runtime_error("Missing GIOP Header");
@@ -199,7 +199,7 @@ GIOPMessageType GIOPDecoder::scanGIOPHeader() {
     minorVersion = buffer.octet();
     auto flags = buffer.octet();
     buffer.setLittleEndian(flags & 1);
-    m_type = static_cast<GIOPMessageType>(buffer.octet());
+    m_type = static_cast<MessageType>(buffer.octet());
     m_length = buffer.ulong();
     return m_type;
 }

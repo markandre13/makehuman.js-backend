@@ -19,6 +19,10 @@ class Interface_impl : public Interface_skel {
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
+        // next steps:
+        // [ ] set/get callback object and call it
+        // [ ] use ArrayBuffer/Buffer for sequence<octet> for the javascript side
+        // [ ] completeness: signed & floating point
 };
 
 kaffeeklatsch_spec([] {
