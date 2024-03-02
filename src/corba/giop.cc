@@ -68,7 +68,7 @@ void GIOPEncoder::reference(const Object* object) {
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
         buffer.ulong(1);               // component count = 1
-        encapsulation(ComponentId::TAG_ORB_TYPE, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+        encapsulation(ComponentId::ORB_TYPE, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
             buffer.ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
         });
     }
@@ -517,7 +517,7 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                             auto length = buffer.ulong();
                             auto nextOffset = buffer.m_offset + length;
                             switch (id) {
-                                case ComponentId::TAG_ORB_TYPE: {
+                                case ComponentId::ORB_TYPE: {
                                     auto typeCount = buffer.ulong();
                                     for (uint32_t j = 0; j < typeCount; ++j) {
                                         auto orbType = buffer.ulong();
@@ -535,11 +535,11 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                                         }
                                     }
                                 } break;
-                                case ComponentId::TAG_CODE_SETS:
+                                case ComponentId::CODE_SETS:
                                     // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
                                     // console.log(`IOR: component[${i}] = CODE_SETS`)
                                     break;
-                                case ComponentId::TAG_POLICIES:
+                                case ComponentId::POLICIES:
                                     // console.log(`IOR: component[${i}] = POLICIES`)
                                     break;
                                 default:
