@@ -338,7 +338,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 servant->second->_call(request->operation, decoder, *encoder)
                     .thenOrCatch(
                         [encoder, connection, responseExpected, requestId] { // FIXME: the references objects won't be available
+                            println("SERVANT RETURNED");
                             if (responseExpected) {
+                                println("SERVANT WANTS RESPONSE");
                                 auto length = encoder->buffer.offset;
                                 encoder->setGIOPHeader(MessageType::REPLY);
                                 encoder->setReplyHeader(requestId, ReplyStatus::NO_EXCEPTION);

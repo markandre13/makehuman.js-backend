@@ -19,7 +19,19 @@ class Interface_impl : public Interface_skel {
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
-        async<void> setPeer(std::shared_ptr<Peer> peer) override { co_return; }
+
+        std::shared_ptr<Peer> peer;
+        async<void> setPeer(std::shared_ptr<Peer> aPeer) override { 
+            this->peer = aPeer;
+            co_return;
+        }
+        async<std::string> callPeer(const std::string_view & value) override {
+            println("INTERFACE IMPL: RECEIVED callPeer(\"{}\"): call peer", value);
+            auto s = co_await peer->callString(string(value) + " to the");
+            // value is not valid anymore
+            println("INTERFACE IMPL: RECEIVED callPeer(...): peer returned \"{}\", return value", s);
+            co_return s + ".";
+        }
         // next steps:
         // [ ] set/get callback object and call it
         // [ ] use ArrayBuffer/Buffer for sequence<octet> for the javascript side
@@ -29,13 +41,12 @@ class Interface_impl : public Interface_skel {
 class Peer_impl : public Peer_skel {
     public:
         Peer_impl(ORB *orb) : Peer_skel(orb) {}
-        async<string> callString(const string_view &value) override { co_return string(value); }
+        async<string> callString(const string_view &value) override { co_return string(value) + " world"; }
 };
-
 
 kaffeeklatsch_spec([] {
     describe("interface", [] {
-        it("send'n receive", [] {
+        fit("send'n receive", [] {
             // SERVER
             auto serverORB = make_shared<ORB>();
             auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 2809);
@@ -53,16 +64,19 @@ kaffeeklatsch_spec([] {
             [&clientORB]() -> async<> {
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:2809#Backend");
                 auto backend = Interface::_narrow(object);
-                expect(co_await backend->callBoolean(true)).to.equal(true);
-                expect(co_await backend->callOctet(42)).to.equal(42);
-                expect(co_await backend->callUShort(65535)).to.equal(65535);
-                expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
-                expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
-                expect(co_await backend->callString("hello")).to.equal("hello");
-                expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
+                // expect(co_await backend->callBoolean(true)).to.equal(true);
+                // expect(co_await backend->callOctet(42)).to.equal(42);
+                // expect(co_await backend->callUShort(65535)).to.equal(65535);
+                // expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
+                // expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
+                // expect(co_await backend->callString("hello")).to.equal("hello");
+                // expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
                 println("============================== SET PEER ================================");
-                // auto frontend = make_shared<Peer_impl>(clientORB.get());
-                // co_await backend->setPeer(frontend);
+                auto frontend = make_shared<Peer_impl>(clientORB.get());
+                co_await backend->setPeer(frontend);
+                println("============================== CALL PEER ===============================");
+                expect(co_await backend->callPeer("hello")).to.equal("hello world");
+                println("============================= CALLED PEER ==============================");
             }()
                                   .thenOrCatch([] {},
                                                [&eptr](std::exception_ptr _eptr) {

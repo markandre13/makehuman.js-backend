@@ -322,7 +322,7 @@ unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
 
 void GIOPDecoder::serviceContext() {
     auto serviceContextListLength = buffer.ulong();
-    for (auto i = 0; i < serviceContextListLength; ++i) {
+    for (size_t i = 0; i < serviceContextListLength; ++i) {
         encapsulation([](ServiceId serviceId) {
             switch (serviceId) {
                 case ServiceId::CodeSets:
@@ -381,7 +381,7 @@ void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-std::shared_ptr<Object> GIOPDecoder::object() {  // const string typeInfo, bool isValue = false) {
+std::shared_ptr<Object> GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.m_offset - 4;
 
@@ -399,46 +399,13 @@ std::shared_ptr<Object> GIOPDecoder::object() {  // const string typeInfo, bool 
     }
 
     if (code < 0x7fffff00) {
-        cerr << "got reference" << endl;
+        if (orb == nullptr) {
+            throw runtime_error("GIOPDecoder::object(orb): orb must not be null");
+        }
         auto ref = reference(code);
-
-        // if (ref.host == this.connection.localAddress && ref.port == this.connection.localPort) {
-        //     return this.connection.orb.servants.get(ref.objectKey)
-        // }
-
-        cerr << "GOT OBJECT " << ref->oid << " " << ref->objectKey << endl;
-
-        // HAVE A LOOK AT WHAT ORGINAL CORBA RETURNS HERE, ME THINKS IT'S JUST THE OBJECT REFERENCE
-        // AND THE REST IS DONE IN _narrow()
-
-        // CORBA::Object_var ORB::string_to_object(const char+)
-        // In Orbit, Objects have Connections
-
-        // in MICO
-        // class Object : public ServerlessObject {
-        //    IOR *ior;
-        //    IOR *fwd_ior;
-        //    ORB_ptr orb;
-        //    string indent;
-        // }
-
-        // class C_stub: C, ::CORBA::ExtInterfaceDef_stub
-
-        // TODO: this belongs elsewhere
-        // let object = this.connection.stubsById.get(ref.objectKey)
-        // if (object !== undefined)
-        //     return object
-        // const shortName = reference.oid.substring(4, reference.oid.length - 4)
-        // let aStubClass = this.connection.orb.stubsByName.get(shortName)
-        // if (aStubClass === undefined) {
-        //     // throw Error(`ORB: no stub registered for OID '${reference.oid}' (${shortName})`)
-        //     throw new OBJECT_ADAPTER(0x4f4d0003, CompletionStatus.NO)
-        // }
-        // object = new aStubClass(this.connection.orb, reference.objectKey, this.connection)
-        // this.connection.stubsById.set(reference.objectKey, object!)
-        // return object
+        cerr << "GOT IOR " << ref->oid << " " << ref->objectKey << endl;
+        return make_shared<ObjectReference>(orb, ref->oid, ref->host, ref->port, ref->get_object_key());
     }
-
     throw runtime_error(format("GIOPDecoder: Unsupported value with CORBA tag {:#x}", code));
 }
 

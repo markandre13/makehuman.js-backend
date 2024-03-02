@@ -1,6 +1,6 @@
 APP=tests
 
-# MEM=-fsanitize=address -fsanitize=leak
+MEM=-fsanitize=address -fsanitize=leak
 
 CXX=/usr/local/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
@@ -46,7 +46,7 @@ run:
 	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP) --reporter=info --report-timing --only=foo
 
 valgrind:
-	/usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind ./$(APP)
+	/usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
 
 clean:
 	rm -f $(OBJ)
