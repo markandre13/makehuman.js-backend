@@ -22,7 +22,7 @@ namespace detail {
 
 
 class ORB : public std::enable_shared_from_this<ORB> {
-        bool debug = true;
+        bool debug = false;
         NamingContextExtImpl * namingService = nullptr;
         // std::map<std::string, Skeleton*> initialReferences; // name to
         std::map<blob, Skeleton *> servants;  // objectId to skeleton

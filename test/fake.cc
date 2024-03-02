@@ -35,23 +35,23 @@ void TcpFakeConnection::send(void *buffer, size_t nbyte) {
 bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
     for (auto src : protocols) {
         if (!src->packets.empty()) {
-            println("found a packet to send");
+            // println("found a packet to send");
             auto packet = src->packets.front();
             for (auto dst : protocols) {
                 if (dst->m_localAddress == packet.connection->remoteAddress() && dst->m_localPort == packet.connection->remotePort()) {
-                    println("found destination protocol {}:{}", dst->m_localAddress, dst->m_localPort);
+                    // println("found destination protocol {}:{}", dst->m_localAddress, dst->m_localPort);
                     TcpFakeConnection *conn = nullptr;
                     for (auto c : dst->connections) {
                         println("found a connection");
                         if (c->localAddress() == packet.connection->remoteAddress() && c->localPort() == packet.connection->remotePort() &&
                             c->remoteAddress() == packet.connection->localAddress() && c->remotePort() == packet.connection->localPort()) {
-                            println("found a connection to send to");
+                            // println("found a connection to send to");
                             conn = c;
                             break;
                         }
                     }
                     if (conn == nullptr) {
-                        println("found no connection on destination, fake listen/accept and create one");
+                        // println("found no connection on destination, fake listen/accept and create one");
                         conn = dynamic_cast<TcpFakeConnection *>(dst->m_orb->getConnection(packet.connection->localAddress(), packet.connection->localPort()));
                     }
                     println("==================== transmit from {}:{} to {}:{} ====================",

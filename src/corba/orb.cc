@@ -42,7 +42,6 @@ class NamingContextExtImpl : public Skeleton {
                 hexdump(name);
                 throw runtime_error(format("NamingContextExtImpl::resolve(\"{}\"): name is not bound to an object", name));
             }
-            println("NamingContextExtImpl::resolve(\"{}\"): found the object", name);
             return servant->second;
         }
 
@@ -54,16 +53,12 @@ class NamingContextExtImpl : public Skeleton {
             if (entries != 1 && !key.empty()) {
                 cerr << "warning: resolve got " << entries << " (expected 1) and/or key is \"" << key << "\" (expected \"\")" << endl;
             }
-            println("NamingContextExtImpl::_orb_resolve(): entries={}, name=\"{}\", key=\"{}\"", entries, name, key);
             std::shared_ptr<Object> result = resolve(name);  // FIXME: we don't want to copy the string
-            println("NamingContextExtImpl::_orb_resolve(): resolved object, now encode to giop");
             encoder.object(result.get());
-            println("NamingContextExtImpl::_orb_resolve(): encoded to giop, return");
         }
 
         void _orb_resolve_str(GIOPDecoder &decoder, GIOPEncoder &encoder) {
             auto name = decoder.buffer.string();
-            cerr << "NamingContextExtImpl::_orb_resolve_str(\"" << name << "\")" << endl;
             auto result = resolve(name);
             encoder.object(result.get());
         }
@@ -194,17 +189,13 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
 
     GIOPEncoder encoder(stub->connection);
     auto responseExpected = true;
-    println("[0] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
     encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
-    println("[1] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
     encode(encoder);
-    println("[2] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
-    encoder.setGIOPHeader(MessageType::REQUEST); // THIS IS TOTAL BOLLOCKS BECAUSE OF THE RESIZE IN IT...
-    println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}", operation, stub->objectKey, operation,
-            requestId);
-    println("[3] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
-    encoder.buffer._data.resize(encoder.buffer.offset);
-    hexdump((void *)encoder.buffer.data(), encoder.buffer.offset);
+    encoder.setGIOPHeader(MessageType::REQUEST);  // THIS IS TOTAL BOLLOCKS BECAUSE OF THE RESIZE IN IT...
+    if (debug) {
+        println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}", operation, stub->objectKey, operation,
+                requestId);
+    }
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
     println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
@@ -288,9 +279,10 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
 }
 
 void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t size) {
-    cout << "RECEIVED" << endl;
-    hexdump(buffer, size);
-
+    if (debug) {
+        println("RECEIVED");
+        hexdump(buffer, size);
+    }
     CDRDecoder data((const char *)buffer, size);
     GIOPDecoder decoder(data);
     auto type = decoder.scanGIOPHeader();
@@ -298,8 +290,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
         case MessageType::REQUEST: {
             // TODO: move this into a method
             auto request = decoder.scanRequestHeader();
-            // string objectKey = request->objectKey;  // FIXME: do not copy FIXME: length HACK
-            cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << request->objectKey << "', " << request->operation << ")" << endl;
+            if (debug) {
+                cout << "REQUEST(requestId=" << request->requestId << ", objectKey='" << request->objectKey << "', " << request->operation << ")" << endl;
+            }
             auto servant = servants.find(request->objectKey);  // FIXME: avoid string copy
             if (servant == servants.end()) {
                 if (request->responseExpected) {
