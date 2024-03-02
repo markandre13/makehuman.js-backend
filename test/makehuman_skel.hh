@@ -11,7 +11,6 @@
 class Backend_skel: public CORBA::Skeleton, public Backend {
 public:
     Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
-    const char *repository_id() const override { return "IDL:Backend:1.0"; }
 private:
     CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
@@ -19,7 +18,6 @@ private:
 class Backend2_skel: public CORBA::Skeleton, public Backend2 {
 public:
     Backend2_skel(CORBA::ORB *orb) : Skeleton(orb) {}
-    const char *repository_id() const override { return "IDL:Backend2:1.0"; }
 private:
     CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };

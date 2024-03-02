@@ -4,20 +4,21 @@
 #include <corba/orb.hh>
 #include <corba/giop.hh>
 #include <corba/coroutine.hh>
+#include <corba/corba.hh>
 #include <string>
 #include <vector>
 
-class Backend {
-public:
+class Backend: public virtual CORBA::Object {
+    static std::string_view _rid;public:
     virtual CORBA::async<std::string> hello(const std::string_view & hello) = 0;
     virtual CORBA::async<void> fail() = 0;
-    static std::shared_ptr<Backend> _narrow(std::shared_ptr<CORBA::Object> pointer);
+    std::string_view repository_id() const override;    static std::shared_ptr<Backend> _narrow(std::shared_ptr<CORBA::Object> pointer);
 };
 
-class Backend2 {
-public:
+class Backend2: public virtual CORBA::Object {
+    static std::string_view _rid;public:
     virtual void chordata(bool on) = 0;
     virtual void mediapipe(bool on) = 0;
-    static std::shared_ptr<Backend2> _narrow(std::shared_ptr<CORBA::Object> pointer);
+    std::string_view repository_id() const override;    static std::shared_ptr<Backend2> _narrow(std::shared_ptr<CORBA::Object> pointer);
 };
 

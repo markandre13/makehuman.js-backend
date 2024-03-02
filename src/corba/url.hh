@@ -6,10 +6,12 @@
 
 namespace CORBA {
 
+// the actual IOR.idl is more complex, one OID plus a list of components
 struct IOR {
+        std::string oid;
+
         std::string host;
         uint16_t port;
-        std::string oid;
         std::string objectKey;
 
         IOR(const std::string &ior);

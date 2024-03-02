@@ -25,7 +25,7 @@ class NamingContextExtImpl : public Skeleton {
 
     public:
         NamingContextExtImpl(CORBA::ORB *orb, const std::string& objectKey) : Skeleton(orb, objectKey) {}
-        const char *repository_id() const override;
+        virtual std::string_view repository_id() const override;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
             if (name2Object.contains(name)) {
@@ -84,12 +84,10 @@ class NamingContextExtImpl : public Skeleton {
         }
 };
 
-const char *NamingContextExtImpl::repository_id() const { return "omg.org/CosNaming/NamingContextExt"; }
-
 class NamingContextExtStub : public Stub {
     public:
         NamingContextExtStub(CORBA::ORB *orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}
-        const char *repository_id() const override;
+        std::string_view repository_id() const override;
 
         // static narrow(object: any): NamingContextExtStub {
         //     if (object instanceof NamingContextExtStub)
@@ -111,7 +109,9 @@ class NamingContextExtStub : public Stub {
         }
 };
 
-const char *NamingContextExtStub::repository_id() const { return "omg.org/CosNaming/NamingContextExt"; }
+std::string_view _rid("omg.org/CosNaming/NamingContextExt");
+std::string_view NamingContextExtImpl::repository_id() const { return _rid; }
+std::string_view NamingContextExtStub::repository_id() const { return _rid; }
 
 Object::~Object() {}
 

@@ -47,7 +47,7 @@ class blob : public std::basic_string<std::byte> {
         inline blob(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
         inline blob(const std::string &buffer): base_t(reinterpret_cast<const std::byte *>(buffer.data()), buffer.size()) {}
         inline blob(const blob_view &value) : base_t(value) {}
-        operator blob_view() const { return blob_view(*this);}
+        // operator blob_view() const { return blob_view(*this);}
 
         // friend ostream &operator<<(ostream &os, const blob_view &dt);
 };

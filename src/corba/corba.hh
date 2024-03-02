@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "exception.hh"
 #include "coroutine.hh"
 #include "giop.hh"
 
@@ -15,82 +16,66 @@ namespace detail {
 class Connection;
 }
 
-// okay, i'm not sure about how thy ol' CORBA vendors did it, here's what i could do:
-// * when we call resolve_str(name) on the remove name server, we get a reference, which contains
-//   host, port, oid, objectKey (oid == repositoryId == "IDL:Foo:1.0")
-// * the same object could actually have different IORs to a remote peer, so it doesn't make
-//   sense to store one in every object
-// * _narrow could be called on
-//   * remote references -> create a stub
-//   * local skeleton implementations -> just return the object itself when the type matches
-//   * remote stubs -> either create the same stub or another stub for the type?
-
-// to convert an Object into a Stub with _narrow(), I need:...:
-// * repository id, e.g. "IDL:Foobar:1.0", for _narrow() to check the Object is legit
-// *
-
+// CORBA 3.3 Part 1 Interfaces, 8.3 Object Reference Operations
 class Object {
-    protected:
-        CORBA::ORB *orb;
-
     public:
-        Object(CORBA::ORB *orb, const CORBA::blob_view &objectKey) : orb(orb), objectKey(objectKey) {
-            std::println("Object(orb, \"{}\")", this->objectKey);
-        }
         virtual ~Object();
-
-        // a unique id for this object on this ORB
-        CORBA::blob objectKey;
-
-        // ORB
-        // Connection
-        // bool _narrow_helper(const char *id);
-        // const char * _repoid();
-        // bool _is_a_remote(const char *id);
-
-        // this is actually defined in CORBA_Object.idl
-
-        virtual const char *repository_id() const {
-            throw std::runtime_error("Object::repository_id() has been called. Maybe you did you call it from within a constructor?");
-        }
-        // bool is_nil();
-        // virtual is_a(string logical_type_id)
-        CORBA::ORB *get_ORB() { return orb; }
+        virtual std::string_view repository_id() const = 0;
+        virtual blob_view get_object_key() const = 0;
+        virtual CORBA::ORB *get_ORB() const = 0;
 };
 
+// TODO: rename this into IOR. 'CORBA 3.3 Pt 1, 6.2.4' already 'Object Reference' for 'Object Key'
 class ObjectReference : public Object {
-    public:
-        ObjectReference(CORBA::ORB *orb, std::string oid, std::string host, uint16_t port, CORBA::blob_view &objectKey)
-            : Object(orb, objectKey), oid(oid), host(host), port(port) {}
-        virtual ~ObjectReference() override;
-        void setORB(CORBA::ORB *anORB) {this->orb = anORB; }
+        ORB *orb;
 
-        std::string oid;
-        std::string host;
-        uint16_t port;
-        const char *repository_id() const override { return oid.c_str(); }
+    public:
+        std::string oid;   // object/repository id the type, e.g. IDL:MyClass:1.0
+        std::string host;  // ORB host
+        uint16_t port;     // ORB port
+        blob objectKey;    // identifies the current object instance on the ORB
+
+        ObjectReference(CORBA::ORB *orb, const std::string_view &oid, std::string host, uint16_t port, const CORBA::blob_view &objectKey)
+            : orb(orb), oid(oid), host(host), port(port), objectKey(objectKey) {}
+        virtual ~ObjectReference() override;
+
+        // this is a hack for _narrow(shared_ptr<Object>)
+        inline void setORB(CORBA::ORB *anORB) { this->orb = anORB; }
+
+        virtual std::string_view repository_id() const override { return oid; }
+        virtual blob_view get_object_key() const override { return objectKey; }
+        CORBA::ORB *get_ORB() const override { return orb; }
 };
 
 /**
  * Base class for representing remote objects.
  */
-class Stub : public Object {
+class Stub : public virtual Object {
         friend class ORB;
-        detail::Connection *connection;
+        ORB *orb;
+        blob objectKey; // objectKey used on the remote end of the connection
+        detail::Connection *connection; // connection to where the remote object lives
 
     public:
-        Stub(CORBA::ORB *orb, const CORBA::blob_view &objectKey, detail::Connection *connection) : Object(orb, objectKey), connection(connection) {}
+        Stub(CORBA::ORB *orb, const CORBA::blob_view &objectKey, detail::Connection *connection) : orb(orb), objectKey(objectKey), connection(connection) {}
         virtual ~Stub() override;
+        virtual blob_view get_object_key() const override { return objectKey; }
+        CORBA::ORB *get_ORB() const override { return orb; }
 };
 
 /**
  * Base class for representing local objects.
  */
-class Skeleton : public Object {
+class Skeleton : public virtual Object {
+    friend class ORB;
+        ORB *orb;
+        blob objectKey;
     public:
-        Skeleton(CORBA::ORB *orb);
-        Skeleton(CORBA::ORB *orb, const std::string &objectKey);
+        Skeleton(CORBA::ORB *orb); // the ORB will create an objectKey
+        Skeleton(CORBA::ORB *orb, const std::string &objectKey); // for special objectKeys, e.g. "omg.org/CosNaming/NamingContextExt"
         virtual ~Skeleton() override;
+        virtual blob_view get_object_key() const override { return objectKey; }
+        CORBA::ORB *get_ORB() const override { return orb; }
         virtual CORBA::async<> _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
 };
 

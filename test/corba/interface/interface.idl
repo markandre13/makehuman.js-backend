@@ -1,3 +1,7 @@
+interface Peer {
+    string callString(in string value);
+};
+
 interface Interface {
     boolean callBoolean(in boolean value);
     octet callOctet(in octet value);
@@ -6,4 +10,6 @@ interface Interface {
     unsigned long long callUnsignedLongLong(in unsigned long long value);
     string callString(in string value);
     sequence<octet> callBlob(in sequence<octet> value);
+    void setPeer(in Peer peer);
+    // Peer getPeer();
 }; 

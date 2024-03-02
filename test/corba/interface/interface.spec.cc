@@ -19,11 +19,19 @@ class Interface_impl : public Interface_skel {
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
+        async<void> setPeer(std::shared_ptr<Peer> peer) override { co_return; }
         // next steps:
         // [ ] set/get callback object and call it
         // [ ] use ArrayBuffer/Buffer for sequence<octet> for the javascript side
         // [ ] completeness: signed & floating point
 };
+
+class Peer_impl : public Peer_skel {
+    public:
+        Peer_impl(ORB *orb) : Peer_skel(orb) {}
+        async<string> callString(const string_view &value) override { co_return string(value); }
+};
+
 
 kaffeeklatsch_spec([] {
     describe("interface", [] {
@@ -52,6 +60,9 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
                 expect(co_await backend->callString("hello")).to.equal("hello");
                 expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
+                println("============================== SET PEER ================================");
+                // auto frontend = make_shared<Peer_impl>(clientORB.get());
+                // co_await backend->setPeer(frontend);
             }()
                                   .thenOrCatch([] {},
                                                [&eptr](std::exception_ptr _eptr) {

@@ -12,7 +12,7 @@
 #include "makehuman_skel.hh"
 #include "makehuman_stub.hh"
 
-static CORBA::async<> _hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _Backend_hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto result = co_await obj->hello(decoder.string_view());
     encoder.string(result);
 }
@@ -22,7 +22,7 @@ CORBA::async<std::string> Backend_stub::hello(const std::string_view & hello) {
     },
     [&](CORBA::GIOPDecoder &decoder) { return decoder.string(); });
 }
-static CORBA::async<> _fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _Backend_fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
 }
 CORBA::async<void> Backend_stub::fail() {
@@ -30,8 +30,8 @@ CORBA::async<void> Backend_stub::fail() {
     });
 }
 std::map<std::string_view, std::function<CORBA::async<>(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend = {
-    {"hello", _hello},
-    {"fail", _fail},
+    {"hello", _Backend_hello},
+    {"fail", _Backend_fail},
 };
 CORBA::async<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto it = _op_Backend.find(operation);
@@ -41,11 +41,14 @@ CORBA::async<> Backend_skel::_call(const std::string_view &operation, CORBA::GIO
     co_await it->second(this, decoder, encoder);
 };
 
+std::string_view Backend::_rid("IDL:Backend:1.0");
+std::string_view Backend::repository_id() const { return _rid;}
+
 std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
     auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
     if (ref) {
-        if (std::strcmp(ref->repository_id(), "IDL:Backend:1.0") != 0) {
+        if (ref->repository_id() != "IDL:Backend:1.0") {
             return std::shared_ptr<Backend>();
         }
         CORBA::ORB *orb = ref->get_ORB();
@@ -60,7 +63,7 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
     return std::shared_ptr<Backend>();
 }
 
-static CORBA::async<> _chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _Backend2_chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     obj->chordata(decoder.boolean());
     co_return;
 }
@@ -69,7 +72,7 @@ void Backend2_stub::chordata(bool on) {
         encoder.boolean(on);
     });
 }
-static CORBA::async<> _mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
+static CORBA::async<> _Backend2_mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     obj->mediapipe(decoder.boolean());
     co_return;
 }
@@ -79,8 +82,8 @@ void Backend2_stub::mediapipe(bool on) {
     });
 }
 std::map<std::string_view, std::function<CORBA::async<>(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend2 = {
-    {"chordata", _chordata},
-    {"mediapipe", _mediapipe},
+    {"chordata", _Backend2_chordata},
+    {"mediapipe", _Backend2_mediapipe},
 };
 CORBA::async<> Backend2_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     auto it = _op_Backend2.find(operation);
@@ -90,11 +93,14 @@ CORBA::async<> Backend2_skel::_call(const std::string_view &operation, CORBA::GI
     co_await it->second(this, decoder, encoder);
 };
 
+std::string_view Backend2::_rid("IDL:Backend2:1.0");
+std::string_view Backend2::repository_id() const { return _rid;}
+
 std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
     auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
     if (ref) {
-        if (std::strcmp(ref->repository_id(), "IDL:Backend2:1.0") != 0) {
+        if (ref->repository_id() != "IDL:Backend2:1.0") {
             return std::shared_ptr<Backend2>();
         }
         CORBA::ORB *orb = ref->get_ORB();

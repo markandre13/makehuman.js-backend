@@ -15,8 +15,14 @@ using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const Object* object) {
+void GIOPEncoder::object(const CORBA::Object * object) {
     cerr << "GIOPEncoder::object(...)" << endl;
+    if (dynamic_cast<const CORBA::Stub*>(object)) {
+        std::println("GIOPEncoder::object(): STUB");
+    }
+    if (dynamic_cast<const CORBA::Skeleton*>(object)) {
+        std::println("GIOPEncoder::object(): SKELETON");
+    }
     if (object == nullptr) {
         buffer.ulong(0);
         return;
@@ -30,6 +36,12 @@ void GIOPEncoder::object(const Object* object) {
         reference(object);
         return;
     }
+    auto reference = dynamic_cast<const ObjectReference*>(object);
+    if (reference != nullptr) {
+        throw runtime_error("Can not serialize object reference yet.");
+        // reference(object);
+        return;
+    }
     throw runtime_error("Can not serialize value type yet.");
 }
 
@@ -38,41 +50,41 @@ void GIOPEncoder::reference(const Object* object) {
     cerr << "GIOPEncoder::reference(...) ENTER" << endl;
     // const className = (object.constructor as any)._idlClassName()
     auto className = object->repository_id();
-    if (className == nullptr) {
-        cerr << "GIOPEncoder::reference(...) [1]" << endl;
-        throw runtime_error("GIOPEncoder::reference(): _idlClassName() must not return nullptr");
-    }
+    // if (className == nullptr) {
+    //     cerr << "GIOPEncoder::reference(...) [1]" << endl;
+    //     throw runtime_error("GIOPEncoder::reference(): _idlClassName() must not return nullptr");
+    // }
 
     // type id
-    buffer.string(className);
+    string(className);
 
     // tagged profile sequence
-    buffer.ulong(1);  // profileCount
+    ulong(1);  // profileCount
 
     // profile id
     // 9.7.2 IIOP IOR Profiles
-    buffer.ulong(0);  // IOR.TAG.IOR.INTERNET_IOP
-    buffer.reserveSize();
-    buffer.endian();
-    buffer.octet(majorVersion);
-    buffer.octet(minorVersion);
+    ulong(0);  // IOR.TAG.IOR.INTERNET_IOP
+    reserveSize();
+    endian();
+    octet(majorVersion);
+    octet(minorVersion);
 
     if (connection == nullptr) {
         cerr << "GIOPEncoder::reference(...) [2]" << endl;
         throw runtime_error("GIOPEncoder::reference(...): the encoder has no connection and can not be reached over the network");
     }
-    buffer.string(connection->localAddress());
-    buffer.ushort(connection->localPort());
-    buffer.blob((const char*)object->objectKey.data(), object->objectKey.size());
+    string(connection->localAddress());
+    ushort(connection->localPort());
+    blob(object->get_object_key());
 
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
-        buffer.ulong(1);               // component count = 1
+        ulong(1);               // component count = 1
         encapsulation(ComponentId::ORB_TYPE, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
-            buffer.ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
+            ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
         });
     }
-    buffer.fillInSize();
+    fillInSize();
     cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
 }
 
@@ -369,13 +381,13 @@ void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-void* GIOPDecoder::object(ORB* orb) {  // const string typeInfo, bool isValue = false) {
+std::shared_ptr<Object> GIOPDecoder::object() {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.m_offset - 4;
 
     if (code == 0) {
         cerr << "[2]" << endl;
-        return nullptr;
+        return std::shared_ptr<Object>();
     }
 
     if ((code & 0xffffff00) == 0x7fffff00) {
