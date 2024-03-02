@@ -1,6 +1,6 @@
 APP=tests
 
-# MEM=-fsanitize=address -fsanitize=leak
+MEM=-fsanitize=address -fsanitize=leak
 
 CXX=/usr/local/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
@@ -11,6 +11,7 @@ CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
 	-I/usr/local/opt/llvm/include/c++ \
 	-I../upstream/kaffeeklatsch/src \
 	-I../src
+# -D_COROUTINE_DEBUG=1
 
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ \
 	-mmacosx-version-min=12.0 \

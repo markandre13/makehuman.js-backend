@@ -17,7 +17,7 @@ kaffeeklatsch_spec([] {
                     encoder.majorVersion = 1;
                     encoder.minorVersion = 2;
 
-                    encoder.encodeRequest(string("\x01\x02\x03\x04"), "myMethod", 4, true);
+                    encoder.encodeRequest(CORBA::blob("\x01\x02\x03\x04"), "myMethod", 4, true);
                     encoder.setGIOPHeader(CORBA::MessageType::REQUEST);
                     auto length = encoder.buffer.offset;
 

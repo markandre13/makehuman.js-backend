@@ -115,6 +115,7 @@ void GIOPEncoder::skipReplyHeader() {
     buffer.offset = 24;  // this does not work!!! anymore with having a variable length service context!!!
 }
 void GIOPEncoder::setGIOPHeader(MessageType type) {
+    buffer.reserve();
     auto offset = buffer.offset;
     buffer.offset = 0;
     buffer.octet('G');
@@ -507,11 +508,11 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                                                 break;
                                             }
                                         }
-                                        if (name == nullptr) {
-                                            cerr << format("IOR: component[{}] = ORB_TYPE {:x}", i, orbType) << endl;
-                                        } else {
-                                            cerr << format("IOR: component[{}] = ORB_TYPE {}", i, name) << endl;
-                                        }
+                                        // if (name == nullptr) {
+                                        //     cerr << format("IOR: component[{}] = ORB_TYPE {:x}", i, orbType) << endl;
+                                        // } else {
+                                        //     cerr << format("IOR: component[{}] = ORB_TYPE {}", i, name) << endl;
+                                        // }
                                     }
                                 } break;
                                 case ComponentId::CODE_SETS:
