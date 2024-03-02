@@ -77,21 +77,21 @@ void GIOPEncoder::reference(const Object* object) {
 }
 
 void GIOPEncoder::encapsulation(ComponentId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<u_int32_t>(type));
+    buffer.ulong(static_cast<uint32_t>(type));
     buffer.reserveSize();
     buffer.endian();
     closure();
     buffer.fillInSize();
 }
 void GIOPEncoder::encapsulation(ProfileId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<u_int32_t>(type));
+    buffer.ulong(static_cast<uint32_t>(type));
     buffer.reserveSize();
     buffer.endian();
     closure();
     buffer.fillInSize();
 }
 void GIOPEncoder::encapsulation(ServiceId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<u_int32_t>(type));
+    buffer.ulong(static_cast<uint32_t>(type));
     buffer.reserveSize();
     buffer.endian();
     closure();
@@ -112,7 +112,7 @@ void GIOPEncoder::setGIOPHeader(MessageType type) {
     buffer.octet(majorVersion);
     buffer.octet(minorVersion);
     buffer.endian();
-    buffer.octet(static_cast<u_int8_t>(type));
+    buffer.octet(static_cast<uint8_t>(type));
     cout << "GIOPHeader length = " << hex << offset - 12 << endl;
     buffer.ulong(offset - 12);
     buffer.offset = offset;

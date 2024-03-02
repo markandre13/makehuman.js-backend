@@ -22,7 +22,7 @@ class CDREncoder {
 
     public:
         void boolean(bool);
-        void octet(u_int8_t);
+        void octet(uint8_t);
         void ushort(uint16_t);
         void ulong(uint32_t);
         void ulonglong(uint64_t);
