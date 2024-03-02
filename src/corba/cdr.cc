@@ -8,14 +8,14 @@ using namespace std;
 namespace CORBA {
 
 void CDREncoder::boolean(bool value) {
-    _data.resize(offset + 1);
+    reserve(offset + 1);
     auto ptr = reinterpret_cast<uint8_t *>(_data.data() + offset);
     offset += 1;
     *ptr = value ? 1 : 0;
 }
 
 void CDREncoder::octet(uint8_t value) {
-    _data.resize(offset + 1);
+    reserve(offset + 1);
     auto ptr = reinterpret_cast<uint8_t *>(_data.data() + offset);
     offset += 1;
     *ptr = value;
@@ -23,7 +23,7 @@ void CDREncoder::octet(uint8_t value) {
 
 void CDREncoder::ushort(uint16_t value) {
     align2();
-    _data.resize(offset + 2);
+    reserve(offset + 2);
     auto ptr = reinterpret_cast<uint16_t *>(_data.data() + offset);
     offset += 2;
     *ptr = value;
@@ -31,7 +31,7 @@ void CDREncoder::ushort(uint16_t value) {
 
 void CDREncoder::ulong(uint32_t value) {
     align4();
-    _data.resize(offset + 4);
+    reserve(offset + 4);
     auto ptr = reinterpret_cast<uint32_t *>(_data.data() + offset);
     offset += 4;
     *ptr = value;
@@ -39,7 +39,7 @@ void CDREncoder::ulong(uint32_t value) {
 
 void CDREncoder::ulonglong(uint64_t value) {
     align8();
-    _data.resize(offset + 8);
+    reserve(offset + 8);
     auto ptr = reinterpret_cast<uint64_t *>(_data.data() + offset);
     offset += 8;
     *ptr = value;
@@ -47,7 +47,7 @@ void CDREncoder::ulonglong(uint64_t value) {
 
 void CDREncoder::blob(const char *value, size_t nbytes) {
     ulong(nbytes);
-    _data.resize(offset + nbytes);
+    reserve(offset + nbytes);
     memcpy(_data.data() + offset, value, nbytes);
     offset += nbytes;
 }
@@ -56,7 +56,7 @@ void CDREncoder::string(const char *value) {
 }
 void CDREncoder::string(const char *value, size_t nbytes) {
     ulong(nbytes + 1);
-    _data.resize(offset + nbytes + 1);
+    reserve(offset + nbytes + 1);
     memcpy(_data.data() + offset, value, nbytes);
     offset += nbytes;
     _data[offset] = 0;

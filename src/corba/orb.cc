@@ -24,7 +24,7 @@ class NamingContextExtImpl : public Skeleton {
         std::map<std::string, std::shared_ptr<Object>> name2Object;
 
     public:
-        NamingContextExtImpl(CORBA::ORB *orb, const std::string& objectKey) : Skeleton(orb, objectKey) {}
+        NamingContextExtImpl(CORBA::ORB *orb, const std::string &objectKey) : Skeleton(orb, objectKey) {}
         virtual std::string_view repository_id() const override;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
@@ -191,13 +191,20 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
     stub->connection->requestId += 2;
     printf("CONNECTION %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(stub->connection), stub->connection->localAddress().c_str(),
            stub->connection->localPort(), stub->connection->remoteAddress().c_str(), stub->connection->remotePort(), stub->connection->requestId);
+
     GIOPEncoder encoder(stub->connection);
     auto responseExpected = true;
+    println("[0] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
     encoder.encodeRequest(stub->objectKey, operation, requestId, responseExpected);
+    println("[1] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
     encode(encoder);
-    encoder.setGIOPHeader(MessageType::REQUEST);
+    println("[2] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
+    encoder.setGIOPHeader(MessageType::REQUEST); // THIS IS TOTAL BOLLOCKS BECAUSE OF THE RESIZE IN IT...
     println("ORB::_twowayCall(stub, \"{}\", ...) SEND REQUEST objectKey=\"{}\", operation=\"{}\", requestId={}", operation, stub->objectKey, operation,
             requestId);
+    println("[3] OFFSET = {}, SIZE = {}", encoder.buffer.offset, encoder.buffer._data.size());
+    encoder.buffer._data.resize(encoder.buffer.offset);
+    hexdump((void *)encoder.buffer.data(), encoder.buffer.offset);
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
     println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
@@ -337,7 +344,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 std::cerr << "CALL SERVANT" << std::endl;
                 servant->second->_call(request->operation, decoder, *encoder)
                     .thenOrCatch(
-                        [encoder, connection, responseExpected, requestId] { // FIXME: the references objects won't be available
+                        [encoder, connection, responseExpected, requestId] {  // FIXME: the references objects won't be available
                             println("SERVANT RETURNED");
                             if (responseExpected) {
                                 println("SERVANT WANTS RESPONSE");
@@ -348,7 +355,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 connection->send((void *)encoder->buffer.data(), length);
                             }
                         },
-                        [encoder, connection, responseExpected, requestId](std::exception_ptr eptr) { // FIXME: the references objects won't be available
+                        [encoder, connection, responseExpected, requestId](std::exception_ptr eptr) {  // FIXME: the references objects won't be available
                             try {
                                 // std::rethrow_exception(ex);
                                 std::rethrow_exception(eptr);
@@ -357,7 +364,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 if (responseExpected) {
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
-                                    encoder->setReplyHeader(requestId,ReplyStatus::USER_EXCEPTION);
+                                    encoder->setReplyHeader(requestId, ReplyStatus::USER_EXCEPTION);
                                     connection->send((void *)encoder->buffer.data(), length);
                                 }
                             } catch (CORBA::SystemException &error) {

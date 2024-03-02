@@ -78,14 +78,18 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callPeer("hello")).to.equal("hello world");
                 println("============================= CALLED PEER ==============================");
             }()
-                                  .thenOrCatch([] {},
+                                  .thenOrCatch([] {
+                                    println("CLIENT COROUTINE FINISHED WITHOUT AN EXCEPTION");
+                                  },
                                                [&eptr](std::exception_ptr _eptr) {
+                                                println("CLIENT COROUTINE FINISHED WITH AN EXCEPTION");
                                                    eptr = _eptr;
                                                });
 
             vector<FakeTcpProtocol *> protocols = {serverProtocol, clientProtocol};
             while (transmit(protocols))
                 ;
+            println("NO MORE PACKETS TO SEND");
 
             if (eptr) {
                 std::rethrow_exception(eptr);

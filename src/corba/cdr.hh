@@ -19,6 +19,11 @@ class CDREncoder {
 
     protected:
         std::vector<size_t> sizeStack;
+        inline void reserve(size_t nbytes) {
+            if (_data.size() < nbytes) {
+                _data.resize(nbytes);
+            }
+        }
 
     public:
         void boolean(bool);
