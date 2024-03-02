@@ -149,7 +149,7 @@ void GIOPEncoder::encodeRequest(const CORBA::blob &objectKey, const std::string 
     if (majorVersion == 1 && minorVersion <= 1) {
         this->blob(objectKey);
     } else {
-        ushort(GIOP_KEY_ADDR);
+        ushort(static_cast<uint16_t>(AddressingDisposition::KEY_ADDR));
         this->blob(objectKey);
     }
 
@@ -249,13 +249,13 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     if (majorVersion == 1 && minorVersion <= 1) {
         header->objectKey = buffer.blob_view();
     } else {
-        auto addressingDisposition = buffer.ushort();
+        auto addressingDisposition = static_cast<AddressingDisposition>(buffer.ushort());
         switch (addressingDisposition) {
-            case GIOP_KEY_ADDR:
+            case AddressingDisposition::KEY_ADDR:
                 header->objectKey = buffer.blob_view();
                 break;
-            case GIOP_PROFILE_ADDR:
-            case GIOP_REFERENCE_ADDR:
+            case AddressingDisposition::PROFILE_ADDR:
+            case AddressingDisposition::REFERENCE_ADDR:
                 throw runtime_error("Unsupported AddressingDisposition.");
             default:
                 throw runtime_error("Unknown AddressingDisposition.");
@@ -281,13 +281,13 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
     if (majorVersion == 1 && minorVersion <= 1) {
         objectKey = buffer.blob_view();
     } else {
-        auto addressingDisposition = buffer.ushort();
+        auto addressingDisposition = static_cast<AddressingDisposition>(buffer.ushort());
         switch (addressingDisposition) {
-            case GIOP_KEY_ADDR:
+            case AddressingDisposition::KEY_ADDR:
                 objectKey = buffer.blob_view();
                 break;
-            case GIOP_PROFILE_ADDR:
-            case GIOP_REFERENCE_ADDR:
+            case AddressingDisposition::PROFILE_ADDR:
+            case AddressingDisposition::REFERENCE_ADDR:
                 throw runtime_error("Unsupported AddressingDisposition.");
             default:
                 throw runtime_error("Unknown AddressingDisposition.");

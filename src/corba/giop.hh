@@ -109,7 +109,7 @@ enum class ComponentId {
     INET_SEC_TRANS = 123
 };
 
-enum AddressingDisposition { GIOP_KEY_ADDR = 0, GIOP_PROFILE_ADDR = 1, GIOP_REFERENCE_ADDR = 2 };
+enum class AddressingDisposition { KEY_ADDR = 0, PROFILE_ADDR = 1, REFERENCE_ADDR = 2 };
 
 struct GIOPHeader {
         char id[4];
