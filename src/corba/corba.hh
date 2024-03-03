@@ -26,7 +26,7 @@ class Object {
 };
 
 // TODO: rename this into IOR. 'CORBA 3.3 Pt 1, 6.2.4' already 'Object Reference' for 'Object Key'
-class ObjectReference : public Object {
+class IOR : public Object {
         ORB *orb;
 
     public:
@@ -35,9 +35,10 @@ class ObjectReference : public Object {
         uint16_t port;     // ORB port
         blob objectKey;    // identifies the current object instance on the ORB
 
-        ObjectReference(CORBA::ORB *orb, const std::string_view &oid, std::string host, uint16_t port, const CORBA::blob_view &objectKey)
+        IOR(const std::string &ior);
+        IOR(CORBA::ORB *orb, const std::string_view &oid, std::string host, uint16_t port, const CORBA::blob_view &objectKey)
             : orb(orb), oid(oid), host(host), port(port), objectKey(objectKey) {}
-        virtual ~ObjectReference() override;
+        virtual ~IOR() override;
 
         // this is a hack for _narrow(shared_ptr<Object>)
         inline void setORB(CORBA::ORB *anORB) { this->orb = anORB; }

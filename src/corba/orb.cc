@@ -92,8 +92,8 @@ class NamingContextExtStub : public Stub {
 
         // TODO: the argument doesn't match the one in the IDL but for now it's
         // good enough
-        async<shared_ptr<ObjectReference>> resolve_str(const string &name) {
-            return get_ORB()->twowayCall<shared_ptr<ObjectReference>>(
+        async<shared_ptr<IOR>> resolve_str(const string &name) {
+            return get_ORB()->twowayCall<shared_ptr<IOR>>(
                 this, "resolve_str",
                 [name](GIOPEncoder &encoder) {
                     encoder.string(name);
@@ -144,7 +144,7 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
             auto reference = co_await rootNamingContext->resolve_str(name.name);
             // std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
             reference->setORB(this);
-            co_return dynamic_pointer_cast<Object, ObjectReference>(reference);
+            co_return dynamic_pointer_cast<Object, IOR>(reference);
         }
     }
     throw runtime_error(format("ORB::stringToObject(\"{}\") failed", iorString));

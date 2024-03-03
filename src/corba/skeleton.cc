@@ -8,6 +8,6 @@ Skeleton::Skeleton(CORBA::ORB *orb, const std::string &objectKey) : orb(orb), ob
 
 Skeleton::~Skeleton() {}
 Stub::~Stub() {}
-ObjectReference::~ObjectReference() {}
+IOR::~IOR() {}
 
 };  // namespace CORBA

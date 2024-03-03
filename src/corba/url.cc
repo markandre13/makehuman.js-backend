@@ -324,9 +324,9 @@ IOR::IOR(const string &ior) {
     CORBA::GIOPDecoder giop(cdr);
     giop.buffer.endian();
     auto ref = giop.reference();
+    oid = ref->oid;
     host = ref->host;
     port = ref->port;
-    oid = ref->oid;
     objectKey = string((const char*)ref->objectKey.data(), ref->objectKey.size());
 }
 

@@ -46,7 +46,7 @@ std::string_view Backend::repository_id() const { return _rid;}
 
 std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
-    auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
+    auto ref = dynamic_cast<CORBA::IOR *>(ptr);
     if (ref) {
         if (ref->repository_id() != "IDL:Backend:1.0") {
             return std::shared_ptr<Backend>();
@@ -98,7 +98,7 @@ std::string_view Backend2::repository_id() const { return _rid;}
 
 std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
-    auto ref = dynamic_cast<CORBA::ObjectReference *>(ptr);
+    auto ref = dynamic_cast<CORBA::IOR *>(ptr);
     if (ref) {
         if (ref->repository_id() != "IDL:Backend2:1.0") {
             return std::shared_ptr<Backend2>();

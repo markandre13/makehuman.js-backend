@@ -7,15 +7,15 @@
 namespace CORBA {
 
 // the actual IOR.idl is more complex, one OID plus a list of components
-struct IOR {
-        std::string oid;
+// struct IOR {
+//         std::string oid;
 
-        std::string host;
-        uint16_t port;
-        std::string objectKey;
+//         std::string host;
+//         uint16_t port;
+//         std::string objectKey;
 
-        IOR(const std::string &ior);
-};
+//         IOR(const std::string &ior);
+// };
 
 struct ObjectAddress {
         std::string proto = "iiop";
@@ -39,6 +39,8 @@ struct CorbaName : CorbaLocation {
         std::string name;
         virtual std::string str() const;
 };
+
+class IOR;
 
 std::variant<IOR, CorbaLocation, CorbaName> decodeURI(const std::string &uri);
 

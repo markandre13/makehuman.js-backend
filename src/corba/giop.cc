@@ -5,17 +5,17 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "blob.hh"
 #include "corba.hh"
 #include "hexdump.hh"
 #include "orb.hh"
 #include "protocol.hh"
-#include "blob.hh"
 
 using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const CORBA::Object * object) {
+void GIOPEncoder::object(const CORBA::Object* object) {
     // cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
         buffer.ulong(0);
@@ -30,7 +30,7 @@ void GIOPEncoder::object(const CORBA::Object * object) {
         reference(object);
         return;
     }
-    auto reference = dynamic_cast<const ObjectReference*>(object);
+    auto reference = dynamic_cast<const IOR*>(object);
     if (reference != nullptr) {
         throw runtime_error("Can not serialize object reference yet.");
         // reference(object);
@@ -73,9 +73,9 @@ void GIOPEncoder::reference(const Object* object) {
 
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
-        ulong(1);               // component count = 1
-        encapsulation(ComponentId::ORB_TYPE, [this]() {    // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
-            ulong(0x4d313300);  // "M13\0" as ORB Type ID for corba.js
+        ulong(1);                                        // component count = 1
+        encapsulation(ComponentId::ORB_TYPE, [this]() {  // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+            ulong(0x4d313300);                           // "M13\0" as ORB Type ID for corba.js
         });
     }
     fillInSize();
@@ -138,7 +138,7 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, ReplyStatus replyStatus) {
     }
 }
 
-void GIOPEncoder::encodeRequest(const CORBA::blob &objectKey, const std::string &operation, uint32_t requestId, bool responseExpected) {
+void GIOPEncoder::encodeRequest(const CORBA::blob& objectKey, const std::string& operation, uint32_t requestId, bool responseExpected) {
     skipGIOPHeader();
 
     if (majorVersion == 1 && minorVersion <= 1) {
@@ -375,7 +375,7 @@ void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-std::shared_ptr<Object> GIOPDecoder::object(ORB *orb) {  // const string typeInfo, bool isValue = false) {
+std::shared_ptr<Object> GIOPDecoder::object(ORB* orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.m_offset - 4;
 
@@ -398,7 +398,7 @@ std::shared_ptr<Object> GIOPDecoder::object(ORB *orb) {  // const string typeInf
         }
         auto ref = reference(code);
         // cerr << "GOT IOR " << ref->oid << " " << ref->objectKey << endl;
-        return make_shared<ObjectReference>(orb, ref->oid, ref->host, ref->port, ref->get_object_key());
+        return make_shared<IOR>(orb, ref->oid, ref->host, ref->port, ref->get_object_key());
     }
     throw runtime_error(format("GIOPDecoder: Unsupported value with CORBA tag {:#x}", code));
 }
@@ -445,92 +445,69 @@ static array<ORBTypeName, 35> orbTypeNames{{{0x48500000, 0x4850000f, "Hewlett Pa
                                             {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
                                             {0x4d313300, 0x4d313300, "corba.js"}}};
 
-struct Reference {
-        std::string oid;
-        std::string host;
-        uint16_t port;
-        std::string objectKey;
-};
+shared_ptr<IOR> GIOPDecoder::reference(size_t length) {
+    auto oid = buffer.string(length);
+    std::string host;
+    uint16_t port;
+    CORBA::blob objectKey;
 
-shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
-    Reference data;
-    // auto data = make_sunique<ObjectReference>();
-
-    // struct IOR, field: string type_id ???
-    data.oid = buffer.string(length);
-    // console.log(`IOR: oid: '${data.oid}'`)
-
-    // struct IOR, field: TaggedProfileSeq profiles ???
     auto profileCount = buffer.ulong();
     // console.log(`oid: '${oid}', tag count=${tagCount}`)
     for (uint32_t i = 0; i < profileCount; ++i) {
-        encapsulation([this, &data](ProfileId profileId) {
+        encapsulation([&](ProfileId profileId) {
             switch (profileId) {
                 // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
                 case ProfileId::TAG_INTERNET_IOP: {
                     // console.log(`Internet IOP Component, length=${profileLength}`)
                     auto iiopMajorVersion = buffer.octet();
                     auto iiopMinorVersion = buffer.octet();
-                    // if (iiopMajorVersion !== 1 || iiopMinorVersion > 1) {
-                    //     throw Error(`Unsupported IIOP ${iiopMajorVersion}.${iiopMinorVersion}. Currently only IIOP
-                    //     ${GIOPBase.MAJOR_VERSION}.${GIOPBase.MINOR_VERSION} is implemented.`)
+                    // if (iiopMajorVersion != 1 || iiopMinorVersion > 1) {
+                    //     throw runtime_error(format("Unsupported IIOP version {}.{}. Must be 1.1+", iiopMajorVersion, iiopMinorVersion));
                     // }
-                    data.host = buffer.string();
-                    data.port = buffer.ushort();
-                    auto objectKey = buffer.blob();
-                    data.objectKey = std::string((const char *)objectKey.data(), objectKey.size());
-                    // console.log(`IOR: IIOP(version: ${iiopMajorVersion}.${iiopMinorVersion}, host: ${data.host}:${data.port}, objectKey: ${data.objectKey})`)
+                    host = buffer.string();
+                    port = buffer.ushort();
+                    objectKey = buffer.blob();
                     // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
-                    if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {
-                        // TaggedComponentSeq
-                        auto n = buffer.ulong();
-                        // console.log(`IOR: ${n} components`)
-                        for (uint32_t i = 0; i < n; ++i) {
-                            auto id = static_cast<ComponentId>(buffer.ulong()); // TODO: make this a method called componentId
-                            auto length = buffer.ulong();
-                            auto nextOffset = buffer.m_offset + length;
-                            switch (id) {
-                                case ComponentId::ORB_TYPE: {
-                                    auto typeCount = buffer.ulong();
-                                    for (uint32_t j = 0; j < typeCount; ++j) {
-                                        auto orbType = buffer.ulong();
-                                        const char* name = nullptr;
-                                        for (const auto& orbTypeName : orbTypeNames) {
-                                            if (orbTypeName.from <= orbType && orbType <= orbTypeName.to) {
-                                                name = orbTypeName.name;
-                                                break;
-                                            }
-                                        }
-                                        // if (name == nullptr) {
-                                        //     cerr << format("IOR: component[{}] = ORB_TYPE {:x}", i, orbType) << endl;
-                                        // } else {
-                                        //     cerr << format("IOR: component[{}] = ORB_TYPE {}", i, name) << endl;
-                                        // }
-                                    }
-                                } break;
-                                case ComponentId::CODE_SETS:
-                                    // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
-                                    // console.log(`IOR: component[${i}] = CODE_SETS`)
-                                    break;
-                                case ComponentId::POLICIES:
-                                    // console.log(`IOR: component[${i}] = POLICIES`)
-                                    break;
-                                default:
-                                    // console.log(`IOR: component[${i}] = ${id} (0x${id.toString(16)})`)
-                            }
-                            buffer.m_offset = nextOffset;
-                        }
-                    }
+                    // if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {
+                    //     encapsulation([&](ComponentId componentId) {
+                    //         switch (componentId) {
+                    //             case ComponentId::ORB_TYPE: {
+                    //                 auto typeCount = buffer.ulong();
+                    //                 for (uint32_t j = 0; j < typeCount; ++j) {
+                    //                     auto orbType = buffer.ulong();
+                    //                     const char* name = nullptr;
+                    //                     for (const auto& orbTypeName : orbTypeNames) {
+                    //                         if (orbTypeName.from <= orbType && orbType <= orbTypeName.to) {
+                    //                             name = orbTypeName.name;
+                    //                             break;
+                    //                         }
+                    //                     }
+                    //                 }
+                    //                 println("GOT ORB_TYPE");
+                    //             } break;
+                    //             case ComponentId::CODE_SETS:
+                    //                 // Corba 3.4, Part 2, 7.10.2.4 CodeSet Component of IOR Multi-Component Profile
+                    //                 // console.log(`IOR: component[${i}] = CODE_SETS`)
+                    //                 println("GOT CODE_SETS");
+                    //                 break;
+                    //             case ComponentId::POLICIES: // there are some about reconnection...
+                    //                 println("GOT POLICIES");
+                    //                 // console.log(`IOR: component[${i}] = POLICIES`)
+                    //                 break;
+                    //             default:
+                    //                 // console.log(`IOR: component[${i}] = ${id} (0x${id.toString(16)})`)
+                    //         };
+                    //     });
+                    // }
                 } break;
                 default: {
-                    // auto id = static_cast<unsigned>(profileId);
-                    // cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
+                    auto id = static_cast<unsigned>(profileId);
+                    cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
                 }
             }
         });
     }
-    auto b = CORBA::blob_view(data.objectKey);
-    return make_shared<ObjectReference>(nullptr, data.oid, data.host, data.port, b);
+    return make_shared<IOR>(nullptr, oid, host, port, objectKey);
 }
 
 }  // namespace CORBA

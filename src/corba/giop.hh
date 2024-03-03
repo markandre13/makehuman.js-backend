@@ -11,7 +11,7 @@ namespace CORBA {
 
 class ORB;
 class Object;
-class ObjectReference;
+class IOR;
 
 enum class MessageType {
     REQUEST = 0,
@@ -251,8 +251,8 @@ class GIOPDecoder : public GIOPBase {
         // reference
 
         std::shared_ptr<Object> object(CORBA::ORB *orb = nullptr);  // const string typeInfo, bool isValue = false) {
-        std::shared_ptr<ObjectReference> reference(size_t length);
-        std::shared_ptr<ObjectReference> reference() { return reference(buffer.ulong()); }
+        std::shared_ptr<IOR> reference(size_t length);
+        std::shared_ptr<IOR> reference() { return reference(buffer.ulong()); }
 };
 
 }  // namespace CORBA

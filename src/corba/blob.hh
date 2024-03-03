@@ -43,6 +43,7 @@ class blob : public std::basic_string<std::byte> {
         using base_t = std::basic_string<std::byte>;
 
     public:
+        inline blob(): base_t() {}
         inline blob(const char *buffer) : base_t(reinterpret_cast<const std::byte *>(buffer), strlen(buffer)) {}
         inline blob(const void *buffer, size_t nbytes) : base_t(reinterpret_cast<const std::byte *>(buffer), nbytes) {}
         inline blob(const std::string &buffer): base_t(reinterpret_cast<const std::byte *>(buffer.data()), buffer.size()) {}
