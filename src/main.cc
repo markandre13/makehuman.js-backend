@@ -47,7 +47,7 @@ int main(void) {
     printf("running\n");
 
     auto orb = make_shared<CORBA::ORB>();
-    auto protocol = new MyProtocol();
+    auto protocol = new WsProtocol();
     orb->registerProtocol(protocol);
     auto backend = make_shared<Backend_impl>(orb);
     orb->bind("Backend", backend);

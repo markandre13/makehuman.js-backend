@@ -19,6 +19,10 @@
 
 using namespace std;
 
+namespace CORBA {
+
+namespace net {
+
 static void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents);
 static void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents);
 
@@ -26,16 +30,15 @@ static ssize_t wslay_send_callback(wslay_event_context_ptr ctx, const uint8_t *d
 static ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len, int flags, void *user_data);
 static void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data);
 
-struct accept_handler_t {
+// libev user data for the listen handler
+struct listen_handler_t {
         ev_io watcher;
         struct ev_loop *loop;
         CORBA::ORB *orb;
 };
 
+// libev user data for the client handler
 enum state_t { STATE_HTTP, STATE_WS };
-
-class MyConnection;
-
 struct client_handler_t {
         ev_io watcher;
         struct ev_loop *loop;
@@ -44,12 +47,12 @@ struct client_handler_t {
         state_t state = STATE_HTTP;
         std::string headers;
 
-        // wslay
+        // wslay context for established connections
         wslay_event_context_ptr ctx;
 
         // for forwarding data from wslay to corba
         CORBA::ORB *orb;
-        MyConnection *connection;
+        WsConnection *connection;
 
         // void libuv_read_cb(ssize_t nbytes, const uv_buf_t *buf);
 };
@@ -57,50 +60,18 @@ struct client_handler_t {
 /**
  * Add a listen socket for the specified hostname and port to the libev loop
  */
-void MyProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port) {
+void WsProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port) {
     int fd = create_listen_socket("localhost", 9001);
-    auto accept_watcher = new accept_handler_t;
+    auto accept_watcher = new listen_handler_t;
     accept_watcher->loop = loop;
     accept_watcher->orb = orb;
     ev_io_init(&accept_watcher->watcher, libev_accept_cb, fd, EV_READ);
     ev_io_start(loop, &accept_watcher->watcher);
 }
 
-MyConnection *MyProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) { return nullptr; }
-CORBA::async<void> MyProtocol::close() { co_return; }
-
-void MyConnection::close(){};
-
-void MyConnection::send(void *buffer, size_t nbyte) {
-    println("MyConnection::send(..., {})", nbyte);
-    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t *)buffer, nbyte};
-    int r0 = wslay_event_queue_msg(this->handler->ctx, &msgarg);
-    println("wslay_event_queue_msg() -> {}", r0);
-    switch (r0) {
-        case 0: {
-            // send queued messages
-            int r1 = wslay_event_send(this->handler->ctx);
-            println("wslay_event_send() -> {}", r1);
-        } break;
-        case WSLAY_ERR_NO_MORE_MSG:
-            cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
-                 << "The one of possible reason is that close control frame has been queued/sent" << endl
-                 << "and no further queueing message is not allowed." << endl;
-        case WSLAY_ERR_INVALID_ARGUMENT:
-            cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
-            break;
-        case WSLAY_ERR_NOMEM:
-            cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
-            break;
-        default:
-            cout << "failed to queue wslay message" << endl;
-            //     std::cout << "SEND FACE " << r << std::endl;
-            break;
-    }
-}
-
+// called by libev when a client want's to connect
 void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
-    auto handler = reinterpret_cast<accept_handler_t *>(watcher);
+    auto handler = reinterpret_cast<listen_handler_t *>(watcher);
     puts("got client");
     if (EV_ERROR & revents) {
         perror("got invalid event");
@@ -114,16 +85,29 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
         close(fd);
         return;
     }
+
     auto client_handler = new client_handler_t();
     client_handler->loop = loop;
     client_handler->orb = handler->orb;
-    client_handler->connection = new MyConnection("localhost", 9001, "frontend", 2, 1);
-    // client_handler->connection->requestId = 1; // InitialResponderRequestIdBiDirectionalIIOP
+    // a serve will only send requests when BiDir was negotiated, and then starts with
+    // requestId 1 and increments by 2
+    // (while client starts with requestId 0 and also increments by 2)
+    auto InitialResponderRequestIdBiDirectionalIIOP = 1;
+    client_handler->connection = new WsConnection("localhost", 9001, "frontend", 2, InitialResponderRequestIdBiDirectionalIIOP);
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &client_handler->watcher);
 }
 
+WsConnection *WsProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
+    println("ORB WANT'S TO CONTACT A CLIENT. BUT IT'S NOT IMPLEMENTED YET.");
+    return nullptr;
+}
+
+CORBA::async<void> WsProtocol::close() { co_return; }
+void WsConnection::close(){};
+
+// called by libev when data can be read
 void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     if (EV_ERROR & revents) {
         perror("libev_read_cb(): got invalid event");
@@ -131,6 +115,10 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     }
     auto handler = reinterpret_cast<client_handler_t *>(watcher);
     switch (handler->state) {
+        case STATE_WS:
+            wslay_event_recv(handler->ctx);
+            break;
+
         case STATE_HTTP: {
             char buffer[8192];
             ssize_t nbytes = recv(watcher->fd, buffer, 8192, 0);
@@ -186,13 +174,13 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
                 send(watcher->fd, reply.data(), reply.size(), 0);
 
                 struct wslay_event_callbacks callbacks = {
-                    wslay_recv_callback,  // called when wslay wants to read data
-                    wslay_send_callback,  // called when wslay wants to send data
-                    NULL,                 /* genmask_callback */
-                    NULL,                 /* on_frame_recv_start_callback */
-                    NULL,                 /* on_frame_recv_callback */
-                    NULL,                 /* on_frame_recv_end_callback */
-                    wslay_msg_rcv_callback// message received via wslay
+                    wslay_recv_callback,    // called when wslay wants to read data
+                    wslay_send_callback,    // called when wslay wants to send data
+                    NULL,                   /* genmask_callback */
+                    NULL,                   /* on_frame_recv_start_callback */
+                    NULL,                   /* on_frame_recv_callback */
+                    NULL,                   /* on_frame_recv_end_callback */
+                    wslay_msg_rcv_callback  // message received via wslay
                 };
                 wslay_event_context_server_init(&handler->ctx, &callbacks, handler);
                 // TODO: call wslay_event_context_free(...) when closing connection
@@ -200,13 +188,46 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
 
             printf("message:%s\n", buffer);
         } break;
-        case STATE_WS:
-            printf("WS\n");
-            wslay_event_recv(handler->ctx);
+    }
+}
+
+// this is called by the ORB to send data
+void WsConnection::send(void *buffer, size_t nbyte) {
+    println("WsConnection::send(..., {})", nbyte);
+    struct wslay_event_msg msgarg = {WSLAY_BINARY_FRAME, (const uint8_t *)buffer, nbyte};
+    int r0 = wslay_event_queue_msg(this->handler->ctx, &msgarg);
+    println("wslay_event_queue_msg() -> {}", r0);
+    switch (r0) {
+        case 0: {
+            // send queued messages
+            // the proper approach would be to temporarily register a write callback
+            // now that we have something to write like this
+            //
+            //   ev_io_init(&client_handler->watcher, libev_write_cb, fd, EV_WRITE);
+            //
+            // and then call wslay_event_send() from there and remove the write callback
+            // again. this way we won't get blocked on writes.
+            int r1 = wslay_event_send(this->handler->ctx);
+            println("wslay_event_send() -> {}", r1);
+        } break;
+        case WSLAY_ERR_NO_MORE_MSG:
+            cout << "WSLAY_ERR_NO_MORE_MSG: Could not queue given message." << endl
+                 << "The one of possible reason is that close control frame has been queued/sent" << endl
+                 << "and no further queueing message is not allowed." << endl;
+        case WSLAY_ERR_INVALID_ARGUMENT:
+            cout << "WSLAY_ERR_INVALID_ARGUMENT: The given message is invalid." << endl;
+            break;
+        case WSLAY_ERR_NOMEM:
+            cout << "WSLAY_ERR_NOMEM Out of memory." << endl;
+            break;
+        default:
+            cout << "failed to queue wslay message" << endl;
+            //     std::cout << "SEND FACE " << r << std::endl;
             break;
     }
 }
 
+// called by wslay to send data to the socket
 ssize_t wslay_send_callback(wslay_event_context_ptr ctx, const uint8_t *data, size_t len, int flags, void *user_data) {
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
     println("wslay_send_callback");
@@ -214,6 +235,8 @@ ssize_t wslay_send_callback(wslay_event_context_ptr ctx, const uint8_t *data, si
     println("send() -> {}", r);
     return r;
 }
+
+// called by wslay to read data from the socket
 ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t len, int flags, void *user_data) {
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
     ssize_t nbytes = recv(handler->watcher.fd, data, len, 0);
@@ -247,6 +270,10 @@ ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t l
 void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data) {
     println("wslay_msg_rcv_callback");
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
-    // arg->msg = nullptr; // THIS NEEDS A CHANGE IN WSLAY
     handler->orb->_socketRcvd(handler->connection, arg->msg, arg->msg_length);
+    // arg->msg = nullptr; // THIS NEEDS A CHANGE IN WSLAY
 }
+
+}  // namespace net
+
+}  // namespace CORBA

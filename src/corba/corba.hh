@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ior.hh"
+#include "orb.hh"
 #include "skeleton.hh"
 #include "stub.hh"
+#include "ior.hh"
 #include "exception.hh"

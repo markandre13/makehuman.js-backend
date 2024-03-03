@@ -1,5 +1,6 @@
 #include "interface.hh"
 
+#include "../../util.hh"
 #include "../../fake.hh"
 #include "interface_skel.hh"
 #include "interface_stub.hh"
@@ -66,32 +67,6 @@ class Peer_impl : public Peer_skel {
         Peer_impl(std::shared_ptr<CORBA::ORB> orb) : Peer_skel(orb) {}
         async<string> callString(const string_view &value) override { co_return string(value) + " world"; }
 };
-
-// due to
-//
-//   CP.51: Do not use capturing lambdas that are coroutines.
-//   https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
-//
-// the following causes a memory error when accessing 'orb' after the co_await
-//
-//   [&orb] -> async<> { ... co_await ... }().thenOrCatch(...)
-//
-// as the closure object will be destroyed after the co_await.
-//
-// this on the other hand works with clang:
-//
-//   auto call(std::function<async<>()> closure) { return closure(); }
-//   call([&orb] -> async<> { ... co_await ... }).thenOrCatch(...)
-//
-// and i assume it's because then the compiler has to pass the closure forward
-// into the call() function and then it's lifetime get's intertwined with the
-// coroutine.
-void parallel(std::exception_ptr &eptr, std::function<CORBA::async<>()> closure) {
-    closure().thenOrCatch([] {},
-                          [&eptr](std::exception_ptr _eptr) {
-                              eptr = _eptr;
-                          });
-}
 
 kaffeeklatsch_spec([] {
     describe("interface", [] {

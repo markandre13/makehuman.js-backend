@@ -9,7 +9,16 @@ enum CompletionStatus { YES, NO, MAYBE };
 
 class Exception : public std::exception {};
 
+/*
+ * base class for exceptions defined by the user in an IDL file
+ */
 class UserException : public Exception {};
+
+/*
+ * Base class for all CORBA related exceptions.
+ *
+ * See CORBA 3.3; Part 1: Interface; A.6 Exception Codes
+ */
 
 class SystemException : public Exception {
     public:

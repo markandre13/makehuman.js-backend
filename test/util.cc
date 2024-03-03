@@ -1,8 +1,35 @@
 #include "util.hh"
 
+
 using namespace std;
 
 void sendChordata(void*, unsigned long) {}
+
+// due to
+//
+//   CP.51: Do not use capturing lambdas that are coroutines.
+//   https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
+//
+// the following causes a memory error when accessing 'orb' after the co_await
+//
+//   [&orb] -> async<> { ... co_await ... }().thenOrCatch(...)
+//
+// as the closure object will be destroyed after the co_await.
+//
+// this on the other hand works with clang:
+//
+//   auto call(std::function<async<>()> closure) { return closure(); }
+//   call([&orb] -> async<> { ... co_await ... }).thenOrCatch(...)
+//
+// and i assume it's because then the compiler has to pass the closure forward
+// into the call() function and then it's lifetime get's intertwined with the
+// coroutine.
+void parallel(std::exception_ptr &eptr, std::function<CORBA::async<>()> closure) {
+    closure().thenOrCatch([] {},
+                          [&eptr](std::exception_ptr _eptr) {
+                              eptr = _eptr;
+                          });
+}
 
 vector<uint8_t> parseOmniDump(const string_view &data) {
     vector<uint8_t> result;

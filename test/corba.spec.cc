@@ -177,9 +177,9 @@ kaffeeklatsch_spec([] {
 // [ ] generate c++ code from idl
 //   [X] twoway call
 //   [X] oneway call
-//   [ ] object references
+//   [X] object references
 //   [ ] special handling for octet sequences
-//   [ ] string reference instead of string for 'in'
+//   [X] string_view instead of string for 'in'
 //   [ ] ORB::_socketRcvd
 //     [ ] abort coroutines when connection gets lost
 //     [ ] timeout

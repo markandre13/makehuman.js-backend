@@ -7,7 +7,7 @@ CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
 	-mmacosx-version-min=12.0 \
 	-Wall -Wextra -Wno-deprecated-anon-enum-enum-conversion \
 	-Werror=return-type -Werror=shadow \
-	-Wno-unused-parameter \
+	-Wno-unused-parameter -Wno-module-import-in-extern-c \
 	-I/usr/local/opt/llvm/include/c++ \
 	-I../upstream/kaffeeklatsch/src \
 	-I../src
@@ -24,17 +24,23 @@ WSLAG_FLAGS=-I/usr/local/include
 PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
 MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
+LIB=-lev -lwslay -lnettle
 # LIB=-lprotobuf -lgmod -lwslay -lnettle
 
-SRC = corba/interface/interface.spec.cc corba/interface/interface.cc \
-	cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc blob.spec.cc \
-	makehuman.cc \
-	main.cc util.cc fake.cc \
-	../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
-	../src/corba/corba.cc ../src/corba/orb.cc \
-	../src/corba/ior.cc ../src/corba/skeleton.cc ../src/corba/stub.cc \
-	../src/corba/giop.cc ../src/corba/cdr.cc \
-	../src/corba/url.cc ../src/corba/hexdump.cc
+    #   corba/net/ws.spec.cc \
+
+
+SRC =  corba/net/ws.spec.cc ../src/corba/net/ws.cc \
+	  corba/interface/interface.spec.cc corba/interface/interface.cc \
+	  cdr_decoder.spec.cc cdr_encoder.spec.cc giop.spec.cc corba.spec.cc blob.spec.cc \
+	  makehuman.cc makehuman_impl.cc \
+	  main.cc util.cc fake.cc \
+	  ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
+	  ../src/corba/corba.cc ../src/corba/orb.cc \
+	  ../src/corba/ior.cc ../src/corba/skeleton.cc ../src/corba/stub.cc \
+	  ../src/corba/giop.cc ../src/corba/cdr.cc \
+	  ../src/corba/url.cc ../src/corba/hexdump.cc \
+	  ../src/corba/net/ws/socket.cc ../src/corba/net/ws/createAcceptKey.cc
 
 OBJ = $(SRC:.cc=.o)
 
