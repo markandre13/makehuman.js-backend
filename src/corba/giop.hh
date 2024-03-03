@@ -250,7 +250,7 @@ class GIOPDecoder : public GIOPBase {
         // object
         // reference
 
-        std::shared_ptr<Object> object(CORBA::ORB *orb = nullptr);  // const string typeInfo, bool isValue = false) {
+        std::shared_ptr<Object> object(std::shared_ptr<CORBA::ORB> orb = std::shared_ptr<CORBA::ORB>());
         std::shared_ptr<IOR> reference(size_t length);
         std::shared_ptr<IOR> reference() { return reference(buffer.ulong()); }
 };

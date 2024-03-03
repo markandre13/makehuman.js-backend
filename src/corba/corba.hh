@@ -22,12 +22,12 @@ class Object {
         virtual ~Object();
         virtual std::string_view repository_id() const = 0;
         virtual blob_view get_object_key() const = 0;
-        virtual CORBA::ORB *get_ORB() const = 0;
+        virtual std::shared_ptr<CORBA::ORB> get_ORB() const = 0;
 };
 
 // TODO: rename this into IOR. 'CORBA 3.3 Pt 1, 6.2.4' already 'Object Reference' for 'Object Key'
 class IOR : public Object {
-        ORB *orb;
+        std::shared_ptr<CORBA::ORB> orb;
 
     public:
         std::string oid;   // object/repository id the type, e.g. IDL:MyClass:1.0
@@ -36,16 +36,16 @@ class IOR : public Object {
         blob objectKey;    // identifies the current object instance on the ORB
 
         IOR(const std::string &ior);
-        IOR(CORBA::ORB *orb, const std::string_view &oid, std::string host, uint16_t port, const CORBA::blob_view &objectKey)
+        IOR(std::shared_ptr<CORBA::ORB> orb, const std::string_view &oid, std::string host, uint16_t port, const CORBA::blob_view &objectKey)
             : orb(orb), oid(oid), host(host), port(port), objectKey(objectKey) {}
         virtual ~IOR() override;
 
         // this is a hack for _narrow(shared_ptr<Object>)
-        inline void setORB(CORBA::ORB *anORB) { this->orb = anORB; }
+        inline void setORB(std::shared_ptr<CORBA::ORB> anORB) { orb = anORB; }
 
         virtual std::string_view repository_id() const override { return oid; }
         virtual blob_view get_object_key() const override { return objectKey; }
-        CORBA::ORB *get_ORB() const override { return orb; }
+        std::shared_ptr<CORBA::ORB> get_ORB() const override { return orb; }
 };
 
 /**
@@ -53,15 +53,15 @@ class IOR : public Object {
  */
 class Stub : public virtual Object {
         friend class ORB;
-        ORB *orb;
+        std::shared_ptr<CORBA::ORB> orb;
         blob objectKey; // objectKey used on the remote end of the connection
         detail::Connection *connection; // connection to where the remote object lives
 
     public:
-        Stub(CORBA::ORB *orb, const CORBA::blob_view &objectKey, detail::Connection *connection) : orb(orb), objectKey(objectKey), connection(connection) {}
+        Stub(std::shared_ptr<CORBA::ORB> orb, const CORBA::blob_view &objectKey, detail::Connection *connection) : orb(orb), objectKey(objectKey), connection(connection) {}
         virtual ~Stub() override;
         virtual blob_view get_object_key() const override { return objectKey; }
-        CORBA::ORB *get_ORB() const override { return orb; }
+        std::shared_ptr<CORBA::ORB> get_ORB() const override { return orb; }
 };
 
 /**
@@ -69,14 +69,14 @@ class Stub : public virtual Object {
  */
 class Skeleton : public virtual Object {
     friend class ORB;
-        ORB *orb;
+        std::shared_ptr<CORBA::ORB> orb;
         blob objectKey;
     public:
-        Skeleton(CORBA::ORB *orb); // the ORB will create an objectKey
-        Skeleton(CORBA::ORB *orb, const std::string &objectKey); // for special objectKeys, e.g. "omg.org/CosNaming/NamingContextExt"
+        Skeleton(std::shared_ptr<CORBA::ORB> orb); // the ORB will create an objectKey
+        Skeleton(std::shared_ptr<CORBA::ORB> orb, const std::string &objectKey); // for special objectKeys, e.g. "omg.org/CosNaming/NamingContextExt"
         virtual ~Skeleton() override;
         virtual blob_view get_object_key() const override { return objectKey; }
-        CORBA::ORB *get_ORB() const override { return orb; }
+        std::shared_ptr<CORBA::ORB> get_ORB() const override { return orb; }
         virtual CORBA::async<> _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) = 0;
 };
 

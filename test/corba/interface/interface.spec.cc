@@ -24,7 +24,7 @@ using CORBA::async, CORBA::ORB, CORBA::blob, CORBA::blob_view;
 
 class Interface_impl : public Interface_skel {
     public:
-        Interface_impl(ORB *orb) : Interface_skel(orb) {}
+        Interface_impl(std::shared_ptr<CORBA::ORB> orb) : Interface_skel(orb) {}
         async<bool> callBoolean(bool value) override { co_return value; }
         async<uint8_t> callOctet(uint8_t value) override { co_return value; }  // check uint8_t with real CORBA
         async<uint16_t> callUShort(uint16_t value) override { co_return value; }
@@ -53,7 +53,7 @@ class Interface_impl : public Interface_skel {
 
 class Peer_impl : public Peer_skel {
     public:
-        Peer_impl(ORB *orb) : Peer_skel(orb) {}
+        Peer_impl(std::shared_ptr<CORBA::ORB> orb) : Peer_skel(orb) {}
         async<string> callString(const string_view &value) override { co_return string(value) + " world"; }
 };
 
@@ -91,7 +91,7 @@ kaffeeklatsch_spec([] {
             auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 2809);
             serverORB->registerProtocol(serverProtocol);
             // serverORB->debug = true;
-            auto backend = make_shared<Interface_impl>(serverORB.get());
+            auto backend = make_shared<Interface_impl>(serverORB);
             serverORB->bind("Backend", backend);
 
             // CLIENT
@@ -112,7 +112,7 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
                 expect(co_await backend->callString("hello")).to.equal("hello");
                 expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
-                auto frontend = make_shared<Peer_impl>(clientORB.get());
+                auto frontend = make_shared<Peer_impl>(clientORB);
                 co_await backend->setPeer(frontend);
                 expect(co_await backend->callPeer("hello")).to.equal("hello to the world.");
             });

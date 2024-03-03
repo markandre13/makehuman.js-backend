@@ -10,14 +10,14 @@
 
 class Backend_stub: public Backend, public CORBA::Stub {
 public:
-    Backend_stub(CORBA::ORB *orb, CORBA::blob_view objectKey, CORBA::detail::Connection *connection): Stub(orb, objectKey, connection) {}
+    Backend_stub(std::shared_ptr<CORBA::ORB> orb, CORBA::blob_view objectKey, CORBA::detail::Connection *connection): Stub(orb, objectKey, connection) {}
     virtual CORBA::async<std::string> hello(const std::string_view & hello) override;
     virtual CORBA::async<void> fail() override;
 };
 
 class Backend2_stub: public Backend2, public CORBA::Stub {
 public:
-    Backend2_stub(CORBA::ORB *orb, CORBA::blob_view objectKey, CORBA::detail::Connection *connection): Stub(orb, objectKey, connection) {}
+    Backend2_stub(std::shared_ptr<CORBA::ORB> orb, CORBA::blob_view objectKey, CORBA::detail::Connection *connection): Stub(orb, objectKey, connection) {}
     virtual void chordata(bool on) override;
     virtual void mediapipe(bool on) override;
 };

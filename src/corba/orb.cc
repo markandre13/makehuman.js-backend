@@ -24,7 +24,7 @@ class NamingContextExtImpl : public Skeleton {
         std::map<std::string, std::shared_ptr<Object>> name2Object;
 
     public:
-        NamingContextExtImpl(CORBA::ORB *orb, const std::string &objectKey) : Skeleton(orb, objectKey) {}
+        NamingContextExtImpl(std::shared_ptr<CORBA::ORB> orb, const std::string &objectKey) : Skeleton(orb, objectKey) {}
         virtual std::string_view repository_id() const override;
 
         void bind(const std::string &name, std::shared_ptr<Object> servant) {
@@ -81,7 +81,7 @@ class NamingContextExtImpl : public Skeleton {
 
 class NamingContextExtStub : public Stub {
     public:
-        NamingContextExtStub(CORBA::ORB *orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}
+        NamingContextExtStub(std::shared_ptr<CORBA::ORB> orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}
         std::string_view repository_id() const override;
 
         // static narrow(object: any): NamingContextExtStub {
@@ -130,7 +130,7 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
             NamingContextExtStub *rootNamingContext;
             if (it == nameConnection->stubsById.end()) {
                 // std::println("ORB::stringToObject(\"{}\"): creating NamingContextExtStub(orb, objectKey=\"{}\", connection)", iorString, name.objectKey);
-                rootNamingContext = new NamingContextExtStub(this, name.objectKey, nameConnection);
+                rootNamingContext = new NamingContextExtStub(this->shared_from_this(), name.objectKey, nameConnection);
                 nameConnection->stubsById[name.objectKey] = rootNamingContext;
             } else {
                 // std::println("ORB::stringToObject(\"{}\"): reusing NamingContextExtStub", iorString);
@@ -143,7 +143,7 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
             // std::println("ORB::stringToObject(\"{}\"): calling resolve_str(\"{}\") on remote end", iorString, name.name);
             auto reference = co_await rootNamingContext->resolve_str(name.name);
             // std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
-            reference->setORB(this);
+            reference->setORB(this->shared_from_this());
             co_return dynamic_pointer_cast<Object, IOR>(reference);
         }
     }
@@ -272,7 +272,7 @@ blob_view ORB::registerServant(Skeleton *servant, const string &objectKey) {
 void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj) {
     if (namingService == nullptr) {
         // println("ORB::bind(\"{}\"): CREATING NameService", id);
-        namingService = new NamingContextExtImpl(this, "NameService");
+        namingService = new NamingContextExtImpl(this->shared_from_this(), "NameService");
         servants["NameService"] = namingService;
     }
     namingService->bind(id, obj);

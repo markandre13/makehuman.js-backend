@@ -3,8 +3,8 @@
 
 namespace CORBA {
 
-Skeleton::Skeleton(CORBA::ORB *orb) : orb(orb), objectKey(orb->registerServant(this)) {}
-Skeleton::Skeleton(CORBA::ORB *orb, const std::string &objectKey) : orb(orb), objectKey(objectKey) { orb->registerServant(this, objectKey); }
+Skeleton::Skeleton(std::shared_ptr<CORBA::ORB> orb) : orb(orb), objectKey(orb->registerServant(this)) {}
+Skeleton::Skeleton(std::shared_ptr<CORBA::ORB> orb, const std::string &objectKey) : orb(orb), objectKey(objectKey) { orb->registerServant(this, objectKey); }
 
 Skeleton::~Skeleton() {}
 Stub::~Stub() {}

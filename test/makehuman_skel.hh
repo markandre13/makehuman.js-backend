@@ -10,14 +10,14 @@
 
 class Backend_skel: public CORBA::Skeleton, public Backend {
 public:
-    Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
+    Backend_skel(std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
 private:
     CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
 
 class Backend2_skel: public CORBA::Skeleton, public Backend2 {
 public:
-    Backend2_skel(CORBA::ORB *orb) : Skeleton(orb) {}
+    Backend2_skel(std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
 private:
     CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };

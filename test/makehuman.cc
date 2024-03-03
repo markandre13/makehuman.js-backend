@@ -51,7 +51,7 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
         if (ref->repository_id() != "IDL:Backend:1.0") {
             return std::shared_ptr<Backend>();
         }
-        CORBA::ORB *orb = ref->get_ORB();
+        std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
         CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
         auto stub = std::make_shared<Backend_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
         return std::dynamic_pointer_cast<Backend>(stub);
@@ -103,7 +103,7 @@ std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> point
         if (ref->repository_id() != "IDL:Backend2:1.0") {
             return std::shared_ptr<Backend2>();
         }
-        CORBA::ORB *orb = ref->get_ORB();
+        std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
         CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
         auto stub = std::make_shared<Backend2_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
         return std::dynamic_pointer_cast<Backend2>(stub);

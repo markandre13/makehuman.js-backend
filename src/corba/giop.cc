@@ -375,12 +375,11 @@ void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-std::shared_ptr<Object> GIOPDecoder::object(ORB* orb) {  // const string typeInfo, bool isValue = false) {
+std::shared_ptr<Object> GIOPDecoder::object(std::shared_ptr<CORBA::ORB> orb) {  // const string typeInfo, bool isValue = false) {
     auto code = buffer.ulong();
     auto objectOffset = buffer.m_offset - 4;
 
     if (code == 0) {
-        cerr << "[2]" << endl;
         return std::shared_ptr<Object>();
     }
 
@@ -393,7 +392,7 @@ std::shared_ptr<Object> GIOPDecoder::object(ORB* orb) {  // const string typeInf
     }
 
     if (code < 0x7fffff00) {
-        if (orb == nullptr) {
+        if (!orb) {
             throw runtime_error("GIOPDecoder::object(orb): orb must not be null");
         }
         auto ref = reference(code);
