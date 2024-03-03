@@ -86,14 +86,6 @@ void CDREncoder::writeDouble(double value) {
     *ptr = value;
 }
 
-void CDREncoder::writeLongDouble(long double value) {
-    align16();
-    reserve(offset + 16);
-    auto ptr = reinterpret_cast<long double *>(_data.data() + offset);
-    offset += 16;
-    *ptr = value;
-}
-
 void CDREncoder::writeBlob(const char *value, size_t nbytes) {
     writeUlong(nbytes);
     reserve(offset + nbytes);
@@ -225,37 +217,6 @@ double CDRDecoder::readDouble() {
     auto value = *reinterpret_cast<const double *>(ptr8());
     if (std::endian::native != _endian) {
         value = __builtin_bswap64(value);
-    }
-    return value;
-}
-
-inline void swap16(void *v) {
-    char *in = static_cast<char*>(v);
-    char out[16];
-    out[0] = in[15];
-    out[1] = in[14];
-    out[2] = in[13];
-    out[3] = in[12];
-    out[4] = in[11];
-    out[5] = in[10];
-    out[6] = in[9];
-    out[7] = in[8];
-    out[8] = in[7];
-    out[9] = in[6];
-    out[10] = in[5];
-    out[11] = in[4];
-    out[12] = in[3];
-    out[13] = in[2];
-    out[14] = in[1];
-    out[15] = in[0];
-    memcpy(v, out, 16);
-}
-
-long double CDRDecoder::readLongDouble() {
-    auto value = *reinterpret_cast<const long double *>(ptr16());
-    if (std::endian::native != _endian) {
-        // value = __builtin_bswap128(value);
-        swap16(&value);
     }
     return value;
 }

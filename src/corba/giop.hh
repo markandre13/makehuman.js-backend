@@ -152,12 +152,6 @@ class GIOPBase {
         const unsigned ENDIAN_BIG = 1;
 
         detail::Connection *connection;
-
-        // const FLOAT64_MAX = 1.7976931348623157e+308;
-        // const FLOAT64_MIN = 2.2250738585072014e-308;
-        // const TWO_TO_20 = 1048576;
-        // const TWO_TO_32 = 4294967296;
-        // const TWO_TO_52 = 4503599627370496;
 };
 
 class GIOPEncoder : public GIOPBase {
@@ -175,7 +169,6 @@ class GIOPEncoder : public GIOPBase {
         inline void writeLonglong(int64_t value) { buffer.writeLonglong(value); }
         inline void writeFloat(float value) { buffer.writeFloat(value); }
         inline void writeDouble(double value) { buffer.writeDouble(value); }
-        inline void writeLongDouble(long double value) { buffer.writeLongDouble(value); }
 
         inline void writeString(const char *value) { buffer.writeString(value); }
         inline void writeString(const char *value, size_t size) { buffer.writeString(value, size); }
@@ -241,7 +234,6 @@ class GIOPDecoder : public GIOPBase {
         inline uint64_t readLonglong() { return buffer.readLonglong(); }
         inline float readFloat() { return buffer.readFloat(); }
         inline double readDouble() { return buffer.readDouble(); }
-        inline long double readLongDouble() { return buffer.readLongDouble(); }
 
         // WHEN DECODING AS OUT -> string|blob
         // WHEN DECODING AS IN  -> string_view|blob_view

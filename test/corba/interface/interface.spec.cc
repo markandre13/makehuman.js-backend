@@ -39,7 +39,6 @@ class Interface_impl : public Interface_skel {
 
         async<float> callFloat(float value) override { co_return value; }
         async<double> callDouble(double value) override { co_return value; }
-        async<long double> callLongDouble(long double value) override { co_return value; }
 
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
@@ -130,7 +129,6 @@ kaffeeklatsch_spec([] {
 
                 expect(co_await backend->callFloat(3.40282e+38f)).to.equal(3.40282e+38f);
                 expect(co_await backend->callDouble(4.94066e-324)).to.equal(4.94066e-324);
-                expect(co_await backend->callLongDouble(1.1e+4932l)).to.equal(1.1e+4932l);
 
                 expect(co_await backend->callString("hello")).to.equal("hello");
                 expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));

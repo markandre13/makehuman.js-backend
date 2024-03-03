@@ -16,7 +16,6 @@ interface Interface {
 
     float callFloat(in float value);
     double callDouble(in double value);
-    long double callLongDouble(in long double value);
 
     string callString(in string value);
     sequence<octet> callBlob(in sequence<octet> value);
