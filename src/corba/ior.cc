@@ -29,12 +29,12 @@ IOR::IOR(const string &ior) {
     // decode reference
     CORBA::CDRDecoder cdr(buffer, bufferSize);
     CORBA::GIOPDecoder giop(cdr);
-    giop.buffer.endian();
-    auto ref = giop.reference();
+    giop.readEndian();
+    auto ref = giop.readReference();
     oid = ref->oid;
     host = ref->host;
     port = ref->port;
-    objectKey = string((const char *)ref->objectKey.data(), ref->objectKey.size());
+    objectKey = ref->objectKey;
 }
 
 IOR::~IOR() {}

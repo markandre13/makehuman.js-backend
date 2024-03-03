@@ -28,17 +28,20 @@ class CDREncoder {
         }
         inline void reserve() { reserve(offset); }
 
-        void boolean(bool);
-        void octet(uint8_t);
-        void ushort(uint16_t);
-        void ulong(uint32_t);
-        void ulonglong(uint64_t);
-        void blob(const char *buffer, size_t nbytes);
-        void string(const char *buffer);
-        void string(const char *buffer, size_t nbytes);
-        inline void string(const std::string &value) { string(value.data(), value.size()); }
-        inline void string(const std::string_view &value) { string(value.data(), value.size()); }
-        void endian();
+        void writeBoolean(bool);
+        void writeOctet(uint8_t);
+        void writeUshort(uint16_t);
+        void writeUlong(uint32_t);
+        void writeUlonglong(uint64_t);
+        void writeShort(int16_t);
+        void writeLong(int32_t);
+        void writeLonglong(int64_t);
+        void writeBlob(const char *buffer, size_t nbytes);
+        void writeString(const char *buffer);
+        void writeString(const char *buffer, size_t nbytes);
+        inline void writeString(const std::string &value) { writeString(value.data(), value.size()); }
+        inline void writeString(const std::string_view &value) { writeString(value.data(), value.size()); }
+        void writeEndian();
 
         void reserveSize();
         void fillInSize();
@@ -79,24 +82,24 @@ class CDRDecoder {
         std::string_view toString() const { return std::string_view(_data, length); }
         std::string str() const { return std::string(_data, length); }
 
-        void endian() { setLittleEndian(octet() & 1); }
-        bool boolean();
-        uint8_t octet();
-        char8_t character();
-        uint16_t ushort();
-        uint32_t ulong();
-        uint64_t ulonglong();
-        // short
-        // long
-        // longlong
+        void readEndian() { setLittleEndian(readOctet() & 1); }
+        bool readBoolean();
+        uint8_t readOctet();
+        char8_t readChar();
+        uint16_t readUshort();
+        uint32_t readUlong();
+        uint64_t readUlonglong();
+        int16_t readShort();
+        int32_t readLong();
+        int64_t readLonglong();
         // float
         // double
-        CORBA::blob blob();
-        std::string string();
-        std::string string(size_t length);
-        CORBA::blob_view blob_view();
-        std::string_view string_view();
-        std::string_view string_view(size_t length);
+        CORBA::blob readBlob();
+        std::string readString();
+        std::string readString(size_t length);
+        CORBA::blob_view readBlobView();
+        std::string_view readStringView();
+        std::string_view readStringView(size_t length);
 
         // sequence
         // value

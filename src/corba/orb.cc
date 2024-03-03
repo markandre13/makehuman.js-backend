@@ -47,20 +47,20 @@ class NamingContextExtImpl : public Skeleton {
 
     protected:
         void _orb_resolve(GIOPDecoder &decoder, GIOPEncoder &encoder) {
-            auto entries = decoder.buffer.ulong();
-            auto name = decoder.buffer.string();
-            auto key = decoder.buffer.string();
+            auto entries = decoder.readUlong();
+            auto name = decoder.readString();
+            auto key = decoder.readString();
             if (entries != 1 && !key.empty()) {
                 cerr << "warning: resolve got " << entries << " (expected 1) and/or key is \"" << key << "\" (expected \"\")" << endl;
             }
             std::shared_ptr<Object> result = resolve(name);  // FIXME: we don't want to copy the string
-            encoder.object(result.get());
+            encoder.writeObject(result.get());
         }
 
         void _orb_resolve_str(GIOPDecoder &decoder, GIOPEncoder &encoder) {
-            auto name = decoder.buffer.string();
+            auto name = decoder.readString();
             auto result = resolve(name);
-            encoder.object(result.get());
+            encoder.writeObject(result.get());
         }
 
         CORBA::async<> _call(const std::string_view &operation, GIOPDecoder &decoder, GIOPEncoder &encoder) override {
@@ -96,10 +96,10 @@ class NamingContextExtStub : public Stub {
             return get_ORB()->twowayCall<shared_ptr<IOR>>(
                 this, "resolve_str",
                 [name](GIOPEncoder &encoder) {
-                    encoder.string(name);
+                    encoder.writeString(name);
                 },
                 [](GIOPDecoder &decoder) {
-                    return decoder.reference();
+                    return decoder.readReference();
                 });
         }
 };
@@ -211,9 +211,9 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
             break;
         case ReplyStatus::SYSTEM_EXCEPTION: {
             // 0.4.3.2 ReplyBody: SystemExceptionReplyBody
-            auto exceptionId = decoder->string();
-            auto minorCodeValue = decoder->ulong();
-            auto completionStatus = static_cast<CompletionStatus>(decoder->ulong());
+            auto exceptionId = decoder->readString();
+            auto minorCodeValue = decoder->readUlong();
+            auto completionStatus = static_cast<CompletionStatus>(decoder->readUlong());
             if (exceptionId == "IDL:omg.org/CORBA/MARSHAL:1.0") {
                 throw MARSHAL(minorCodeValue, completionStatus);
             } else if (exceptionId == "IDL:omg.org/CORBA/NO_PERMISSION:1.0") {
@@ -230,7 +230,7 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
                 throw OBJECT_ADAPTER(minorCodeValue, completionStatus);
             } else if (exceptionId == "IDL:mark13.org/CORBA/GENERIC:1.0") {
                 throw runtime_error(
-                    format("Remote CORBA exception from {}:{}: {}", stub->connection->remoteAddress(), stub->connection->remotePort(), decoder->string()));
+                    format("Remote CORBA exception from {}:{}: {}", stub->connection->remoteAddress(), stub->connection->remotePort(), decoder->readString()));
             } else {
                 throw runtime_error(
                     format("CORBA System Exception {} from {}:{}", exceptionId, stub->connection->remoteAddress(), stub->connection->remotePort()));
@@ -299,9 +299,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                     CORBA::GIOPEncoder encoder(connection);
                     encoder.skipReplyHeader();
 
-                    encoder.string("IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0");
-                    encoder.ulong(0x4f4d0001);  // Attempt to pass an unactivated (unregistered) value as an object reference.
-                    encoder.ulong(NO);          // completionStatus
+                    encoder.writeString("IDL:omg.org/CORBA/OBJECT_NOT_EXIST:1.0");
+                    encoder.writeUlong(0x4f4d0001);  // Attempt to pass an unactivated (unregistered) value as an object reference.
+                    encoder.writeUlong(NO);          // completionStatus
 
                     auto length = encoder.buffer.offset;
                     encoder.setGIOPHeader(MessageType::REPLY);
@@ -313,11 +313,11 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
             }
 
             if (request->operation == "_is_a") {
-                auto repositoryId = decoder.string();
+                auto repositoryId = decoder.readString();
                 CORBA::GIOPEncoder encoder(connection);
                 encoder.skipReplyHeader();
 
-                encoder.boolean(repositoryId == servant->second->repository_id());
+                encoder.writeBoolean(repositoryId == servant->second->repository_id());
 
                 auto length = encoder.buffer.offset;
                 encoder.setGIOPHeader(MessageType::REPLY);
@@ -363,9 +363,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                             } catch (CORBA::SystemException &error) {
                                 println("SERVANT THREW CORBA::SYSTEM EXCEPTION");
                                 if (responseExpected) {
-                                    encoder->string(error.major());
-                                    encoder->ulong(error.minor);
-                                    encoder->ulong(error.completed);
+                                    encoder->writeString(error.major());
+                                    encoder->writeUlong(error.minor);
+                                    encoder->writeUlong(error.completed);
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
                                     encoder->setReplyHeader(requestId, ReplyStatus::SYSTEM_EXCEPTION);
@@ -374,10 +374,10 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                             } catch (std::exception &ex) {
                                 println("SERVANT THREW STD::EXCEPTION");
                                 if (responseExpected) {
-                                    encoder->string("IDL:mark13.org/CORBA/GENERIC:1.0");
-                                    encoder->ulong(0);
-                                    encoder->ulong(0);
-                                    encoder->string(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
+                                    encoder->writeString("IDL:mark13.org/CORBA/GENERIC:1.0");
+                                    encoder->writeUlong(0);
+                                    encoder->writeUlong(0);
+                                    encoder->writeString(format("IDL:{}:1.0: {}", typeid(ex).name(), ex.what()));
                                     auto length = encoder->buffer.offset;
                                     encoder->setGIOPHeader(MessageType::REPLY);
                                     encoder->setReplyHeader(requestId, ReplyStatus::SYSTEM_EXCEPTION);
@@ -409,7 +409,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
             break;
         } break;
         default:
-            cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST " << static_cast<unsigned>(type) << endl;
+            cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST OF TYPE " << static_cast<unsigned>(type) << endl;
             break;
     }
 }

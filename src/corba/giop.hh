@@ -165,33 +165,36 @@ class GIOPEncoder : public GIOPBase {
         GIOPEncoder(detail::Connection *connection = nullptr) : GIOPBase(connection) { this->connection = connection; }
 
         CDREncoder buffer;
-        inline void boolean(bool value) { buffer.boolean(value); }
-        inline void octet(u_int8_t value) { buffer.octet(value); }
-        inline void ushort(uint16_t value) { buffer.ushort(value); }
-        inline void ulong(uint32_t value) { buffer.ulong(value); }
-        inline void ulonglong(uint64_t value) { buffer.ulonglong(value); }
+        inline void writeBoolean(bool value) { buffer.writeBoolean(value); }
+        inline void writeOctet(u_int8_t value) { buffer.writeOctet(value); }
+        inline void writeUshort(uint16_t value) { buffer.writeUshort(value); }
+        inline void writeUlong(uint32_t value) { buffer.writeUlong(value); }
+        inline void writeUlonglong(uint64_t value) { buffer.writeUlonglong(value); }
+        inline void writeShort(int16_t value) { buffer.writeShort(value); }
+        inline void writeLong(int32_t value) { buffer.writeLong(value); }
+        inline void writeLonglong(int64_t value) { buffer.writeLonglong(value); }
 
-        inline void string(const char *value) { buffer.string(value); }
-        inline void string(const char *value, size_t size) { buffer.string(value, size); }
-        inline void string(const std::string &value) { buffer.string(value); }
-        inline void string(const std::string_view &value) { buffer.string(value); }
+        inline void writeString(const char *value) { buffer.writeString(value); }
+        inline void writeString(const char *value, size_t size) { buffer.writeString(value, size); }
+        inline void writeString(const std::string &value) { buffer.writeString(value); }
+        inline void writeString(const std::string_view &value) { buffer.writeString(value); }
 
-        inline void blob(const char *value, size_t size) { buffer.blob(value, size); }
-        inline void blob(const std::string &value) { buffer.blob(value.data(), value.size()); }
-        inline void blob(const std::string_view &value) { buffer.blob(value.data(), value.size()); }
-        inline void blob(const CORBA::blob &value) { buffer.blob((const char*)value.data(), value.size()); }
-        inline void blob(const CORBA::blob_view &value) { buffer.blob((const char*)value.data(), value.size()); }
+        inline void writeBlob(const char *value, size_t size) { buffer.writeBlob(value, size); }
+        inline void writeBlob(const std::string &value) { buffer.writeBlob(value.data(), value.size()); }
+        inline void writeBlob(const std::string_view &value) { buffer.writeBlob(value.data(), value.size()); }
+        inline void writeBlob(const CORBA::blob &value) { buffer.writeBlob((const char*)value.data(), value.size()); }
+        inline void writeBlob(const CORBA::blob_view &value) { buffer.writeBlob((const char*)value.data(), value.size()); }
 
-        inline void endian() { buffer.endian(); }
+        inline void writeEndian() { buffer.writeEndian(); }
 
         inline void reserveSize() { buffer.reserveSize(); }
         inline void fillInSize() { buffer.fillInSize(); }
 
-        void object(const Object *object);
-        void reference(const Object *object);
-        void encapsulation(ComponentId type, std::function<void()> closure);
-        void encapsulation(ProfileId type, std::function<void()> closure);
-        void encapsulation(ServiceId type, std::function<void()> closure);
+        void writeObject(const Object *object);
+        void writeReference(const Object *object);
+        void writeEncapsulation(ComponentId type, std::function<void()> closure);
+        void writeEncapsulation(ProfileId type, std::function<void()> closure);
+        void writeEncapsulation(ServiceId type, std::function<void()> closure);
         void skipGIOPHeader();
         void skipReplyHeader();
         void setGIOPHeader(MessageType type);
@@ -219,40 +222,40 @@ class GIOPDecoder : public GIOPBase {
 
         // CORBA 3.4 Part 2, 9.3.3 Encapsulation
         // Used for ServiceContext, Profile and Component
-        void encapsulation(std::function<void(ComponentId type)> closure);
-        void encapsulation(std::function<void(ProfileId type)> closure);
-        void encapsulation(std::function<void(ServiceId type)> closure);
+        void readEncapsulation(std::function<void(ComponentId type)> closure);
+        void readEncapsulation(std::function<void(ProfileId type)> closure);
+        void readEncapsulation(std::function<void(ServiceId type)> closure);
 
-        inline void endian() { buffer.endian(); }
-        inline bool boolean() { return buffer.boolean(); }
-        inline uint8_t octet()  { return buffer.octet(); }
-        inline char8_t character() { return buffer.character(); }
-        inline uint16_t ushort() { return buffer.ushort(); }
-        inline uint32_t ulong() { return buffer.ulong(); }
-        inline uint64_t ulonglong() { return buffer.ulonglong(); }
-        // short
-        // long
-        // longlong
+        inline void readEndian() { buffer.readEndian(); }
+        inline bool readBoolean() { return buffer.readBoolean(); }
+        inline uint8_t readOctet()  { return buffer.readOctet(); }
+        inline char8_t readChar() { return buffer.readChar(); }
+        inline uint16_t readUshort() { return buffer.readUshort(); }
+        inline uint32_t readUlong() { return buffer.readUlong(); }
+        inline uint64_t readUlonglong() { return buffer.readUlonglong(); }
+        inline uint16_t readShort() { return buffer.readShort(); }
+        inline uint32_t readLong() { return buffer.readLong(); }
+        inline uint64_t readLonglong() { return buffer.readLonglong(); }
         // float
         // double
 
         // WHEN DECODING AS OUT -> string|blob
         // WHEN DECODING AS IN  -> string_view|blob_view
-        inline CORBA::blob blob() { return buffer.blob(); }
-        inline std::string string() { return buffer.string(); }
-        inline std::string string(size_t length) { return buffer.string(length); }
+        inline CORBA::blob readBlob() { return buffer.readBlob(); }
+        inline std::string readString() { return buffer.readString(); }
+        inline std::string readString(size_t length) { return buffer.readString(length); }
 
-        inline CORBA::blob_view blob_view() { return buffer.blob_view(); }
-        inline std::string_view string_view() { return buffer.string_view(); }
-        inline std::string_view string_view(size_t length) { return buffer.string_view(length); }
+        inline CORBA::blob_view readBlobView() { return buffer.readBlobView(); }
+        inline std::string_view readStringView() { return buffer.readStringView(); }
+        inline std::string_view readStringView(size_t length) { return buffer.readStringView(length); }
         // sequence
         // value
         // object
         // reference
 
-        std::shared_ptr<Object> object(std::shared_ptr<CORBA::ORB> orb = std::shared_ptr<CORBA::ORB>());
-        std::shared_ptr<IOR> reference(size_t length);
-        std::shared_ptr<IOR> reference() { return reference(buffer.ulong()); }
+        std::shared_ptr<Object> readObject(std::shared_ptr<CORBA::ORB> orb = std::shared_ptr<CORBA::ORB>());
+        std::shared_ptr<IOR> readReference(size_t length);
+        std::shared_ptr<IOR> readReference() { return readReference(buffer.readUlong()); }
 };
 
 }  // namespace CORBA

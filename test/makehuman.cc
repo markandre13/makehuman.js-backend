@@ -13,14 +13,14 @@
 #include "makehuman_stub.hh"
 
 static CORBA::async<> _Backend_hello(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    auto result = co_await obj->hello(decoder.string_view());
-    encoder.string(result);
+    auto result = co_await obj->hello(decoder.readStringView());
+    encoder.writeString(result);
 }
 CORBA::async<std::string> Backend_stub::hello(const std::string_view & hello) {
     return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
-        encoder.string(hello);
+        encoder.writeString(hello);
     },
-    [&](CORBA::GIOPDecoder &decoder) { return decoder.string(); });
+    [&](CORBA::GIOPDecoder &decoder) { return decoder.readString(); });
 }
 static CORBA::async<> _Backend_fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
@@ -64,21 +64,21 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
 }
 
 static CORBA::async<> _Backend2_chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    obj->chordata(decoder.boolean());
+    obj->chordata(decoder.readBoolean());
     co_return;
 }
 void Backend2_stub::chordata(bool on) {
     get_ORB()->onewayCall(this, "chordata", [&](CORBA::GIOPEncoder &encoder) {
-        encoder.boolean(on);
+        encoder.writeBoolean(on);
     });
 }
 static CORBA::async<> _Backend2_mediapipe(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
-    obj->mediapipe(decoder.boolean());
+    obj->mediapipe(decoder.readBoolean());
     co_return;
 }
 void Backend2_stub::mediapipe(bool on) {
     get_ORB()->onewayCall(this, "mediapipe", [&](CORBA::GIOPEncoder &encoder) {
-        encoder.boolean(on);
+        encoder.writeBoolean(on);
     });
 }
 std::map<std::string_view, std::function<CORBA::async<>(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder)>> _op_Backend2 = {

@@ -5,35 +5,35 @@ using namespace kaffeeklatsch;
 
 kaffeeklatsch_spec([] {
     describe("CDREncoder", [] {
-        it("boolean()", [] {
+        it("boolean", [] {
             CORBA::CDREncoder encoder;
-            encoder.boolean(0x42);
+            encoder.writeBoolean(0x42);
             CORBA::CDRDecoder decoder(encoder);
-            expect(decoder.octet()).equals(0x01);
+            expect(decoder.readOctet()).equals(0x01);
         });
-        it("octet()", [] {
+        it("octet", [] {
             CORBA::CDREncoder encoder;
-            encoder.octet(0x42);
+            encoder.writeOctet(0x42);
             CORBA::CDRDecoder decoder(encoder);
-            expect(decoder.octet()).equals(0x42);
+            expect(decoder.readOctet()).equals(0x42);
         });
-        it("ushort()", [] {
+        it("ushort", [] {
             CORBA::CDREncoder encoder;
-            encoder.ushort(0xDEAD);
+            encoder.writeUshort(0xDEAD);
             CORBA::CDRDecoder decoder(encoder);
-            expect(decoder.ushort()).equals(0xDEAD);
+            expect(decoder.readUshort()).equals(0xDEAD);
         });
-        it("ulong()", [] {
+        it("ulong", [] {
             CORBA::CDREncoder encoder;
-            encoder.ulong(0xDEADBEEF);
+            encoder.writeUlong(0xDEADBEEF);
             CORBA::CDRDecoder decoder(encoder);
-            expect(decoder.ulong()).equals(0xDEADBEEF);
+            expect(decoder.readUlong()).equals(0xDEADBEEF);
         });
-        it("ulonglong()", [] {
+        it("ulonglong", [] {
             CORBA::CDREncoder encoder;
-            encoder.ulonglong(0xDEADBEEFC0DEBABE);
+            encoder.writeUlonglong(0xDEADBEEFC0DEBABE);
             CORBA::CDRDecoder decoder(encoder);
-            expect(decoder.ulonglong()).equals(0xDEADBEEFC0DEBABE);
+            expect(decoder.readUlonglong()).equals(0xDEADBEEFC0DEBABE);
         });
     });
 });

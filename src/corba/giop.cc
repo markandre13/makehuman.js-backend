@@ -15,10 +15,10 @@ using namespace std;
 
 namespace CORBA {
 
-void GIOPEncoder::object(const CORBA::Object* object) {
+void GIOPEncoder::writeObject(const CORBA::Object* object) {
     // cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
-        buffer.ulong(0);
+        buffer.writeUlong(0);
         return;
     }
     auto stub = dynamic_cast<const Stub*>(object);
@@ -27,7 +27,7 @@ void GIOPEncoder::object(const CORBA::Object* object) {
     }
     auto skeleton = dynamic_cast<const Skeleton*>(object);
     if (skeleton != nullptr) {
-        reference(object);
+        writeReference(object);
         return;
     }
     auto reference = dynamic_cast<const IOR*>(object);
@@ -40,7 +40,7 @@ void GIOPEncoder::object(const CORBA::Object* object) {
 }
 
 // Interoperable Object Reference (IOR)
-void GIOPEncoder::reference(const Object* object) {
+void GIOPEncoder::writeReference(const Object* object) {
     // cerr << "GIOPEncoder::reference(...) ENTER" << endl;
     // const className = (object.constructor as any)._idlClassName()
     auto className = object->repository_id();
@@ -50,58 +50,58 @@ void GIOPEncoder::reference(const Object* object) {
     // }
 
     // type id
-    string(className);
+    writeString(className);
 
     // tagged profile sequence
-    ulong(1);  // profileCount
+    writeUlong(1);  // profileCount
 
     // profile id
     // 9.7.2 IIOP IOR Profiles
-    ulong(0);  // IOR.TAG.IOR.INTERNET_IOP
+    writeUlong(0);  // IOR.TAG.IOR.INTERNET_IOP
     reserveSize();
-    endian();
-    octet(majorVersion);
-    octet(minorVersion);
+    writeEndian();
+    writeOctet(majorVersion);
+    writeOctet(minorVersion);
 
     if (connection == nullptr) {
         cerr << "GIOPEncoder::reference(...) [2]" << endl;
         throw runtime_error("GIOPEncoder::reference(...): the encoder has no connection and can not be reached over the network");
     }
-    string(connection->localAddress());
-    ushort(connection->localPort());
-    blob(object->get_object_key());
+    writeString(connection->localAddress());
+    writeUshort(connection->localPort());
+    writeBlob(object->get_object_key());
 
     // IIOP >= 1.1: components
     if (majorVersion != 1 || minorVersion != 0) {
-        ulong(1);                                        // component count = 1
-        encapsulation(ComponentId::ORB_TYPE, [this]() {  // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
-            ulong(0x4d313300);                           // "M13\0" as ORB Type ID for corba.js
+        writeUlong(1);                                        // component count = 1
+        writeEncapsulation(ComponentId::ORB_TYPE, [this]() {  // 0:  TAG_ORB_TYPE (3.4 P 2, 7.6.6.1)
+            writeUlong(0x4d313300);                           // "M13\0" as ORB Type ID for corba.js
         });
     }
     fillInSize();
     // cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
 }
 
-void GIOPEncoder::encapsulation(ComponentId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<uint32_t>(type));
-    buffer.reserveSize();
-    buffer.endian();
+void GIOPEncoder::writeEncapsulation(ComponentId type, std::function<void()> closure) {
+    writeUlong(static_cast<uint32_t>(type));
+    reserveSize();
+    writeEndian();
     closure();
-    buffer.fillInSize();
+    fillInSize();
 }
-void GIOPEncoder::encapsulation(ProfileId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<uint32_t>(type));
-    buffer.reserveSize();
-    buffer.endian();
+void GIOPEncoder::writeEncapsulation(ProfileId type, std::function<void()> closure) {
+    writeUlong(static_cast<uint32_t>(type));
+    reserveSize();
+    writeEndian();
     closure();
-    buffer.fillInSize();
+    fillInSize();
 }
-void GIOPEncoder::encapsulation(ServiceId type, std::function<void()> closure) {
-    buffer.ulong(static_cast<uint32_t>(type));
-    buffer.reserveSize();
-    buffer.endian();
+void GIOPEncoder::writeEncapsulation(ServiceId type, std::function<void()> closure) {
+    writeUlong(static_cast<uint32_t>(type));
+    reserveSize();
+    writeEndian();
     closure();
-    buffer.fillInSize();
+    fillInSize();
 }
 
 void GIOPEncoder::skipGIOPHeader() { buffer.offset = 10; }
@@ -112,15 +112,15 @@ void GIOPEncoder::setGIOPHeader(MessageType type) {
     buffer.reserve();
     auto offset = buffer.offset;
     buffer.offset = 0;
-    buffer.octet('G');
-    buffer.octet('I');
-    buffer.octet('O');
-    buffer.octet('P');
-    buffer.octet(majorVersion);
-    buffer.octet(minorVersion);
-    buffer.endian();
-    buffer.octet(static_cast<uint8_t>(type));
-    buffer.ulong(offset - 12);
+    writeOctet('G');
+    writeOctet('I');
+    writeOctet('O');
+    writeOctet('P');
+    writeOctet(majorVersion);
+    writeOctet(minorVersion);
+    writeEndian();
+    writeOctet(static_cast<uint8_t>(type));
+    writeUlong(offset - 12);
     buffer.offset = offset;
 }
 void GIOPEncoder::setReplyHeader(uint32_t requestId, ReplyStatus replyStatus) {
@@ -128,13 +128,13 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, ReplyStatus replyStatus) {
     // fixme: create and use version methods like isVersionLessThan(1,2) or isVersionVersionGreaterEqual(1,2)
     if (majorVersion == 1 && minorVersion < 2) {
         // this.serviceContext()
-        buffer.ulong(0);  // skipReplyHeader needs a fixed size service context
+       writeUlong(0);  // skipReplyHeader needs a fixed size service context
     }
-    buffer.ulong(requestId);
-    buffer.ulong(static_cast<uint32_t>(replyStatus));
+    writeUlong(requestId);
+    writeUlong(static_cast<uint32_t>(replyStatus));
     if (majorVersion == 1 && minorVersion >= 2) {
         // this.serviceContext();
-        buffer.ulong(0);  // skipReplyHeader needs a fixed size service context
+        writeUlong(0);  // skipReplyHeader needs a fixed size service context
     }
 }
 
@@ -144,24 +144,24 @@ void GIOPEncoder::encodeRequest(const CORBA::blob& objectKey, const std::string&
     if (majorVersion == 1 && minorVersion <= 1) {
         serviceContext();
     }
-    ulong(requestId);
+    writeUlong(requestId);
     if (majorVersion == 1 && minorVersion <= 1) {
-        octet(responseExpected ? 1 : 0);
+        writeOctet(responseExpected ? 1 : 0);
     } else {
-        octet(responseExpected ? 3 : 0);
+        writeOctet(responseExpected ? 3 : 0);
     }
     buffer.offset += 3;
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        this->blob(objectKey);
+        this->writeBlob(objectKey);
     } else {
-        ushort(static_cast<uint16_t>(AddressingDisposition::KEY_ADDR));
-        this->blob(objectKey);
+        writeUshort(static_cast<uint16_t>(AddressingDisposition::KEY_ADDR));
+        this->writeBlob(objectKey);
     }
 
-    string(operation);
+    writeString(operation);
     if (majorVersion == 1 && minorVersion <= 1) {
-        ulong(0);  // Requesting Principal length
+        writeUlong(0);  // Requesting Principal length
     } else {
         serviceContext();
         buffer.align8();  // alignAndReserve(8);
@@ -171,7 +171,7 @@ void GIOPEncoder::encodeRequest(const CORBA::blob& objectKey, const std::string&
 void GIOPEncoder::serviceContext() {
     // TODO: remove this, this happens only in tests
     // if (connection == nullptr) {
-    ulong(0);
+    writeUlong(0);
     return;
     // }
 
@@ -215,12 +215,12 @@ MessageType GIOPDecoder::scanGIOPHeader() {
         throw std::runtime_error("Missing GIOP Header");
     }
     buffer.setOffset(4);
-    majorVersion = buffer.octet();
-    minorVersion = buffer.octet();
-    auto flags = buffer.octet();
+    majorVersion = readOctet();
+    minorVersion = readOctet();
+    auto flags = readOctet();
     buffer.setLittleEndian(flags & 1);
-    m_type = static_cast<MessageType>(buffer.octet());
-    m_length = buffer.ulong();
+    m_type = static_cast<MessageType>(readOctet());
+    m_length = readUlong();
     return m_type;
 }
 
@@ -232,8 +232,8 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
         cout << "SERVICE CONTEXT" << endl;
     }
     auto header = new RequestHeader();
-    header->requestId = buffer.ulong();
-    auto responseFlags = buffer.octet();
+    header->requestId = readUlong();
+    auto responseFlags = readOctet();
     if (majorVersion == 1 && minorVersion <= 1) {
         header->responseExpected = responseFlags != 0;
     } else {
@@ -253,12 +253,12 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     buffer.skip(3);  // RequestReserved
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        header->objectKey = buffer.blob_view();
+        header->objectKey = readBlobView();
     } else {
-        auto addressingDisposition = static_cast<AddressingDisposition>(buffer.ushort());
+        auto addressingDisposition = static_cast<AddressingDisposition>(readUshort());
         switch (addressingDisposition) {
             case AddressingDisposition::KEY_ADDR:
-                header->objectKey = buffer.blob_view();
+                header->objectKey = readBlobView();
                 break;
             case AddressingDisposition::PROFILE_ADDR:
             case AddressingDisposition::REFERENCE_ADDR:
@@ -268,10 +268,10 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
         }
     }
     // cout << "REQUEST objectKey size = " << header->objectKey.length << endl;
-    header->operation = buffer.string_view();
+    header->operation = readStringView();
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        auto requestingPrincipalLength = buffer.ulong();
+        auto requestingPrincipalLength = readUlong();
         // FIXME: this.offset += requestingPrincipalLength???
     } else {
         serviceContext();
@@ -282,15 +282,15 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
 }
 
 const LocateRequest* GIOPDecoder::scanLocateRequest() {
-    this->requestId = buffer.ulong();
+    this->requestId = readUlong();
     CORBA::blob_view objectKey;
     if (majorVersion == 1 && minorVersion <= 1) {
-        objectKey = buffer.blob_view();
+        objectKey = readBlobView();
     } else {
-        auto addressingDisposition = static_cast<AddressingDisposition>(buffer.ushort());
+        auto addressingDisposition = static_cast<AddressingDisposition>(readUshort());
         switch (addressingDisposition) {
             case AddressingDisposition::KEY_ADDR:
-                objectKey = buffer.blob_view();
+                objectKey = readBlobView();
                 break;
             case AddressingDisposition::PROFILE_ADDR:
             case AddressingDisposition::REFERENCE_ADDR:
@@ -306,8 +306,8 @@ unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
     if (majorVersion == 1 && minorVersion <= 1) {
         serviceContext();
     }
-    this->requestId = buffer.ulong();
-    this->replyStatus = static_cast<ReplyStatus>(buffer.ulong());
+    this->requestId = readUlong();
+    this->replyStatus = static_cast<ReplyStatus>(readUlong());
     if (majorVersion == 1 && minorVersion >= 2) {
         serviceContext();
     }
@@ -315,9 +315,9 @@ unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
 }
 
 void GIOPDecoder::serviceContext() {
-    auto serviceContextListLength = buffer.ulong();
+    auto serviceContextListLength = readUlong();
     for (size_t i = 0; i < serviceContextListLength; ++i) {
-        encapsulation([](ServiceId serviceId) {
+        readEncapsulation([](ServiceId serviceId) {
             switch (serviceId) {
                 case ServiceId::CodeSets:
                     // std::cout << "ServiceContext CodeSets" << std::endl;
@@ -335,12 +335,12 @@ void GIOPDecoder::serviceContext() {
     }
 }
 
-void GIOPDecoder::encapsulation(std::function<void(ComponentId type)> closure) {
-    auto type = static_cast<ComponentId>(buffer.ulong());
-    auto size = buffer.ulong();
+void GIOPDecoder::readEncapsulation(std::function<void(ComponentId type)> closure) {
+    auto type = static_cast<ComponentId>(readUlong());
+    auto size = readUlong();
     auto nextOffset = buffer.getOffset() + size;
     auto lastEndian = buffer._endian;
-    auto flags = buffer.octet();
+    auto flags = readOctet();
     buffer.setLittleEndian(flags & 1);
 
     closure(type);
@@ -348,12 +348,12 @@ void GIOPDecoder::encapsulation(std::function<void(ComponentId type)> closure) {
     buffer._endian = lastEndian;
     buffer.setOffset(nextOffset);
 }
-void GIOPDecoder::encapsulation(std::function<void(ProfileId type)> closure) {
-    auto type = static_cast<ProfileId>(buffer.ulong());
-    auto size = buffer.ulong();
+void GIOPDecoder::readEncapsulation(std::function<void(ProfileId type)> closure) {
+    auto type = static_cast<ProfileId>(readUlong());
+    auto size = readUlong();
     auto nextOffset = buffer.getOffset() + size;
     auto lastEndian = buffer._endian;
-    auto flags = buffer.octet();
+    auto flags = readOctet();
     buffer.setLittleEndian(flags & 1);
 
     closure(type);
@@ -361,12 +361,12 @@ void GIOPDecoder::encapsulation(std::function<void(ProfileId type)> closure) {
     buffer._endian = lastEndian;
     buffer.setOffset(nextOffset);
 }
-void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
-    auto type = static_cast<ServiceId>(buffer.ulong());
-    auto size = buffer.ulong();
+void GIOPDecoder::readEncapsulation(std::function<void(ServiceId type)> closure) {
+    auto type = static_cast<ServiceId>(readUlong());
+    auto size = readUlong();
     auto nextOffset = buffer.getOffset() + size;
     auto lastEndian = buffer._endian;
-    auto flags = buffer.octet();
+    auto flags = readOctet();
     buffer.setLittleEndian(flags & 1);
 
     closure(type);
@@ -375,9 +375,9 @@ void GIOPDecoder::encapsulation(std::function<void(ServiceId type)> closure) {
     buffer.setOffset(nextOffset);
 }
 
-std::shared_ptr<Object> GIOPDecoder::object(std::shared_ptr<CORBA::ORB> orb) {  // const string typeInfo, bool isValue = false) {
-    auto code = buffer.ulong();
-    auto objectOffset = buffer.m_offset - 4;
+std::shared_ptr<Object> GIOPDecoder::readObject(std::shared_ptr<CORBA::ORB> orb) {  // const string typeInfo, bool isValue = false) {
+    auto code = readUlong();
+    // auto objectOffset = buffer.m_offset - 4;
 
     if (code == 0) {
         return std::shared_ptr<Object>();
@@ -395,7 +395,7 @@ std::shared_ptr<Object> GIOPDecoder::object(std::shared_ptr<CORBA::ORB> orb) {  
         if (!orb) {
             throw runtime_error("GIOPDecoder::object(orb): orb must not be null");
         }
-        auto ref = reference(code);
+        auto ref = readReference(code);
         // cerr << "GOT IOR " << ref->oid << " " << ref->objectKey << endl;
         return make_shared<IOR>(orb, ref->oid, ref->host, ref->port, ref->get_object_key());
     }
@@ -444,36 +444,36 @@ static array<ORBTypeName, 35> orbTypeNames{{{0x48500000, 0x4850000f, "Hewlett Pa
                                             {0x42424300, 0x4242430f, "Bionic Buffalo Corporation"},
                                             {0x4d313300, 0x4d313300, "corba.js"}}};
 
-shared_ptr<IOR> GIOPDecoder::reference(size_t length) {
-    auto oid = buffer.string(length);
+shared_ptr<IOR> GIOPDecoder::readReference(size_t length) {
+    auto oid = readString(length);
     std::string host;
     uint16_t port;
     CORBA::blob objectKey;
 
-    auto profileCount = buffer.ulong();
+    auto profileCount = readUlong();
     // console.log(`oid: '${oid}', tag count=${tagCount}`)
     for (uint32_t i = 0; i < profileCount; ++i) {
-        encapsulation([&](ProfileId profileId) {
+        readEncapsulation([&](ProfileId profileId) {
             switch (profileId) {
                 // CORBA 3.3 Part 2: 9.7.2 IIOP IOR Profiles
                 case ProfileId::TAG_INTERNET_IOP: {
                     // console.log(`Internet IOP Component, length=${profileLength}`)
-                    auto iiopMajorVersion = buffer.octet();
-                    auto iiopMinorVersion = buffer.octet();
+                    auto iiopMajorVersion = readOctet();
+                    auto iiopMinorVersion = readOctet();
                     // if (iiopMajorVersion != 1 || iiopMinorVersion > 1) {
                     //     throw runtime_error(format("Unsupported IIOP version {}.{}. Must be 1.1+", iiopMajorVersion, iiopMinorVersion));
                     // }
-                    host = buffer.string();
-                    port = buffer.ushort();
-                    objectKey = buffer.blob();
+                    host = readString();
+                    port = readUshort();
+                    objectKey = readBlob();
                     // FIXME: use utility function to compare version!!! better use hex: version >= 0x0101
                     // if (iiopMajorVersion == 1 && iiopMinorVersion != 0) {
-                    //     encapsulation([&](ComponentId componentId) {
+                    //     readEncapsulation([&](ComponentId componentId) {
                     //         switch (componentId) {
                     //             case ComponentId::ORB_TYPE: {
-                    //                 auto typeCount = buffer.ulong();
+                    //                 auto typeCount = readUlong();
                     //                 for (uint32_t j = 0; j < typeCount; ++j) {
-                    //                     auto orbType = buffer.ulong();
+                    //                     auto orbType = readUlong();
                     //                     const char* name = nullptr;
                     //                     for (const auto& orbTypeName : orbTypeNames) {
                     //                         if (orbTypeName.from <= orbType && orbType <= orbTypeName.to) {

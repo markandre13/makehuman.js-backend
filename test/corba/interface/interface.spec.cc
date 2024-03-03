@@ -5,6 +5,8 @@
 #include "interface_stub.hh"
 #include "kaffeeklatsch.hh"
 
+#include <climits>
+
 namespace cppasync {
 
 #ifdef _COROUTINE_DEBUG
@@ -25,11 +27,16 @@ using CORBA::async, CORBA::ORB, CORBA::blob, CORBA::blob_view;
 class Interface_impl : public Interface_skel {
     public:
         Interface_impl(std::shared_ptr<CORBA::ORB> orb) : Interface_skel(orb) {}
+
         async<bool> callBoolean(bool value) override { co_return value; }
         async<uint8_t> callOctet(uint8_t value) override { co_return value; }  // check uint8_t with real CORBA
         async<uint16_t> callUShort(uint16_t value) override { co_return value; }
         async<uint32_t> callUnsignedLong(uint32_t value) override { co_return value; }
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
+        async<int16_t> callShort(int16_t value) override { co_return value; }
+        async<uint32_t> callLong(int32_t value) override { co_return value; }
+        async<uint64_t> callLongLong(int64_t value) override { co_return value; }
+
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
 
@@ -105,13 +112,20 @@ kaffeeklatsch_spec([] {
             parallel(eptr, [&clientORB] -> async<> {
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:2809#Backend");
                 auto backend = Interface::_narrow(object);
+
                 expect(co_await backend->callBoolean(true)).to.equal(true);
                 expect(co_await backend->callOctet(42)).to.equal(42);
                 expect(co_await backend->callUShort(65535)).to.equal(65535);
                 expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
+
+                expect(co_await backend->callShort(-32768)).to.equal(-32768);
+                expect(co_await backend->callLong(-2147483648l)).to.equal(-2147483648l);
+                expect(co_await backend->callLongLong(-9223372036854775807ll)).to.equal(-9223372036854775807ll);
+
                 expect(co_await backend->callString("hello")).to.equal("hello");
                 expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));
+
                 auto frontend = make_shared<Peer_impl>(clientORB);
                 co_await backend->setPeer(frontend);
                 expect(co_await backend->callPeer("hello")).to.equal("hello to the world.");
