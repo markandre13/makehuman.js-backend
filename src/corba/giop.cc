@@ -16,13 +16,7 @@ using namespace std;
 namespace CORBA {
 
 void GIOPEncoder::object(const CORBA::Object * object) {
-    cerr << "GIOPEncoder::object(...)" << endl;
-    if (dynamic_cast<const CORBA::Stub*>(object)) {
-        std::println("GIOPEncoder::object(): STUB");
-    }
-    if (dynamic_cast<const CORBA::Skeleton*>(object)) {
-        std::println("GIOPEncoder::object(): SKELETON");
-    }
+    // cerr << "GIOPEncoder::object(...)" << endl;
     if (object == nullptr) {
         buffer.ulong(0);
         return;
@@ -47,7 +41,7 @@ void GIOPEncoder::object(const CORBA::Object * object) {
 
 // Interoperable Object Reference (IOR)
 void GIOPEncoder::reference(const Object* object) {
-    cerr << "GIOPEncoder::reference(...) ENTER" << endl;
+    // cerr << "GIOPEncoder::reference(...) ENTER" << endl;
     // const className = (object.constructor as any)._idlClassName()
     auto className = object->repository_id();
     // if (className == nullptr) {
@@ -85,7 +79,7 @@ void GIOPEncoder::reference(const Object* object) {
         });
     }
     fillInSize();
-    cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
+    // cerr << "GIOPEncoder::reference(...) LEAVE" << endl;
 }
 
 void GIOPEncoder::encapsulation(ComponentId type, std::function<void()> closure) {
@@ -126,7 +120,6 @@ void GIOPEncoder::setGIOPHeader(MessageType type) {
     buffer.octet(minorVersion);
     buffer.endian();
     buffer.octet(static_cast<uint8_t>(type));
-    cout << "GIOPHeader length = " << hex << offset - 12 << endl;
     buffer.ulong(offset - 12);
     buffer.offset = offset;
 }
@@ -404,7 +397,7 @@ std::shared_ptr<Object> GIOPDecoder::object(ORB *orb) {  // const string typeInf
             throw runtime_error("GIOPDecoder::object(orb): orb must not be null");
         }
         auto ref = reference(code);
-        cerr << "GOT IOR " << ref->oid << " " << ref->objectKey << endl;
+        // cerr << "GOT IOR " << ref->oid << " " << ref->objectKey << endl;
         return make_shared<ObjectReference>(orb, ref->oid, ref->host, ref->port, ref->get_object_key());
     }
     throw runtime_error(format("GIOPDecoder: Unsupported value with CORBA tag {:#x}", code));
@@ -530,8 +523,8 @@ shared_ptr<ObjectReference> GIOPDecoder::reference(size_t length) {
                     }
                 } break;
                 default: {
-                    auto id = static_cast<unsigned>(profileId);
-                    cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
+                    // auto id = static_cast<unsigned>(profileId);
+                    // cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
                 }
             }
         });

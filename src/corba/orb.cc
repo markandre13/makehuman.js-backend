@@ -35,7 +35,7 @@ class NamingContextExtImpl : public Skeleton {
         }
 
         std::shared_ptr<Object> resolve(const std::string &name) {
-            println("NamingContextImpl.resolve(\"{}\")", name);
+            // println("NamingContextImpl.resolve(\"{}\")", name);
             auto servant = name2Object.find(name);
             if (servant == name2Object.end()) {
                 println("NamingContextExtImpl::resolve(\"{}\"): name is not bound to an object", name);
@@ -113,7 +113,7 @@ Object::~Object() {}
 ORB::ORB() {}
 
 async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
-    std::println("ORB::stringToObject(\"{}\"): enter", iorString);
+    // std::println("ORB::stringToObject(\"{}\"): enter", iorString);
     auto uri = decodeURI(iorString);
     if (std::holds_alternative<IOR>(uri)) {
         // return iorToObject(std::get<IOR>(uri));
@@ -123,26 +123,26 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
         auto addr = name.addr[0];  // TODO: we only try the 1st one
         if (addr.proto == "iiop") {
             // get remote NameService (FIXME: what if it's us?)
-            std::println("ORB::stringToObject(\"{}\"): get connection to {}:{}", iorString, addr.host, addr.port);
+            // std::println("ORB::stringToObject(\"{}\"): get connection to {}:{}", iorString, addr.host, addr.port);
             CORBA::detail::Connection *nameConnection = getConnection(addr.host, addr.port);
-            std::println("ORB::stringToObject(\"{}\"): got connection to {}:{}", iorString, addr.host, addr.port);
+            // std::println("ORB::stringToObject(\"{}\"): got connection to {}:{}", iorString, addr.host, addr.port);
             auto it = nameConnection->stubsById.find(name.objectKey);
             NamingContextExtStub *rootNamingContext;
             if (it == nameConnection->stubsById.end()) {
-                std::println("ORB::stringToObject(\"{}\"): creating NamingContextExtStub(orb, objectKey=\"{}\", connection)", iorString, name.objectKey);
+                // std::println("ORB::stringToObject(\"{}\"): creating NamingContextExtStub(orb, objectKey=\"{}\", connection)", iorString, name.objectKey);
                 rootNamingContext = new NamingContextExtStub(this, name.objectKey, nameConnection);
                 nameConnection->stubsById[name.objectKey] = rootNamingContext;
             } else {
-                std::println("ORB::stringToObject(\"{}\"): reusing NamingContextExtStub", iorString);
+                // std::println("ORB::stringToObject(\"{}\"): reusing NamingContextExtStub", iorString);
                 rootNamingContext = dynamic_cast<NamingContextExtStub *>(it->second);
                 if (rootNamingContext == nullptr) {
                     throw runtime_error("Not a NamingContextExt");
                 }
             }
             // get object from remote NameServiceExt
-            std::println("ORB::stringToObject(\"{}\"): calling resolve_str(\"{}\") on remote end", iorString, name.name);
+            // std::println("ORB::stringToObject(\"{}\"): calling resolve_str(\"{}\") on remote end", iorString, name.name);
             auto reference = co_await rootNamingContext->resolve_str(name.name);
-            std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
+            // std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
             reference->setORB(this);
             co_return dynamic_pointer_cast<Object, ObjectReference>(reference);
         }
@@ -178,14 +178,14 @@ detail::Connection *ORB::getConnection(string host, uint16_t port) {
 }
 
 async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::function<void(GIOPEncoder &)> encode) {
-    println("ORB::_twowayCall(stub, \"{}\", ...) ENTER", operation);
+    // println("ORB::_twowayCall(stub, \"{}\", ...) ENTER", operation);
     if (stub->connection == nullptr) {
         throw runtime_error("ORB::_twowayCall(): the stub has no connection");
     }
     auto requestId = stub->connection->requestId;
     stub->connection->requestId += 2;
-    printf("CONNECTION %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(stub->connection), stub->connection->localAddress().c_str(),
-           stub->connection->localPort(), stub->connection->remoteAddress().c_str(), stub->connection->remotePort(), stub->connection->requestId);
+    // printf("CONNECTION %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(stub->connection), stub->connection->localAddress().c_str(),
+    //        stub->connection->localPort(), stub->connection->remoteAddress().c_str(), stub->connection->remotePort(), stub->connection->requestId);
 
     GIOPEncoder encoder(stub->connection);
     auto responseExpected = true;
@@ -197,9 +197,9 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
                 requestId);
     }
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
-    println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
+    // println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
-    println("ORB::_twowayCall(stub, \"{}\", ...) LEAVE WITH DECODER", operation);
+    // println("ORB::_twowayCall(stub, \"{}\", ...) LEAVE WITH DECODER", operation);
 
     // move parts of this into a separate function so that it can be unit tested
     switch (decoder->replyStatus) {
@@ -258,12 +258,12 @@ void ORB::onewayCall(Stub *stub, const char *operation, std::function<void(GIOPE
 }
 
 blob_view ORB::registerServant(Skeleton *servant) {
-    println("ORB::registerServant(servant)");
+    // println("ORB::registerServant(servant)");
     return registerServant(servant, format("OID:{:x}", ++servantIdCounter));
 }
 
 blob_view ORB::registerServant(Skeleton *servant, const string &objectKey) {
-    println("ORB::registerServant(servant, \"{}\")", objectKey);
+    // println("ORB::registerServant(servant, \"{}\")", objectKey);
     auto pos = servants.emplace(std::make_pair(blob(objectKey), servant));
     servants[blob(objectKey)] = servant;
     return blob_view(std::get<0>(pos)->first);
@@ -271,7 +271,7 @@ blob_view ORB::registerServant(Skeleton *servant, const string &objectKey) {
 
 void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj) {
     if (namingService == nullptr) {
-        println("ORB::bind(\"{}\"): CREATING NameService", id);
+        // println("ORB::bind(\"{}\"): CREATING NameService", id);
         namingService = new NamingContextExtImpl(this, "NameService");
         servants["NameService"] = namingService;
     }
@@ -334,17 +334,17 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 uint32_t requestId = request->requestId;
 
                 // move parts of this into a separate function so that it can be unit tested
-                std::cerr << "CALL SERVANT" << std::endl;
+                // std::cerr << "CALL SERVANT" << std::endl;
                 servant->second->_call(request->operation, decoder, *encoder)
                     .thenOrCatch(
                         [encoder, connection, responseExpected, requestId] {  // FIXME: the references objects won't be available
-                            println("SERVANT RETURNED");
+                            // println("SERVANT RETURNED");
                             if (responseExpected) {
-                                println("SERVANT WANTS RESPONSE");
+                                // println("SERVANT WANTS RESPONSE");
                                 auto length = encoder->buffer.offset;
                                 encoder->setGIOPHeader(MessageType::REPLY);
                                 encoder->setReplyHeader(requestId, ReplyStatus::NO_EXCEPTION);
-                                println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
+                                // println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
                                 connection->send((void *)encoder->buffer.data(), length);
                             }
                         },

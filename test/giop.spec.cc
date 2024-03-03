@@ -21,7 +21,7 @@ kaffeeklatsch_spec([] {
                     encoder.setGIOPHeader(CORBA::MessageType::REQUEST);
                     auto length = encoder.buffer.offset;
 
-                    hexdump(encoder.buffer.data(), length);
+                    // hexdump(encoder.buffer.data(), length);
 
                     CORBA::CDRDecoder cdr(encoder.buffer.data(), length);
                     CORBA::GIOPDecoder decoder(cdr);
@@ -104,7 +104,7 @@ kaffeeklatsch_spec([] {
             expect(request->requestId).equals(4);
             CORBA::blob_view objectKey(dataview.data() + 28, 20);
             expect(request->objectKey).equals(objectKey);
-            hexdump(request->operation);
+            // hexdump(request->operation);
             expect(request->operation).equals("sendObject");
         });
         it("OmniORB Reply", [] {

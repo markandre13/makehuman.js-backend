@@ -25,7 +25,7 @@ class Backend_impl : public Backend_skel {
     public:
         Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
         virtual CORBA::async<string> hello(const string_view &word) override {
-            println("Backend_impl::hello(\"{}\")", word);
+            // println("Backend_impl::hello(\"{}\")", word);
             co_return string(word) + " world.";
         }
         virtual CORBA::async<> fail() override {
@@ -148,67 +148,7 @@ kaffeeklatsch_spec([] {
             expect(ior.objectKey).to.equal("/1101/1626888441/_0");
         });
     });
-    describe("integration tests", [] {
-        it("play ping pong", [] {
-            // SERVER
-            auto serverORB = make_shared<CORBA::ORB>();
-            auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 8080);
-            serverORB->registerProtocol(serverProtocol);
-
-            auto backend = make_shared<Backend_impl>(serverORB.get());
-
-            serverORB->bind("Backend", backend);
-
-            // CLIENT
-
-            auto clientORB = make_shared<CORBA::ORB>();
-            auto clientProtocol = new FakeTcpProtocol(clientORB.get(), "frontend.local", 32768);
-            clientORB->registerProtocol(clientProtocol);
-
-            [&]() -> CORBA::async<> {
-                println("STEP 0: RESOLVE OBJECT");
-                auto object = co_await clientORB->stringToObject("corbaname::backend.local:8080#Backend");
-                println("STEP 1: GOT OBJECT");
-                auto backend = Backend::_narrow(object);
-                println("STEP 2: CALL OBJECT");
-                auto reply = co_await backend->hello("hello");
-                cerr << "GOT " << reply << endl;
-                println("STEP 3: CALL OBJECT AND GET EXCEPTION");
-                try {
-                    co_await backend->fail();
-                } catch (CORBA::SystemException &ex) {
-                    println("caught exception {}", ex.major());
-                }
-                co_return;
-            }()
-                         .no_wait();
-
-            // [&]() -> CORBA::async<> {
-                println("REQUEST TO BACKEND resolve_str() ================================================");
-                // auto clientConn = FakeTcpProtocol::sender;
-                // auto serverConn = serverORB->getConnection(FakeTcpProtocol::sender->localAddress(), FakeTcpProtocol::sender->localPort());
-
-                // printf("clientConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(clientConn), clientConn->localAddress().c_str(),
-                //        clientConn->localPort(), clientConn->remoteAddress().c_str(), clientConn->remotePort(), clientConn->requestId);
-                // printf("serverConn %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(serverConn), serverConn->localAddress().c_str(),
-                //        serverConn->localPort(), serverConn->remoteAddress().c_str(), serverConn->remotePort(), serverConn->requestId);
-
-                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                // println("REPLY TO FRONTEND resolve_str() =================================================");
-                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                // println("REQUEST TO BACKEND hello() ================================================");
-                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                // println("REPLY TO FRONTEND hello() =================================================");
-                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                // println("REQUEST TO BACKEND fail() ================================================");
-                // serverORB->_socketRcvd(serverConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-                // println("REPLY TO FRONTEND fail() =================================================");
-                // clientORB->_socketRcvd(clientConn, (const uint8_t *)FakeTcpProtocol::buffer, FakeTcpProtocol::size);
-            // }()
-            //              .no_wait();
-        });
-    });
-
+   
     describe("c++ playground", [] {
         // the thing about c++ smart pointers is that they do the reference counting
         // in the pointer, not the object.

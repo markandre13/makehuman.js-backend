@@ -4,32 +4,20 @@
 using std::println;
 
 CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
-    println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
+    // println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
     auto conn = new TcpFakeConnection(this, m_localAddress, m_localPort, hostname, port);
-    printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(conn), conn->localAddress().c_str(), conn->localPort(),
-           conn->remoteAddress().c_str(), conn->remotePort(), conn->requestId);
+    // printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(conn), conn->localAddress().c_str(), conn->localPort(),
+    //        conn->remoteAddress().c_str(), conn->remotePort(), conn->requestId);
     connections.push_back(conn);
     return conn;
 }
 
 CORBA::async<void> FakeTcpProtocol::close() { co_return; }
 
-// TcpFakeConnection *FakeTcpProtocol::sender;
-// void *FakeTcpProtocol::buffer = nullptr;
-// size_t FakeTcpProtocol::size = 0;
-
 void TcpFakeConnection::close() {}
 void TcpFakeConnection::send(void *buffer, size_t nbyte) {
-    println("TcpFakeConnection::send(...) from {}:{} to {}:{}", m_localAddress, m_localPort, m_remoteAddress, m_remotePort);
+    // println("TcpFakeConnection::send(...) from {}:{} to {}:{}", m_localAddress, m_localPort, m_remoteAddress, m_remotePort);
     protocol->packets.emplace_back(FakePaket(this, buffer, nbyte));
-    println("  PACKETS {} {}", protocol->packets.size(), protocol->packets.empty());
-    // FakeTcpProtocol::sender = this;
-    // if (FakeTcpProtocol::buffer) {
-    //     free(FakeTcpProtocol::buffer);
-    // }
-    // FakeTcpProtocol::buffer = malloc(nbyte);
-    // memcpy(FakeTcpProtocol::buffer, buffer, nbyte);
-    // FakeTcpProtocol::size = nbyte;
 }
 
 bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
@@ -42,7 +30,7 @@ bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
                     // println("found destination protocol {}:{}", dst->m_localAddress, dst->m_localPort);
                     TcpFakeConnection *conn = nullptr;
                     for (auto c : dst->connections) {
-                        println("found a connection");
+                        // println("found a connection");
                         if (c->localAddress() == packet.connection->remoteAddress() && c->localPort() == packet.connection->remotePort() &&
                             c->remoteAddress() == packet.connection->localAddress() && c->remotePort() == packet.connection->localPort()) {
                             // println("found a connection to send to");

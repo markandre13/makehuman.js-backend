@@ -39,10 +39,10 @@ class Interface_impl : public Interface_skel {
             co_return;
         }
         async<std::string> callPeer(const std::string_view &value) override {
-            println("INTERFACE IMPL: RECEIVED callPeer(\"{}\"): call peer", value);
+            // println("INTERFACE IMPL: RECEIVED callPeer(\"{}\"): call peer", value);
             auto s = co_await peer->callString(string(value) + " to the");
             // value is not valid anymore
-            println("INTERFACE IMPL: RECEIVED callPeer(...): peer returned \"{}\", return value \"{}.\"", s, s);
+            // println("INTERFACE IMPL: RECEIVED callPeer(...): peer returned \"{}\", return value \"{}.\"", s, s);
             co_return s + ".";
         }
         // next steps:
@@ -57,58 +57,30 @@ class Peer_impl : public Peer_skel {
         async<string> callString(const string_view &value) override { co_return string(value) + " world"; }
 };
 
-static unsigned counter = 0;
-
-class M {
-        unsigned id;
-
-    public:
-        M() {
-            id = ++counter;
-            println("M {} created", id);
-        }
-        M(const M &m) {
-            id = ++counter;
-            println("M {} copied from M {}", id, m.id);
-        }
-        M(const M &&m) {
-            id = ++counter;
-            println("M {} moved from", id, m.id);
-        }
-        ~M() { println("M {} destroyed", id); }
-};
-
 // due to
 //
 //   CP.51: Do not use capturing lambdas that are coroutines.
 //   https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-capture
 //
-// the following caused a memory error when accessing 'orb' after the co_await
-// 
+// the following causes a memory error when accessing 'orb' after the co_await
+//
 //   [&orb] -> async<> { ... co_await ... }().thenOrCatch(...)
-// 
-// not knowing that, the 1st workaround i found, still assuming my cpptask implementation
-// being fault was making a copy of 'orb' before the co_await and using the copy after
-// the co_await.
 //
-//   A capturing lambda can be a coroutine, but you have to save your captures while you still can
-//   https://devblogs.microsoft.com/oldnewthing/20211103-00/?p=105870
+// as the closure object will be destroyed after the co_await.
 //
-// the following works with clang, which would mean that closures are not store on the stack...?
+// this on the other hand works with clang:
 //
-// while at it, i also found
+//   auto call(std::function<async<>()> closure) { return closure(); }
+//   call([&orb] -> async<> { ... co_await ... }).thenOrCatch(...)
 //
-//   CP.53: Parameters to coroutines should not be passed by reference
-//
+// and i assume it's because then the compiler has to pass the closure forward
+// into the call() function and then it's lifetime get's intertwined with the
+// coroutine.
 void parallel(std::exception_ptr &eptr, std::function<CORBA::async<>()> closure) {
-    closure().thenOrCatch(
-        [] {
-            println("CLIENT COROUTINE FINISHED WITHOUT AN EXCEPTION");
-        },
-        [&eptr](std::exception_ptr _eptr) {
-            println("CLIENT COROUTINE FINISHED WITH AN EXCEPTION");
-            eptr = _eptr;
-        });
+    closure().thenOrCatch([] {},
+                          [&eptr](std::exception_ptr _eptr) {
+                              eptr = _eptr;
+                          });
 }
 
 kaffeeklatsch_spec([] {
@@ -129,7 +101,7 @@ kaffeeklatsch_spec([] {
             clientORB->registerProtocol(clientProtocol);
 
             std::exception_ptr eptr;
-            
+
             parallel(eptr, [&clientORB] -> async<> {
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:2809#Backend");
                 auto backend = Interface::_narrow(object);
@@ -148,7 +120,6 @@ kaffeeklatsch_spec([] {
             vector<FakeTcpProtocol *> protocols = {serverProtocol, clientProtocol};
             while (transmit(protocols))
                 ;
-            println("NO MORE PACKETS TO SEND");
 
             if (eptr) {
                 std::rethrow_exception(eptr);
