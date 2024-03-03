@@ -19,7 +19,7 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lev -lwslay -lnettle
 
 SRC = main.cc \
-	corba/corba.cc corba/orb.cc corba/url.cc \
+	corba/corba.cc corba/orb.cc corba/url.cc corba/ior.cc \
 	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
 	corba/hexdump.cc \
 	corba/net/ws.cc corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
@@ -50,27 +50,34 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: corba/corba.hh corba/coroutine.hh ../upstream/cpptask/src/async.hh
-main.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/orb.hh
-main.o: corba/protocol.hh corba/net/ws.hh corba/protocol.hh
+main.o: corba/corba.hh corba/ior.hh corba/object.hh corba/blob.hh
+main.o: corba/skeleton.hh corba/coroutine.hh ../upstream/cpptask/src/async.hh
+main.o: corba/stub.hh corba/exception.hh corba/orb.hh corba/giop.hh
+main.o: corba/cdr.hh corba/protocol.hh corba/net/ws.hh corba/protocol.hh
 corba/corba.o: corba/orb.hh corba/coroutine.hh
 corba/corba.o: ../upstream/cpptask/src/async.hh corba/giop.hh corba/cdr.hh
 corba/corba.o: corba/blob.hh
 corba/orb.o: corba/orb.hh corba/coroutine.hh ../upstream/cpptask/src/async.hh
 corba/orb.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
-corba/orb.o: corba/hexdump.hh corba/protocol.hh corba/url.hh
+corba/orb.o: corba/ior.hh corba/object.hh corba/skeleton.hh corba/stub.hh
+corba/orb.o: corba/exception.hh corba/hexdump.hh corba/protocol.hh
+corba/orb.o: corba/url.hh
 corba/url.o: corba/url.hh corba/cdr.hh corba/blob.hh corba/giop.hh
-corba/url.o: corba/corba.hh corba/coroutine.hh
-corba/url.o: ../upstream/cpptask/src/async.hh
-corba/skeleton.o: corba/corba.hh corba/coroutine.hh
-corba/skeleton.o: ../upstream/cpptask/src/async.hh corba/giop.hh corba/cdr.hh
-corba/skeleton.o: corba/blob.hh corba/orb.hh
+corba/url.o: corba/corba.hh corba/ior.hh corba/object.hh corba/skeleton.hh
+corba/url.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
+corba/url.o: corba/stub.hh corba/exception.hh
+corba/skeleton.o: corba/corba.hh corba/ior.hh corba/object.hh corba/blob.hh
+corba/skeleton.o: corba/skeleton.hh corba/coroutine.hh
+corba/skeleton.o: ../upstream/cpptask/src/async.hh corba/stub.hh
+corba/skeleton.o: corba/exception.hh corba/orb.hh corba/giop.hh corba/cdr.hh
 corba/giop.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
+corba/giop.o: corba/ior.hh corba/object.hh corba/skeleton.hh
 corba/giop.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
-corba/giop.o: corba/hexdump.hh corba/orb.hh corba/protocol.hh
+corba/giop.o: corba/stub.hh corba/exception.hh corba/hexdump.hh corba/orb.hh
+corba/giop.o: corba/protocol.hh
 corba/cdr.o: corba/cdr.hh corba/blob.hh
 corba/net/ws.o: corba/net/ws.hh corba/protocol.hh corba/coroutine.hh
-corba/net/ws.o: ../upstream/cpptask/src/async.hh corba/orb.hh corba/giop.hh
-corba/net/ws.o: corba/cdr.hh corba/blob.hh corba/net/ws/createAcceptKey.hh
+corba/net/ws.o: ../upstream/cpptask/src/async.hh corba/blob.hh corba/orb.hh
+corba/net/ws.o: corba/giop.hh corba/cdr.hh corba/net/ws/createAcceptKey.hh
 corba/net/ws.o: corba/net/ws/socket.hh
 corba/net/ws/createAcceptKey.o: corba/net/ws/createAcceptKey.hh

@@ -247,7 +247,6 @@ ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t l
 void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data) {
     println("wslay_msg_rcv_callback");
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
-    const char *buffer = arg->msg;
     // arg->msg = nullptr; // THIS NEEDS A CHANGE IN WSLAY
-    handler->orb->_socketRcvd(handler->connection, buffer, arg->msg_length);
+    handler->orb->_socketRcvd(handler->connection, arg->msg, arg->msg_length);
 }

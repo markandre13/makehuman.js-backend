@@ -26,15 +26,15 @@ class Backend {
 
 class Backend_skel: public CORBA::Skeleton, public Backend {
 public:
-    Backend_skel(CORBA::ORB *orb) : Skeleton(orb) {}
-    const char *repository_id() const override { return "IDL:Backend:1.0"; }
+    Backend_skel(std::shared_ptr<CORBA::ORB> orb) : Skeleton(orb) {}
+    std::string_view repository_id() const override { return "IDL:Backend:1.0"; }
 private:
     CORBA::async<> _call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) override;
 };
 
 class Backend_impl : public Backend_skel {
     public:
-        Backend_impl(CORBA::ORB *orb) : Backend_skel(orb) {}
+        Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 };
 
 CORBA::async<> Backend_skel::_call(const std::string_view &operation, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) { 
@@ -49,7 +49,7 @@ int main(void) {
     auto orb = make_shared<CORBA::ORB>();
     auto protocol = new MyProtocol();
     orb->registerProtocol(protocol);
-    auto backend = make_shared<Backend_impl>(orb.get());
+    auto backend = make_shared<Backend_impl>(orb);
     orb->bind("Backend", backend);
 
     struct ev_loop *loop = EV_DEFAULT;
