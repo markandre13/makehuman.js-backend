@@ -117,8 +117,8 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     auto client_handler = new client_handler_t();
     client_handler->loop = loop;
     client_handler->orb = handler->orb;
-    client_handler->connection = new MyConnection("localhost", 9001, "frontend", 2);
-    client_handler->connection->requestId = 1; // InitialResponderRequestIdBiDirectionalIIOP
+    client_handler->connection = new MyConnection("localhost", 9001, "frontend", 2, 1);
+    // client_handler->connection->requestId = 1; // InitialResponderRequestIdBiDirectionalIIOP
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &client_handler->watcher);

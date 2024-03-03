@@ -12,8 +12,8 @@ class MyConnection : public CORBA::detail::Connection {
         uint16_t m_remotePort;
 
     public:
-        MyConnection(const std::string &localAddress, uint16_t localPort, const std::string &remoteAddress, uint16_t remotePort)
-            : m_localAddress(localAddress), m_localPort(localPort), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
+        MyConnection(const std::string &localAddress, uint16_t localPort, const std::string &remoteAddress, uint16_t remotePort, uint32_t initialRequestId = 0)
+            : Connection(initialRequestId), m_localAddress(localAddress), m_localPort(localPort), m_remoteAddress(remoteAddress), m_remotePort(remotePort) {}
 
         const std::string & localAddress() const override { return m_localAddress; }
         uint16_t localPort() const override { return m_localPort; }

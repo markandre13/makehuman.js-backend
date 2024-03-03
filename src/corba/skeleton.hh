@@ -9,7 +9,7 @@ class GIOPDecoder;
 class GIOPEncoder;
 
 /**
- * Base class for representing local objects.
+ * Base class for representing object implementations.
  */
 class Skeleton : public virtual Object {
         friend class ORB;

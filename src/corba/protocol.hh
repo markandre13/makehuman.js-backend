@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
-#include "coroutine.hh"
 #include "blob.hh"
+#include "coroutine.hh"
 
 namespace CORBA {
 
@@ -14,18 +14,39 @@ class GIOPDecoder;
 
 namespace detail {
 
-// Protocol provides an interface to the ORB for various network protocols, eg.
-// orb.registerProtocol(new TcpProtocol(orb))
-// orb.registerProtocol(new WebSocketProtocol(orb))
-class Connection {
+class Connection;
+
+/**
+ * Protocol provides an interface to the ORB for various network protocols, eg.
+ *
+ * orb.registerProtocol(new TcpProtocol(orb))
+ * orb.registerProtocol(new WebSocketProtocol(orb))
+ */
+class Protocol {
     public:
+        // hm... do we return something or do we call ORB?
+        virtual Connection *connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
+        virtual async<> close() = 0;
+};
+
+class Connection {
+        friend class CORBA::ORB;
+
         ORB *orb;
 
-        // request id's are per connection
+        /**
+         * counter to create new outgoing request ids
+         */
         uint32_t requestId = 0;
 
+        /**
+         * for suspending coroutines via
+         *   co_await interlock.suspend(requestId)
+         *
+         */
         interlock<uint32_t, GIOPDecoder *> interlock;
 
+        // public:
         // bi-directional service context needs only to be send once
         bool didSendBiDirIIOP = false;
 
@@ -34,6 +55,8 @@ class Connection {
         // objectId to stub?
         std::map<blob, Stub *> stubsById;
 
+    public:
+        Connection(uint32_t initialRequestId = 0) {}
         // replies to be send back over this connection
         // number: RequestId
         // WeakMap? refcount tests
@@ -43,20 +66,13 @@ class Connection {
         // BigInt: ContextId
         // initialContextTokens = new Map<BigInt, InitialContextToken>()
 
-        virtual const std::string& localAddress() const = 0;
+        virtual const std::string &localAddress() const = 0;
         virtual uint16_t localPort() const = 0;
-        virtual const std::string& remoteAddress() const = 0;
+        virtual const std::string &remoteAddress() const = 0;
         virtual uint16_t remotePort() const = 0;
 
         virtual void close() = 0;
         virtual void send(void *buffer, size_t nbyte) = 0;
-};
-
-class Protocol {
-    public:
-        // hm... do we return something or do we call ORB?
-        virtual Connection *connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
-        virtual async<void> close() = 0;
 };
 
 }  // namespace detail
