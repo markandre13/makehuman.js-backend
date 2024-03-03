@@ -36,6 +36,9 @@ class CDREncoder {
         void writeShort(int16_t);
         void writeLong(int32_t);
         void writeLonglong(int64_t);
+        void writeFloat(float);
+        void writeDouble(double);
+        void writeLongDouble(long double);
         void writeBlob(const char *buffer, size_t nbytes);
         void writeString(const char *buffer);
         void writeString(const char *buffer, size_t nbytes);
@@ -67,6 +70,12 @@ class CDREncoder {
                 ++offset;
             }
         }
+        void align16() {
+            if (offset & 0x0F) {
+                offset |= 0x0F;
+                ++offset;
+            }
+        }
 };
 
 class CDRDecoder {
@@ -92,8 +101,9 @@ class CDRDecoder {
         int16_t readShort();
         int32_t readLong();
         int64_t readLonglong();
-        // float
-        // double
+        float readFloat();
+        double readDouble();
+        long double readLongDouble();
         CORBA::blob readBlob();
         std::string readString();
         std::string readString(size_t length);
@@ -130,6 +140,12 @@ class CDRDecoder {
                 ++m_offset;
             }
         }
+        void align16() {
+            if (m_offset & 0x0f) {
+                m_offset |= 0x0f;
+                ++m_offset;
+            }
+        }
 
     protected:
         const char *ptr2() {
@@ -154,6 +170,15 @@ class CDRDecoder {
             align8();
             auto ptr = _data + m_offset;
             m_offset += 8;
+            if (m_offset > length) {
+                throw std::out_of_range("out of range");
+            }
+            return ptr;
+        }
+        const char *ptr16() {
+            align16();
+            auto ptr = _data + m_offset;
+            m_offset += 16;
             if (m_offset > length) {
                 throw std::out_of_range("out of range");
             }

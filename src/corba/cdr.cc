@@ -1,7 +1,8 @@
 #include "cdr.hh"
 
-#include <iostream>
+#include <bit>
 #include <format>
+#include <iostream>
 
 using namespace std;
 
@@ -69,6 +70,30 @@ void CDREncoder::writeLonglong(int64_t value) {
     *ptr = value;
 }
 
+void CDREncoder::writeFloat(float value) {
+    align4();
+    reserve(offset + 4);
+    auto ptr = reinterpret_cast<float *>(_data.data() + offset);
+    offset += 4;
+    *ptr = value;
+}
+
+void CDREncoder::writeDouble(double value) {
+    align8();
+    reserve(offset + 8);
+    auto ptr = reinterpret_cast<double *>(_data.data() + offset);
+    offset += 8;
+    *ptr = value;
+}
+
+void CDREncoder::writeLongDouble(long double value) {
+    align16();
+    reserve(offset + 16);
+    auto ptr = reinterpret_cast<long double *>(_data.data() + offset);
+    offset += 16;
+    *ptr = value;
+}
+
 void CDREncoder::writeBlob(const char *value, size_t nbytes) {
     writeUlong(nbytes);
     reserve(offset + nbytes);
@@ -76,9 +101,7 @@ void CDREncoder::writeBlob(const char *value, size_t nbytes) {
     offset += nbytes;
 }
 
-void CDREncoder::writeString(const char *value) {
-    writeString(value, strlen(value));
-}
+void CDREncoder::writeString(const char *value) { writeString(value, strlen(value)); }
 void CDREncoder::writeString(const char *value, size_t nbytes) {
     writeUlong(nbytes + 1);
     reserve(offset + nbytes + 1);
@@ -189,6 +212,54 @@ int64_t CDRDecoder::readLonglong() {
     return value;
 }
 
+float CDRDecoder::readFloat() {
+    auto ptr = reinterpret_cast<const float *>(ptr4());
+    float value = *ptr;
+    if (std::endian::native != _endian) {
+        value = __builtin_bswap32(value);
+    }
+    return value;
+}
+
+double CDRDecoder::readDouble() {
+    auto value = *reinterpret_cast<const double *>(ptr8());
+    if (std::endian::native != _endian) {
+        value = __builtin_bswap64(value);
+    }
+    return value;
+}
+
+inline void swap16(void *v) {
+    char *in = static_cast<char*>(v);
+    char out[16];
+    out[0] = in[15];
+    out[1] = in[14];
+    out[2] = in[13];
+    out[3] = in[12];
+    out[4] = in[11];
+    out[5] = in[10];
+    out[6] = in[9];
+    out[7] = in[8];
+    out[8] = in[7];
+    out[9] = in[6];
+    out[10] = in[5];
+    out[11] = in[4];
+    out[12] = in[3];
+    out[13] = in[2];
+    out[14] = in[1];
+    out[15] = in[0];
+    memcpy(v, out, 16);
+}
+
+long double CDRDecoder::readLongDouble() {
+    auto value = *reinterpret_cast<const long double *>(ptr16());
+    if (std::endian::native != _endian) {
+        // value = __builtin_bswap128(value);
+        swap16(&value);
+    }
+    return value;
+}
+
 CORBA::blob CDRDecoder::readBlob() {
     size_t len = readUlong();
     auto buffer = _data + m_offset;
@@ -199,9 +270,7 @@ CORBA::blob CDRDecoder::readBlob() {
     return CORBA::blob(buffer, len);
 }
 
-std::string CDRDecoder::readString() {
-    return readString(readUlong());
-}
+std::string CDRDecoder::readString() { return readString(readUlong()); }
 
 std::string CDRDecoder::readString(size_t len) {
     auto buffer = _data + m_offset;
@@ -209,7 +278,7 @@ std::string CDRDecoder::readString(size_t len) {
     if (m_offset > length) {
         throw std::out_of_range("out of range");
     }
-    return std::string(buffer, len-1);
+    return std::string(buffer, len - 1);
 }
 
 CORBA::blob_view CDRDecoder::readBlobView() {
@@ -222,9 +291,7 @@ CORBA::blob_view CDRDecoder::readBlobView() {
     return CORBA::blob_view(buffer, len);
 }
 
-std::string_view CDRDecoder::readStringView() {
-    return readStringView(readUlong());
-}
+std::string_view CDRDecoder::readStringView() { return readStringView(readUlong()); }
 
 std::string_view CDRDecoder::readStringView(size_t len) {
     auto buffer = _data + m_offset;
@@ -232,7 +299,7 @@ std::string_view CDRDecoder::readStringView(size_t len) {
     if (m_offset > length) {
         throw std::out_of_range("out of range");
     }
-    return std::string_view(buffer, len-1);
+    return std::string_view(buffer, len - 1);
 }
 
 }  // namespace CORBA

@@ -500,8 +500,8 @@ shared_ptr<IOR> GIOPDecoder::readReference(size_t length) {
                     // }
                 } break;
                 default: {
-                    auto id = static_cast<unsigned>(profileId);
-                    cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
+                    // auto id = static_cast<unsigned>(profileId);
+                    // cerr << format("IOR: Unhandled profile id={} {:x}", id, id) << endl;
                 }
             }
         });

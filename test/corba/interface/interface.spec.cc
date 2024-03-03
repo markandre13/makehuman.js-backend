@@ -5,8 +5,6 @@
 #include "interface_stub.hh"
 #include "kaffeeklatsch.hh"
 
-#include <climits>
-
 namespace cppasync {
 
 #ifdef _COROUTINE_DEBUG
@@ -30,12 +28,18 @@ class Interface_impl : public Interface_skel {
 
         async<bool> callBoolean(bool value) override { co_return value; }
         async<uint8_t> callOctet(uint8_t value) override { co_return value; }  // check uint8_t with real CORBA
+
         async<uint16_t> callUShort(uint16_t value) override { co_return value; }
         async<uint32_t> callUnsignedLong(uint32_t value) override { co_return value; }
         async<uint64_t> callUnsignedLongLong(uint64_t value) override { co_return value; }
+
         async<int16_t> callShort(int16_t value) override { co_return value; }
         async<uint32_t> callLong(int32_t value) override { co_return value; }
         async<uint64_t> callLongLong(int64_t value) override { co_return value; }
+
+        async<float> callFloat(float value) override { co_return value; }
+        async<double> callDouble(double value) override { co_return value; }
+        async<long double> callLongDouble(long double value) override { co_return value; }
 
         async<string> callString(const string_view &value) override { co_return string(value); }
         async<blob> callBlob(const blob_view &value) override { co_return blob(value); }
@@ -115,6 +119,7 @@ kaffeeklatsch_spec([] {
 
                 expect(co_await backend->callBoolean(true)).to.equal(true);
                 expect(co_await backend->callOctet(42)).to.equal(42);
+
                 expect(co_await backend->callUShort(65535)).to.equal(65535);
                 expect(co_await backend->callUnsignedLong(4294967295ul)).to.equal(4294967295ul);
                 expect(co_await backend->callUnsignedLongLong(18446744073709551615ull)).to.equal(18446744073709551615ull);
@@ -122,6 +127,10 @@ kaffeeklatsch_spec([] {
                 expect(co_await backend->callShort(-32768)).to.equal(-32768);
                 expect(co_await backend->callLong(-2147483648l)).to.equal(-2147483648l);
                 expect(co_await backend->callLongLong(-9223372036854775807ll)).to.equal(-9223372036854775807ll);
+
+                expect(co_await backend->callFloat(3.40282e+38f)).to.equal(3.40282e+38f);
+                expect(co_await backend->callDouble(4.94066e-324)).to.equal(4.94066e-324);
+                expect(co_await backend->callLongDouble(1.1e+4932l)).to.equal(1.1e+4932l);
 
                 expect(co_await backend->callString("hello")).to.equal("hello");
                 expect(co_await backend->callBlob(blob_view("hello"))).to.equal(blob("hello"));

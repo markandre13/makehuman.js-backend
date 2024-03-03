@@ -173,6 +173,9 @@ class GIOPEncoder : public GIOPBase {
         inline void writeShort(int16_t value) { buffer.writeShort(value); }
         inline void writeLong(int32_t value) { buffer.writeLong(value); }
         inline void writeLonglong(int64_t value) { buffer.writeLonglong(value); }
+        inline void writeFloat(float value) { buffer.writeFloat(value); }
+        inline void writeDouble(double value) { buffer.writeDouble(value); }
+        inline void writeLongDouble(long double value) { buffer.writeLongDouble(value); }
 
         inline void writeString(const char *value) { buffer.writeString(value); }
         inline void writeString(const char *value, size_t size) { buffer.writeString(value, size); }
@@ -236,8 +239,9 @@ class GIOPDecoder : public GIOPBase {
         inline uint16_t readShort() { return buffer.readShort(); }
         inline uint32_t readLong() { return buffer.readLong(); }
         inline uint64_t readLonglong() { return buffer.readLonglong(); }
-        // float
-        // double
+        inline float readFloat() { return buffer.readFloat(); }
+        inline double readDouble() { return buffer.readDouble(); }
+        inline long double readLongDouble() { return buffer.readLongDouble(); }
 
         // WHEN DECODING AS OUT -> string|blob
         // WHEN DECODING AS IN  -> string_view|blob_view
