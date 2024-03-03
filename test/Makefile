@@ -31,8 +31,10 @@ SRC = corba/interface/interface.spec.cc corba/interface/interface.cc \
 	makehuman.cc \
 	main.cc util.cc fake.cc \
 	../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
- 	../src/corba/orb.cc ../src/corba/skeleton.cc ../src/corba/url.cc \
-	../src/corba/ior.cc ../src/corba/giop.cc ../src/corba/cdr.cc  ../src/corba/hexdump.cc
+	../src/corba/corba.cc ../src/corba/orb.cc \
+	../src/corba/ior.cc ../src/corba/skeleton.cc ../src/corba/stub.cc \
+	../src/corba/giop.cc ../src/corba/cdr.cc \
+	../src/corba/url.cc ../src/corba/hexdump.cc
 
 OBJ = $(SRC:.cc=.o)
 
@@ -93,6 +95,9 @@ makehuman.o: makehuman.hh makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh ../src/corba/hexdump.hh ../src/corba/blob.hh
 fake.o: fake.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
+../src/corba/corba.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
+../src/corba/corba.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
+../src/corba/corba.o: ../src/corba/cdr.hh ../src/corba/blob.hh
 ../src/corba/orb.o: ../src/corba/orb.hh ../src/corba/coroutine.hh
 ../src/corba/orb.o: ../upstream/cpptask/src/async.hh ../src/corba/giop.hh
 ../src/corba/orb.o: ../src/corba/cdr.hh ../src/corba/blob.hh
@@ -101,20 +106,15 @@ fake.o: fake.hh
 ../src/corba/orb.o: ../src/corba/stub.hh ../src/corba/exception.hh
 ../src/corba/orb.o: ../src/corba/hexdump.hh ../src/corba/protocol.hh
 ../src/corba/orb.o: ../src/corba/url.hh
-../src/corba/skeleton.o: ../src/corba/corba.hh ../src/corba/ior.hh
-../src/corba/skeleton.o: ../src/corba/object.hh ../src/corba/blob.hh
-../src/corba/skeleton.o: ../src/corba/skeleton.hh ../src/corba/coroutine.hh
-../src/corba/skeleton.o: ../upstream/cpptask/src/async.hh
-../src/corba/skeleton.o: ../src/corba/stub.hh ../src/corba/exception.hh
-../src/corba/skeleton.o: ../src/corba/orb.hh ../src/corba/giop.hh
-../src/corba/skeleton.o: ../src/corba/cdr.hh
-../src/corba/url.o: ../src/corba/url.hh ../src/corba/cdr.hh
-../src/corba/url.o: ../src/corba/blob.hh ../src/corba/giop.hh
-../src/corba/url.o: ../src/corba/corba.hh ../src/corba/ior.hh
-../src/corba/url.o: ../src/corba/object.hh ../src/corba/skeleton.hh
-../src/corba/url.o: ../src/corba/coroutine.hh
-../src/corba/url.o: ../upstream/cpptask/src/async.hh ../src/corba/stub.hh
-../src/corba/url.o: ../src/corba/exception.hh
+../src/corba/ior.o: ../src/corba/ior.hh ../src/corba/object.hh
+../src/corba/ior.o: ../src/corba/blob.hh ../src/corba/giop.hh
+../src/corba/ior.o: ../src/corba/cdr.hh
+../src/corba/skeleton.o: ../src/corba/skeleton.hh ../src/corba/object.hh
+../src/corba/skeleton.o: ../src/corba/blob.hh ../src/corba/coroutine.hh
+../src/corba/skeleton.o: ../upstream/cpptask/src/async.hh ../src/corba/orb.hh
+../src/corba/skeleton.o: ../src/corba/giop.hh ../src/corba/cdr.hh
+../src/corba/stub.o: ../src/corba/stub.hh ../src/corba/object.hh
+../src/corba/stub.o: ../src/corba/blob.hh
 ../src/corba/giop.o: ../src/corba/giop.hh ../src/corba/cdr.hh
 ../src/corba/giop.o: ../src/corba/blob.hh ../src/corba/corba.hh
 ../src/corba/giop.o: ../src/corba/ior.hh ../src/corba/object.hh
@@ -123,3 +123,10 @@ fake.o: fake.hh
 ../src/corba/giop.o: ../src/corba/exception.hh ../src/corba/hexdump.hh
 ../src/corba/giop.o: ../src/corba/orb.hh ../src/corba/protocol.hh
 ../src/corba/cdr.o: ../src/corba/cdr.hh ../src/corba/blob.hh
+../src/corba/url.o: ../src/corba/url.hh ../src/corba/cdr.hh
+../src/corba/url.o: ../src/corba/blob.hh ../src/corba/giop.hh
+../src/corba/url.o: ../src/corba/corba.hh ../src/corba/ior.hh
+../src/corba/url.o: ../src/corba/object.hh ../src/corba/skeleton.hh
+../src/corba/url.o: ../src/corba/coroutine.hh
+../src/corba/url.o: ../upstream/cpptask/src/async.hh ../src/corba/stub.hh
+../src/corba/url.o: ../src/corba/exception.hh

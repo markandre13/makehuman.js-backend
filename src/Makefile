@@ -19,9 +19,10 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lev -lwslay -lnettle
 
 SRC = main.cc \
-	corba/corba.cc corba/orb.cc corba/url.cc corba/ior.cc \
-	corba/skeleton.cc corba/giop.cc corba/cdr.cc \
-	corba/hexdump.cc \
+	corba/corba.cc corba/orb.cc \
+	corba/ior.cc corba/skeleton.cc corba/stub.cc \
+	corba/giop.cc corba/cdr.cc \
+	corba/url.cc corba/hexdump.cc \
 	corba/net/ws.cc corba/net/ws/socket.cc corba/net/ws/createAcceptKey.cc \
 
 OBJ = $(SRC:.cc=.o)
@@ -62,20 +63,22 @@ corba/orb.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
 corba/orb.o: corba/ior.hh corba/object.hh corba/skeleton.hh corba/stub.hh
 corba/orb.o: corba/exception.hh corba/hexdump.hh corba/protocol.hh
 corba/orb.o: corba/url.hh
-corba/url.o: corba/url.hh corba/cdr.hh corba/blob.hh corba/giop.hh
-corba/url.o: corba/corba.hh corba/ior.hh corba/object.hh corba/skeleton.hh
-corba/url.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
-corba/url.o: corba/stub.hh corba/exception.hh
-corba/skeleton.o: corba/corba.hh corba/ior.hh corba/object.hh corba/blob.hh
-corba/skeleton.o: corba/skeleton.hh corba/coroutine.hh
-corba/skeleton.o: ../upstream/cpptask/src/async.hh corba/stub.hh
-corba/skeleton.o: corba/exception.hh corba/orb.hh corba/giop.hh corba/cdr.hh
+corba/ior.o: corba/ior.hh corba/object.hh corba/blob.hh corba/giop.hh
+corba/ior.o: corba/cdr.hh
+corba/skeleton.o: corba/skeleton.hh corba/object.hh corba/blob.hh
+corba/skeleton.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
+corba/skeleton.o: corba/orb.hh corba/giop.hh corba/cdr.hh
+corba/stub.o: corba/stub.hh corba/object.hh corba/blob.hh
 corba/giop.o: corba/giop.hh corba/cdr.hh corba/blob.hh corba/corba.hh
 corba/giop.o: corba/ior.hh corba/object.hh corba/skeleton.hh
 corba/giop.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
 corba/giop.o: corba/stub.hh corba/exception.hh corba/hexdump.hh corba/orb.hh
 corba/giop.o: corba/protocol.hh
 corba/cdr.o: corba/cdr.hh corba/blob.hh
+corba/url.o: corba/url.hh corba/cdr.hh corba/blob.hh corba/giop.hh
+corba/url.o: corba/corba.hh corba/ior.hh corba/object.hh corba/skeleton.hh
+corba/url.o: corba/coroutine.hh ../upstream/cpptask/src/async.hh
+corba/url.o: corba/stub.hh corba/exception.hh
 corba/net/ws.o: corba/net/ws.hh corba/protocol.hh corba/coroutine.hh
 corba/net/ws.o: ../upstream/cpptask/src/async.hh corba/blob.hh corba/orb.hh
 corba/net/ws.o: corba/giop.hh corba/cdr.hh corba/net/ws/createAcceptKey.hh
