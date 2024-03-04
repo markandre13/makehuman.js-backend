@@ -29,11 +29,12 @@ kaffeeklatsch_spec([] {
 
                 std::exception_ptr eptr;
 
-                parallel(eptr, [] -> async<> {
+                parallel(eptr, [loop] -> async<> {
                     auto clientORB = make_shared<CORBA::ORB>();
                     auto protocol = new CORBA::net::WsProtocol();
                     clientORB->registerProtocol(protocol);
-                    auto object = co_await clientORB->stringToObject("corbaname::backend.local:9001#Backend");
+                    protocol->attach(clientORB.get(), loop);
+                    auto object = co_await clientORB->stringToObject("corbaname::localhost:9001#Backend");
                     auto backend = Backend::_narrow(object);
                 });
 
@@ -42,6 +43,8 @@ kaffeeklatsch_spec([] {
                 // simple non-repeating 5.5 second timeout
                 // ev_timer_init(&timeout_watcher, timeout_cb, 5.5, 0.);
                 // ev_timer_start(loop, &timeout_watcher);
+
+                // ev_break
 
                 ev_run(loop, 0);
 

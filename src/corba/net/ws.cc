@@ -8,6 +8,9 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+
+#include <arpa/inet.h>
+
 #include <stdio.h>  // for puts
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -34,17 +37,17 @@ static void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wsl
 struct listen_handler_t {
         ev_io watcher;
         struct ev_loop *loop;
-        CORBA::ORB *orb;
+        WsProtocol *protocol;
 };
 
 // libev user data for the client handler
-enum state_t { STATE_HTTP, STATE_WS };
+enum state_t { STATE_HTTP_SERVER, STATE_HTTP_CLIENT, STATE_WS };
 struct client_handler_t {
         ev_io watcher;
         struct ev_loop *loop;
 
         // for initial HTTP negotiation
-        state_t state = STATE_HTTP;
+        state_t state = STATE_HTTP_SERVER;
         std::string headers;
 
         // wslay context for established connections
@@ -53,20 +56,28 @@ struct client_handler_t {
         // for forwarding data from wslay to corba
         CORBA::ORB *orb;
         WsConnection *connection;
-
-        // void libuv_read_cb(ssize_t nbytes, const uv_buf_t *buf);
 };
 
 /**
  * Add a listen socket for the specified hostname and port to the libev loop
  */
 void WsProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port) {
-    int fd = create_listen_socket("localhost", 9001);
+    m_localAddress = hostname;
+    m_localPort = port;
+    m_orb = orb;
+    m_loop = loop;
+
+    int fd = create_listen_socket(hostname.c_str(), port);
     auto accept_watcher = new listen_handler_t;
     accept_watcher->loop = loop;
-    accept_watcher->orb = orb;
+    accept_watcher->protocol = this;
     ev_io_init(&accept_watcher->watcher, libev_accept_cb, fd, EV_READ);
     ev_io_start(loop, &accept_watcher->watcher);
+}
+
+void WsProtocol::attach(CORBA::ORB *orb, struct ev_loop *loop) {
+    m_orb = orb;
+    m_loop = loop;
 }
 
 // called by libev when a client want's to connect
@@ -88,20 +99,53 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
 
     auto client_handler = new client_handler_t();
     client_handler->loop = loop;
-    client_handler->orb = handler->orb;
+    client_handler->orb = handler->protocol->m_orb;
     // a serve will only send requests when BiDir was negotiated, and then starts with
     // requestId 1 and increments by 2
     // (while client starts with requestId 0 and also increments by 2)
     auto InitialResponderRequestIdBiDirectionalIIOP = 1;
-    client_handler->connection = new WsConnection("localhost", 9001, "frontend", 2, InitialResponderRequestIdBiDirectionalIIOP);
+    client_handler->connection =
+        new WsConnection(handler->protocol->m_localAddress, handler->protocol->m_localPort, "frontend", 2, InitialResponderRequestIdBiDirectionalIIOP);
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &client_handler->watcher);
 }
 
 WsConnection *WsProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
-    println("ORB WANT'S TO CONTACT A CLIENT. BUT IT'S NOT IMPLEMENTED YET.");
-    return nullptr;
+    int fd = connect_to(hostname.c_str(), port);
+    auto client_handler = new client_handler_t();
+    client_handler->state = STATE_HTTP_CLIENT;
+    client_handler->loop = m_loop;
+    client_handler->orb = m_orb;
+    // a serve will only send requests when BiDir was negotiated, and then starts with
+    // requestId 1 and increments by 2
+    // (while client starts with requestId 0 and also increments by 2)
+    // auto InitialResponderRequestIdBiDirectionalIIOP = 1;
+
+    string localAddress;
+    unsigned localPort;
+
+    if (m_localAddress.empty()) {
+        struct sockaddr_in server_addr, my_addr;
+        bzero(&my_addr, sizeof(my_addr));
+        socklen_t len = sizeof(my_addr);
+        getsockname(fd, (struct sockaddr *)&my_addr, &len);
+        char myIP[16];
+        inet_ntop(AF_INET, &my_addr.sin_addr, myIP, sizeof(myIP));
+        localAddress = myIP;
+        localPort = ntohs(my_addr.sin_port);
+    } else {
+        localAddress = m_localAddress;
+        localPort = m_localPort;
+    }
+    println("CONNECT LOCAL SOCKET IS {}:{}", localAddress, localPort);
+
+    client_handler->connection = new WsConnection(localAddress, localPort, hostname, port);
+    client_handler->connection->handler = client_handler;
+    ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
+    ev_io_start(m_loop, &client_handler->watcher);
+
+    return client_handler->connection;
 }
 
 CORBA::async<void> WsProtocol::close() { co_return; }
@@ -119,7 +163,7 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
             wslay_event_recv(handler->ctx);
             break;
 
-        case STATE_HTTP: {
+        case STATE_HTTP_SERVER: {
             char buffer[8192];
             ssize_t nbytes = recv(watcher->fd, buffer, 8192, 0);
             if (nbytes < 0) {

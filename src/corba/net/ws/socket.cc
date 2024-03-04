@@ -1,3 +1,28 @@
+/*
+ * Wslay - The WebSocket Library
+ *
+ * Copyright (c) 2011, 2012 Tatsuhiro Tsujikawa
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 #include <fcntl.h>
 #include <netdb.h>
 #include <signal.h>
@@ -52,6 +77,38 @@ int create_listen_socket(const char *hostname, uint16_t port) {
         return -1;
     }
     return sfd;
+}
+
+int connect_to(const char *host, uint16_t port) {
+  struct addrinfo hints;
+  int fd = -1;
+  int r;
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  struct addrinfo *res;
+  auto service = std::to_string(port);
+  r = getaddrinfo(host, service.c_str(), &hints, &res);
+  if (r != 0) {
+    std::cerr << "getaddrinfo: " << gai_strerror(r) << std::endl;
+    return -1;
+  }
+  for (struct addrinfo *rp = res; rp; rp = rp->ai_next) {
+    fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (fd == -1) {
+      continue;
+    }
+    while ((r = connect(fd, rp->ai_addr, rp->ai_addrlen)) == -1 &&
+           errno == EINTR)
+      ;
+    if (r == 0) {
+      break;
+    }
+    close(fd);
+    fd = -1;
+  }
+  freeaddrinfo(res);
+  return fd;
 }
 
 int make_non_block(int fd) {

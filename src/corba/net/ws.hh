@@ -34,8 +34,11 @@ class WsConnection : public CORBA::detail::Connection {
 struct WsProtocol : public CORBA::detail::Protocol {
         std::string m_localAddress;
         uint16_t m_localPort;
+        CORBA::ORB *m_orb;
+        struct ev_loop *m_loop;
 
         void listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port);
+        void attach(CORBA::ORB *orb, struct ev_loop *loop);
 
         WsConnection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
         CORBA::async<void> close() override;
