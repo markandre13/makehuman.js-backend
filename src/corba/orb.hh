@@ -35,7 +35,7 @@ class ORB : public std::enable_shared_from_this<ORB> {
         std::vector<detail::Connection*> connections;
 
     public:
-        detail::Connection * getConnection(std::string host, uint16_t port);
+        async<detail::Connection*> getConnection(std::string host, uint16_t port);
         void addConnection(detail::Connection *connection) { connections.push_back(connection); }
         ORB();
         void run();

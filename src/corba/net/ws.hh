@@ -40,7 +40,7 @@ struct WsProtocol : public CORBA::detail::Protocol {
         void listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string &hostname, uint16_t port);
         void attach(CORBA::ORB *orb, struct ev_loop *loop);
 
-        WsConnection *connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
+        async<detail::Connection*> connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) override;
         CORBA::async<void> close() override;
 };
 

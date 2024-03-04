@@ -124,7 +124,7 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
         if (addr.proto == "iiop") {
             // get remote NameService (FIXME: what if it's us?)
             // std::println("ORB::stringToObject(\"{}\"): get connection to {}:{}", iorString, addr.host, addr.port);
-            CORBA::detail::Connection *nameConnection = getConnection(addr.host, addr.port);
+            CORBA::detail::Connection *nameConnection = co_await getConnection(addr.host, addr.port);
             // std::println("ORB::stringToObject(\"{}\"): got connection to {}:{}", iorString, addr.host, addr.port);
             auto it = nameConnection->stubsById.find(name.objectKey);
             NamingContextExtStub *rootNamingContext;
@@ -150,13 +150,13 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
     throw runtime_error(format("ORB::stringToObject(\"{}\") failed", iorString));
 }
 
-detail::Connection *ORB::getConnection(string host, uint16_t port) {
+async<detail::Connection*> ORB::getConnection(string host, uint16_t port) {
     if (host == "::1") {
         host = "localhost";
     }
     for (auto conn : connections) {
         if (conn->remoteAddress() == host && conn->remotePort() == port) {
-            return conn;
+            co_return conn;
         }
     }
     for (auto proto : protocols) {
@@ -170,9 +170,9 @@ detail::Connection *ORB::getConnection(string host, uint16_t port) {
                 println("ORB : active connection {}:{}", conn->remoteAddress(), conn->remotePort());
             }
         }
-        CORBA::detail::Connection *connection = proto->connect(this, host, port);
+        CORBA::detail::Connection *connection = co_await proto->connect(this, host, port);
         connections.push_back(connection);
-        return connection;
+        co_return connection;
     }
     throw runtime_error(format("failed to allocate connection to {}:{}", host, port));
 }

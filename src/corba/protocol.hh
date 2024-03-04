@@ -25,7 +25,7 @@ class Connection;
 class Protocol {
     public:
         // hm... do we return something or do we call ORB?
-        virtual Connection *connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
+        virtual async<detail::Connection*> connect(const ORB *orb, const std::string &hostname, uint16_t port) = 0;
         virtual async<> close() = 0;
 };
 

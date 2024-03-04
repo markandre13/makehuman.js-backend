@@ -1,15 +1,16 @@
 #include "fake.hh"
+
 #include <corba/orb.hh>
 
 using std::println;
 
-CORBA::detail::Connection *FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
+CORBA::async<CORBA::detail::Connection *> FakeTcpProtocol::connect(const ::CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
     // println("TcpFakeConnection::connect(\"{}\", {})", hostname, port);
     auto conn = new TcpFakeConnection(this, m_localAddress, m_localPort, hostname, port);
     // printf("TcpFakeConnection::connect() -> %p %s:%u -> %s:%u requestId=%u\n", static_cast<void *>(conn), conn->localAddress().c_str(), conn->localPort(),
     //        conn->remoteAddress().c_str(), conn->remotePort(), conn->requestId);
     connections.push_back(conn);
-    return conn;
+    co_return conn;
 }
 
 CORBA::async<void> FakeTcpProtocol::close() { co_return; }
@@ -40,14 +41,14 @@ bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
                     }
                     if (conn == nullptr) {
                         // println("found no connection on destination, fake listen/accept and create one");
-                        conn = dynamic_cast<TcpFakeConnection *>(dst->m_orb->getConnection(packet.connection->localAddress(), packet.connection->localPort()));
+                        dst->m_orb->getConnection(packet.connection->localAddress(), packet.connection->localPort())
+                            .then([&](CORBA::detail::Connection *_conn) {
+                                conn = dynamic_cast<TcpFakeConnection *>(_conn);
+                            });
+                        // conn = dynamic_cast<TcpFakeConnection *>();
                     }
-                    println("==================== transmit from {}:{} to {}:{} ====================",
-                        packet.connection->localAddress(),
-                        packet.connection->localPort(),
-                        packet.connection->remoteAddress(),
-                        packet.connection->remotePort()
-                    );
+                    println("==================== transmit from {}:{} to {}:{} ====================", packet.connection->localAddress(),
+                            packet.connection->localPort(), packet.connection->remoteAddress(), packet.connection->remotePort());
                     dst->m_orb->_socketRcvd(conn, packet.buffer.data(), packet.buffer.size());
                     src->packets.erase(src->packets.begin());
                     return true;

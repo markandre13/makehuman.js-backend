@@ -10,4 +10,6 @@ using async = typename cppasync::async<T>;
 template <typename K, typename V>
 using interlock = typename cppasync::interlock<K, V>;
 
+using signal = typename cppasync::signal;
+
 }  // namespace CORBA

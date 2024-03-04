@@ -5,18 +5,17 @@
 #include "ws/socket.hh"
 
 // #include <ev.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-
-#include <arpa/inet.h>
-
 #include <stdio.h>  // for puts
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <wslay/wslay.h>
 
+#include <fstream>
 #include <iostream>
 #include <print>
 
@@ -45,10 +44,12 @@ enum state_t { STATE_HTTP_SERVER, STATE_HTTP_CLIENT, STATE_WS };
 struct client_handler_t {
         ev_io watcher;
         struct ev_loop *loop;
+        signal sig;
 
         // for initial HTTP negotiation
         state_t state = STATE_HTTP_SERVER;
         std::string headers;
+        std::string client_key;
 
         // wslay context for established connections
         wslay_event_context_ptr ctx;
@@ -111,8 +112,15 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     ev_io_start(loop, &client_handler->watcher);
 }
 
-WsConnection *WsProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
+async<detail::Connection *> WsProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
     int fd = connect_to(hostname.c_str(), port);
+    int val = 1;
+    if (make_non_block(fd) == -1 || setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val)) == -1) {
+        puts("failed to setup");
+        ::close(fd);
+        co_return nullptr;
+    }
+
     auto client_handler = new client_handler_t();
     client_handler->state = STATE_HTTP_CLIENT;
     client_handler->loop = m_loop;
@@ -126,7 +134,7 @@ WsConnection *WsProtocol::connect(const CORBA::ORB *orb, const std::string &host
     unsigned localPort;
 
     if (m_localAddress.empty()) {
-        struct sockaddr_in server_addr, my_addr;
+        struct sockaddr_in my_addr;
         bzero(&my_addr, sizeof(my_addr));
         socklen_t len = sizeof(my_addr);
         getsockname(fd, (struct sockaddr *)&my_addr, &len);
@@ -140,12 +148,43 @@ WsConnection *WsProtocol::connect(const CORBA::ORB *orb, const std::string &host
     }
     println("CONNECT LOCAL SOCKET IS {}:{}", localAddress, localPort);
 
+    string path = "/";
+    client_handler->client_key = create_clientkey();
+
+    auto get = format(
+        "GET {} HTTP/1.1\r\n"
+        "Host: {}:{}\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: {}\r\n"
+        "Sec-WebSocket-Version: 13\r\n"
+        "\r\n",
+        path, hostname, port, client_handler->client_key);
+
+    ssize_t r = send(fd, get.data(), get.size(), 0);
+    println("send http, got {}\n{}", r, get);
+    if (r != get.size()) {
+        throw runtime_error("failed");
+    }
+
     client_handler->connection = new WsConnection(localAddress, localPort, hostname, port);
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(m_loop, &client_handler->watcher);
 
-    return client_handler->connection;
+    println("suspend WsProtocol::connect()");
+    co_await client_handler->sig.suspend();
+    println("resume WsProtocol::connect()");
+
+    co_return client_handler->connection;
+}
+
+int genmask_callback(wslay_event_context_ptr ctx, uint8_t *buf, size_t len, void *user_data) {
+    client_handler_t *ws = (client_handler_t *)user_data;
+    ifstream dev_urand_("/dev/urandom");
+    dev_urand_.read((char *)buf, len);
+    //   ws->get_random(buf, len);
+    return 0;
 }
 
 CORBA::async<void> WsProtocol::close() { co_return; }
@@ -163,6 +202,7 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
             wslay_event_recv(handler->ctx);
             break;
 
+        case STATE_HTTP_CLIENT:
         case STATE_HTTP_SERVER: {
             char buffer[8192];
             ssize_t nbytes = recv(watcher->fd, buffer, 8192, 0);
@@ -189,48 +229,95 @@ void libev_read_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
             if (handler->headers.size() > 8192) {
                 std::cerr << "Too large http header" << std::endl;
             }
-            if (handler->headers.find("\r\n\r\n") != std::string::npos) {
-                std::string::size_type keyhdstart;
-                if (handler->headers.find("Upgrade: websocket\r\n") == std::string::npos ||
-                    handler->headers.find("Connection: Upgrade\r\n") == std::string::npos ||
-                    (keyhdstart = handler->headers.find("Sec-WebSocket-Key: ")) == std::string::npos) {
-                    std::cerr << "http_upgrade: missing required headers" << std::endl;
-                    // abort
-                    return;
-                }
-                keyhdstart += 19;
-                std::string::size_type keyhdend = handler->headers.find("\r\n", keyhdstart);
-                string client_key = handler->headers.substr(keyhdstart, keyhdend - keyhdstart);
-                string accept_key = create_acceptkey(client_key);
-                println("got HTTP request, switching to websocket");
+            switch (handler->state) {
+                case STATE_HTTP_CLIENT: {
+                    if (handler->headers.find("\r\n\r\n") != std::string::npos) {
+                        println("HTTP:CLIENT received http\n{}\n\n", handler->headers);
 
-                handler->headers.clear();
-                handler->state = STATE_WS;
+                        string& resheader = handler->headers;
 
-                string reply =
-                    "HTTP/1.1 101 Switching Protocols\r\n"
-                    "Upgrade: websocket\r\n"
-                    "Connection: Upgrade\r\n"
-                    "Sec-WebSocket-Accept: " +
-                    accept_key +
-                    "\r\n"
-                    "\r\n";
-                send(watcher->fd, reply.data(), reply.size(), 0);
+                        std::string::size_type keyhdstart;
+                        if ((keyhdstart = resheader.find("Sec-WebSocket-Accept: ")) == std::string::npos) {
+                            std::cerr << "http_upgrade: missing required headers" << std::endl;
+                            return;
+                        }
+                        keyhdstart += 22;
+                        std::string::size_type keyhdend = resheader.find("\r\n", keyhdstart);
+                        std::string accept_key = resheader.substr(keyhdstart, keyhdend - keyhdstart);
+                        if (accept_key == create_acceptkey(handler->client_key)) {
+                            auto body = resheader.substr(resheader.find("\r\n\r\n") + 4);
+                            println("CLIENT OK: HAVE {} MORE BYTES AFTER HEADER", body.size());
+                            // return;
+                        } else {
+                            println("CLIENT: SERVER SEND INVALID Sec-WebSocket-Accept");
+                            return;
+                        }
 
-                struct wslay_event_callbacks callbacks = {
-                    wslay_recv_callback,    // called when wslay wants to read data
-                    wslay_send_callback,    // called when wslay wants to send data
-                    NULL,                   /* genmask_callback */
-                    NULL,                   /* on_frame_recv_start_callback */
-                    NULL,                   /* on_frame_recv_callback */
-                    NULL,                   /* on_frame_recv_end_callback */
-                    wslay_msg_rcv_callback  // message received via wslay
-                };
-                wslay_event_context_server_init(&handler->ctx, &callbacks, handler);
-                // TODO: call wslay_event_context_free(...) when closing connection
+                        struct wslay_event_callbacks callbacks = {
+                            wslay_recv_callback,    // called when wslay wants to read data
+                            wslay_send_callback,    // called when wslay wants to send data
+                            genmask_callback,       /* genmask_callback */
+                            NULL,                   /* on_frame_recv_start_callback */
+                            NULL,                   /* on_frame_recv_callback */
+                            NULL,                   /* on_frame_recv_end_callback */
+                            wslay_msg_rcv_callback  // message received via wslay
+                        };
+                        printf("HANDLER %p, CTX %p: @0\n", handler, handler->ctx);
+                        if (wslay_event_context_client_init(&handler->ctx, &callbacks, handler) != 0) {
+                            printf("FAILED TO SETUP CLIENT CONTEXT\n");
+                        }
+                        printf("HANDLER %p, CTX %p: @1\n", handler, handler->ctx);
+
+                        handler->headers.clear();
+                        handler->state = STATE_WS;
+                        handler->sig.resume();
+                    }
+                } break;
+                case STATE_HTTP_SERVER:
+                    if (handler->headers.find("\r\n\r\n") != std::string::npos) {
+                        std::string::size_type keyhdstart;
+                        if (handler->headers.find("Upgrade: websocket\r\n") == std::string::npos ||
+                            handler->headers.find("Connection: Upgrade\r\n") == std::string::npos ||
+                            (keyhdstart = handler->headers.find("Sec-WebSocket-Key: ")) == std::string::npos) {
+                            std::cerr << "http_upgrade: missing required headers" << std::endl;
+                            // abort
+                            return;
+                        }
+                        keyhdstart += 19;
+                        std::string::size_type keyhdend = handler->headers.find("\r\n", keyhdstart);
+                        string client_key = handler->headers.substr(keyhdstart, keyhdend - keyhdstart);
+                        string accept_key = create_acceptkey(client_key);
+                        println("got HTTP request, switching to websocket");
+
+                        handler->headers.clear();
+                        handler->state = STATE_WS;
+
+                        string reply =
+                            "HTTP/1.1 101 Switching Protocols\r\n"
+                            "Upgrade: websocket\r\n"
+                            "Connection: Upgrade\r\n"
+                            "Sec-WebSocket-Accept: " +
+                            accept_key +
+                            "\r\n"
+                            "\r\n";
+                        send(watcher->fd, reply.data(), reply.size(), 0);
+
+                        struct wslay_event_callbacks callbacks = {
+                            wslay_recv_callback,    // called when wslay wants to read data
+                            wslay_send_callback,    // called when wslay wants to send data
+                            NULL,                   /* genmask_callback */
+                            NULL,                   /* on_frame_recv_start_callback */
+                            NULL,                   /* on_frame_recv_callback */
+                            NULL,                   /* on_frame_recv_end_callback */
+                            wslay_msg_rcv_callback  // message received via wslay
+                        };
+                        if (wslay_event_context_server_init(&handler->ctx, &callbacks, handler) != 0) {
+                            printf("FAILED TO SETUP SERVER CONTEXT");
+                        }
+                        // TODO: call wslay_event_context_free(...) when closing connection
+                    }
+                    break;
             }
-
-            printf("message:%s\n", buffer);
         } break;
     }
 }
@@ -251,6 +338,7 @@ void WsConnection::send(void *buffer, size_t nbyte) {
             //
             // and then call wslay_event_send() from there and remove the write callback
             // again. this way we won't get blocked on writes.
+            printf("HANDLER %p, CTX %p: @3\n", handler, handler->ctx);
             int r1 = wslay_event_send(this->handler->ctx);
             println("wslay_event_send() -> {}", r1);
         } break;

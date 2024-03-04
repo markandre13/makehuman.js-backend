@@ -15,7 +15,7 @@ using CORBA::async;
 kaffeeklatsch_spec([] {
     describe("net", [] {
         describe("websocket", [] {
-            xit("do it", [] {
+            fit("do it", [] {
                 struct ev_loop *loop = EV_DEFAULT;
 
                 // start server & client on the same ev loop
