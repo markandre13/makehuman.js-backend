@@ -13,7 +13,8 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <wslay/wslay.h>
+// #include <wslay/wslay.h>
+#include "../../../upstream/wslay/lib/wslay_event.h"
 
 #include <fstream>
 #include <iostream>
@@ -69,6 +70,9 @@ void WsProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string
     m_loop = loop;
 
     int fd = create_listen_socket(hostname.c_str(), port);
+    if (fd < 0) {
+        throw runtime_error(format("WsProtocol::listen(): {}:{}: {}", hostname, port, strerror(errno)));
+    }
     auto accept_watcher = new listen_handler_t;
     accept_watcher->loop = loop;
     accept_watcher->protocol = this;

@@ -43,7 +43,7 @@ void ignore_sig_pipe() {
 
 int create_listen_socket(const char *hostname, uint16_t port) {
     struct addrinfo hints;
-    int sfd = -1;
+
     int r;
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
@@ -56,26 +56,41 @@ int create_listen_socket(const char *hostname, uint16_t port) {
         std::cerr << "getaddrinfo: " << gai_strerror(r) << std::endl;
         return -1;
     }
+
+    int sfd = -1;
     for (struct addrinfo *rp = addrinfo; rp; rp = rp->ai_next) {
+        std::cerr << "CREATE SOCKET" << std::endl;
         sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (sfd == -1) {
+            std::cerr << "FAILED TO CREATE SOCKET: " << strerror(errno) << std::endl;
             continue;
         }
         int val = 1;
         if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &val, static_cast<socklen_t>(sizeof(val))) == -1) {
+            std::cerr << "FAILED TO REUSE SOCKET: " << strerror(errno) << std::endl;
+            close(sfd);
             continue;
         }
         if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0) {
+            std::cerr << "SUCCEEDED TO BIND SOCKET" << std::endl;
             break;
         }
+        std::cerr << "FAILED TO BIND SOCKET:" << strerror(errno) << std::endl;
         close(sfd);
+        sfd = -1;
     }
     freeaddrinfo(addrinfo);
+    if (sfd == -1) {
+        std::cerr << "FAILED TO CREATE ANY SOCKET" << std::endl;
+        return -1;
+    }
+
     if (listen(sfd, 16) == -1) {
-        perror("listen");
+        std::cerr << "failed to listen on socket " << sfd << ": " << strerror(errno) << std::endl;
         close(sfd);
         return -1;
     }
+    std::cerr << "created listen socket " << sfd << std::endl;
     return sfd;
 }
 

@@ -17,10 +17,18 @@ static CORBA::async<> _Backend_hello(Backend *obj, CORBA::GIOPDecoder &decoder, 
     encoder.writeString(result);
 }
 CORBA::async<std::string> Backend_stub::hello(const std::string_view & hello) {
-    return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
+    std::println("Backend_stub::hello(): ENTER");
+    auto r = co_await get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
         encoder.writeString(hello);
     },
-    [&](CORBA::GIOPDecoder &decoder) { return decoder.readString(); });
+    [&](CORBA::GIOPDecoder &decoder) { 
+        std::println("Backend_stub::hello(): DECODE RESULT STRING");
+        auto r = decoder.readString();
+        std::println("Backend_stub::hello(): DECODED RESULT STRING");
+        return r;
+    });
+    std::println("Backend_stub::hello(): LEAVE");
+    co_return r;
 }
 static CORBA::async<> _Backend_fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
@@ -52,7 +60,7 @@ std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer
             return std::shared_ptr<Backend>();
         }
         std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
-        CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
+        CORBA::detail::Connection *conn = ref->get_connection();
         auto stub = std::make_shared<Backend_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
         return std::dynamic_pointer_cast<Backend>(stub);
     }
@@ -104,7 +112,7 @@ std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> point
             return std::shared_ptr<Backend2>();
         }
         std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
-        CORBA::detail::Connection *conn = orb->getConnection(ref->host, ref->port);
+        CORBA::detail::Connection *conn = ref->get_connection();
         auto stub = std::make_shared<Backend2_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
         return std::dynamic_pointer_cast<Backend2>(stub);
     }

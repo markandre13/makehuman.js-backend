@@ -81,7 +81,8 @@ class NamingContextExtImpl : public Skeleton {
 
 class NamingContextExtStub : public Stub {
     public:
-        NamingContextExtStub(std::shared_ptr<CORBA::ORB> orb, const string &objectKey, detail::Connection *connection) : Stub(orb, blob_view(objectKey), connection) {}
+        NamingContextExtStub(std::shared_ptr<CORBA::ORB> orb, const string &objectKey, detail::Connection *connection)
+            : Stub(orb, blob_view(objectKey), connection) {}
         std::string_view repository_id() const override;
 
         // static narrow(object: any): NamingContextExtStub {
@@ -144,13 +145,17 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
             auto reference = co_await rootNamingContext->resolve_str(name.name);
             // std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
             reference->set_ORB(this->shared_from_this());
+
+            auto *objectConnection = co_await getConnection(reference->host, reference->port);
+            reference->set_connection(objectConnection);
+
             co_return dynamic_pointer_cast<Object, IOR>(reference);
         }
     }
     throw runtime_error(format("ORB::stringToObject(\"{}\") failed", iorString));
 }
 
-async<detail::Connection*> ORB::getConnection(string host, uint16_t port) {
+async<detail::Connection *> ORB::getConnection(string host, uint16_t port) {
     if (host == "::1") {
         host = "localhost";
     }
@@ -197,9 +202,13 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
                 requestId);
     }
     stub->connection->send((void *)encoder.buffer.data(), encoder.buffer.offset);
-    // println("ORB::_twowayCall(stub, \"{}\", ...) WAIT FOR REPLY", operation);
+    if (debug) {
+        println("ORB::_twowayCall(stub, \"{}\", ...) SUSPEND FOR REPLY", operation);
+    }
     GIOPDecoder *decoder = co_await stub->connection->interlock.suspend(requestId);
-    // println("ORB::_twowayCall(stub, \"{}\", ...) LEAVE WITH DECODER", operation);
+    if (debug) {
+        println("ORB::_twowayCall(stub, \"{}\", ...) RESUME WITH REPLY", operation);
+    }
 
     // move parts of this into a separate function so that it can be unit tested
     switch (decoder->replyStatus) {
@@ -239,7 +248,9 @@ async<GIOPDecoder *> ORB::_twowayCall(Stub *stub, const char *operation, std::fu
         default:
             throw runtime_error(format("ReplyStatusType {} is not supported", (unsigned)decoder->replyStatus));
     }
-
+    if (debug) {
+        println("ORB::_twowayCall(stub, \"{}\", ...) RETURN", operation);
+    }
     co_return decoder;
 }
 
@@ -280,7 +291,7 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
 
 void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t size) {
     if (debug) {
-        println("RECEIVED");
+        println("ORB::_socketRcvd()");
         hexdump(buffer, size);
     }
     CDRDecoder data((const char *)buffer, size);
@@ -401,6 +412,9 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
         } break;
         case MessageType::REPLY: {
             auto _data = decoder.scanReplyHeader();
+            if (debug) {
+                println("ORB::_socketRcvd(): REPLY, resume requestId {}", _data->requestId);
+            }
             try {
                 connection->interlock.resume(_data->requestId, &decoder);
             } catch (...) {

@@ -20,22 +20,33 @@ kaffeeklatsch_spec([] {
 
                 // start server & client on the same ev loop
                 auto serverORB = make_shared<CORBA::ORB>();
+                serverORB->debug = true;
                 auto protocol = new CORBA::net::WsProtocol();
                 serverORB->registerProtocol(protocol);
-                protocol->listen(serverORB.get(), loop, "localhost", 9001);
+                protocol->listen(serverORB.get(), loop, "localhost", 9002);
 
                 auto backend = make_shared<Backend_impl>(serverORB);
                 serverORB->bind("Backend", backend);
 
                 std::exception_ptr eptr;
 
-                parallel(eptr, [loop] -> async<> {
+                parallel(eptr, [loop, &eptr] -> async<> {
                     auto clientORB = make_shared<CORBA::ORB>();
                     auto protocol = new CORBA::net::WsProtocol();
                     clientORB->registerProtocol(protocol);
+                    clientORB->debug = true;
+
                     protocol->attach(clientORB.get(), loop);
-                    auto object = co_await clientORB->stringToObject("corbaname::localhost:9001#Backend");
+
+                    println("CLIENT: resolve 'Backend'");
+                    auto object = co_await clientORB->stringToObject("corbaname::localhost:9002#Backend");
                     auto backend = Backend::_narrow(object);
+                    println("CLIENT: call backend");
+                    auto result = co_await backend->hello("zoolock");
+                    println("CLIENT: got '{}'", result);
+                    expect(result).to.equal("zoolock world.");
+                    println("CLIENT: expected", result);
+                    ev_break(loop); // when the expect throws, we can't break the loop!!!
                 });
 
 
@@ -45,7 +56,7 @@ kaffeeklatsch_spec([] {
                 // ev_timer_start(loop, &timeout_watcher);
 
                 // ev_break
-
+                println("START LOOP");
                 ev_run(loop, 0);
 
                 if (eptr) {
