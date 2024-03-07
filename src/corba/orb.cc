@@ -145,10 +145,6 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
             auto reference = co_await rootNamingContext->resolve_str(name.name);
             // std::println("ORB::stringToObject(\"{}\"): got reference", iorString);
             reference->set_ORB(this->shared_from_this());
-
-            auto *objectConnection = co_await getConnection(reference->host, reference->port);
-            reference->set_connection(objectConnection);
-
             co_return dynamic_pointer_cast<Object, IOR>(reference);
         }
     }

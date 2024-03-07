@@ -15,7 +15,7 @@ using CORBA::async;
 kaffeeklatsch_spec([] {
     describe("net", [] {
         describe("websocket", [] {
-            fit("do it", [] {
+            it("do it", [] {
                 struct ev_loop *loop = EV_DEFAULT;
 
                 // start server & client on the same ev loop
@@ -30,7 +30,7 @@ kaffeeklatsch_spec([] {
 
                 std::exception_ptr eptr;
 
-                parallel(eptr, [loop, &eptr] -> async<> {
+                parallel(eptr, loop, [loop] -> async<> {
                     auto clientORB = make_shared<CORBA::ORB>();
                     auto protocol = new CORBA::net::WsProtocol();
                     clientORB->registerProtocol(protocol);
@@ -40,13 +40,13 @@ kaffeeklatsch_spec([] {
 
                     println("CLIENT: resolve 'Backend'");
                     auto object = co_await clientORB->stringToObject("corbaname::localhost:9002#Backend");
-                    auto backend = Backend::_narrow(object);
+                    auto backend = co_await Backend::_narrow(object);
                     println("CLIENT: call backend");
                     auto result = co_await backend->hello("zoolock");
                     println("CLIENT: got '{}'", result);
                     expect(result).to.equal("zoolock world.");
                     println("CLIENT: expected", result);
-                    ev_break(loop); // when the expect throws, we can't break the loop!!!
+                    // ev_break(loop); // when the expect throws, we can't break the loop!!!
                 });
 
 

@@ -17,18 +17,10 @@ static CORBA::async<> _Backend_hello(Backend *obj, CORBA::GIOPDecoder &decoder, 
     encoder.writeString(result);
 }
 CORBA::async<std::string> Backend_stub::hello(const std::string_view & hello) {
-    std::println("Backend_stub::hello(): ENTER");
-    auto r = co_await get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
+    return get_ORB()->twowayCall<std::string>(this, "hello", [&](CORBA::GIOPEncoder &encoder) {
         encoder.writeString(hello);
     },
-    [&](CORBA::GIOPDecoder &decoder) { 
-        std::println("Backend_stub::hello(): DECODE RESULT STRING");
-        auto r = decoder.readString();
-        std::println("Backend_stub::hello(): DECODED RESULT STRING");
-        return r;
-    });
-    std::println("Backend_stub::hello(): LEAVE");
-    co_return r;
+    [&](CORBA::GIOPDecoder &decoder) { return decoder.readString(); });
 }
 static CORBA::async<> _Backend_fail(Backend *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
     co_await obj->fail();
@@ -52,23 +44,23 @@ CORBA::async<> Backend_skel::_call(const std::string_view &operation, CORBA::GIO
 std::string_view Backend::_rid("IDL:Backend:1.0");
 std::string_view Backend::repository_id() const { return _rid;}
 
-std::shared_ptr<Backend> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer) {
+CORBA::async<std::shared_ptr<Backend>> Backend::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
     auto ref = dynamic_cast<CORBA::IOR *>(ptr);
     if (ref) {
         if (ref->repository_id() != "IDL:Backend:1.0") {
-            return std::shared_ptr<Backend>();
+            co_return std::shared_ptr<Backend>();
         }
         std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
-        CORBA::detail::Connection *conn = ref->get_connection();
+        CORBA::detail::Connection *conn = co_await orb->getConnection(ref->host, ref->port);
         auto stub = std::make_shared<Backend_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
-        return std::dynamic_pointer_cast<Backend>(stub);
+        co_return std::dynamic_pointer_cast<Backend>(stub);
     }
     auto obj = dynamic_cast<Backend*>(ptr);
     if (obj) {
-        return std::dynamic_pointer_cast<Backend>(pointer);
+        co_return std::dynamic_pointer_cast<Backend>(pointer);
     }
-    return std::shared_ptr<Backend>();
+    co_return std::shared_ptr<Backend>();
 }
 
 static CORBA::async<> _Backend2_chordata(Backend2 *obj, CORBA::GIOPDecoder &decoder, CORBA::GIOPEncoder &encoder) {
@@ -104,22 +96,22 @@ CORBA::async<> Backend2_skel::_call(const std::string_view &operation, CORBA::GI
 std::string_view Backend2::_rid("IDL:Backend2:1.0");
 std::string_view Backend2::repository_id() const { return _rid;}
 
-std::shared_ptr<Backend2> Backend2::_narrow(std::shared_ptr<CORBA::Object> pointer) {
+CORBA::async<std::shared_ptr<Backend2>> Backend2::_narrow(std::shared_ptr<CORBA::Object> pointer) {
     auto ptr = pointer.get();
     auto ref = dynamic_cast<CORBA::IOR *>(ptr);
     if (ref) {
         if (ref->repository_id() != "IDL:Backend2:1.0") {
-            return std::shared_ptr<Backend2>();
+            co_return std::shared_ptr<Backend2>();
         }
         std::shared_ptr<CORBA::ORB> orb = ref->get_ORB();
-        CORBA::detail::Connection *conn = ref->get_connection();
+        CORBA::detail::Connection *conn = co_await orb->getConnection(ref->host, ref->port);
         auto stub = std::make_shared<Backend2_stub>(orb, CORBA::blob_view(ref->objectKey), conn);
-        return std::dynamic_pointer_cast<Backend2>(stub);
+        co_return std::dynamic_pointer_cast<Backend2>(stub);
     }
     auto obj = dynamic_cast<Backend2*>(ptr);
     if (obj) {
-        return std::dynamic_pointer_cast<Backend2>(pointer);
+        co_return std::dynamic_pointer_cast<Backend2>(pointer);
     }
-    return std::shared_ptr<Backend2>();
+    co_return std::shared_ptr<Backend2>();
 }
 

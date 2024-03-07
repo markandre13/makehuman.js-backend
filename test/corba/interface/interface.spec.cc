@@ -46,14 +46,19 @@ class Interface_impl : public Interface_skel {
 
         std::shared_ptr<Peer> peer;
         async<void> setPeer(std::shared_ptr<Peer> aPeer) override {
+            // auto ps = std::dynamic_pointer_cast<Peer, Peer_stub>(aPeer);
+            auto ptr = dynamic_cast<Peer_stub*>(aPeer.get());
+            if (ptr && ptr->connection == nullptr) {
+                println("NO CONNECTION IN STUB !!!!!!!!!!!!!!!!");
+            }
             this->peer = aPeer;
             co_return;
         }
         async<std::string> callPeer(const std::string_view &value) override {
-            // println("INTERFACE IMPL: RECEIVED callPeer(\"{}\"): call peer", value);
+            println("INTERFACE IMPL: RECEIVED callPeer(\"{}\"): call peer", value);
             auto s = co_await peer->callString(string(value) + " to the");
             // value is not valid anymore
-            // println("INTERFACE IMPL: RECEIVED callPeer(...): peer returned \"{}\", return value \"{}.\"", s, s);
+            println("INTERFACE IMPL: RECEIVED callPeer(...): peer returned \"{}\", return value \"{}.\"", s, s);
             co_return s + ".";
         }
         // next steps:
@@ -89,7 +94,7 @@ kaffeeklatsch_spec([] {
 
             parallel(eptr, [&clientORB] -> async<> {
                 auto object = co_await clientORB->stringToObject("corbaname::backend.local:2809#Backend");
-                auto backend = Interface::_narrow(object);
+                auto backend = co_await Interface::_narrow(object);
 
                 expect(co_await backend->callBoolean(true)).to.equal(true);
                 expect(co_await backend->callOctet(42)).to.equal(42);

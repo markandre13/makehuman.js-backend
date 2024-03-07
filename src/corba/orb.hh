@@ -59,12 +59,8 @@ class ORB : public std::enable_shared_from_this<ORB> {
             std::function<void(GIOPEncoder &)> encode,
             std::function<T(GIOPDecoder &)> decode)
         {
-            std::println("ORB::twowayCall(): CALL");
             auto decoder = co_await _twowayCall(stub, operation, encode);
-            std::println("ORB::twowayCall(): DECODE");
-            auto result = decode(*decoder);
-            std::println("ORB::twowayCall(): RETURN");
-            co_return result;
+            co_return decode(*decoder);
         }
 
         // template <typename T>

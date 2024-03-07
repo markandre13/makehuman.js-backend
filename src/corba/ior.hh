@@ -12,7 +12,6 @@ class Connection;
 
 class IOR : public Object {
         std::shared_ptr<CORBA::ORB> orb;
-        detail::Connection *connection = nullptr;
 
     public:
         std::string oid;   // object/repository id, aka. "the type", e.g. IDL:MyClass:1.0
@@ -30,9 +29,6 @@ class IOR : public Object {
 
         std::shared_ptr<CORBA::ORB> get_ORB() const override { return orb; }
         inline void set_ORB(std::shared_ptr<CORBA::ORB> anORB) { orb = anORB; }
-
-        inline void set_connection(detail::Connection *aConnection) { connection = aConnection; }
-        inline detail::Connection * get_connection() const { return connection; }
 };
 
 }  // namespace CORBA

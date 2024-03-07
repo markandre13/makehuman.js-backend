@@ -1,9 +1,8 @@
 #include "util.hh"
 
-
 using namespace std;
 
-void sendChordata(void*, unsigned long) {}
+void sendChordata(void *, unsigned long) {}
 
 // due to
 //
@@ -29,6 +28,16 @@ void parallel(std::exception_ptr &eptr, std::function<CORBA::async<>()> closure)
                           [&eptr](std::exception_ptr _eptr) {
                               eptr = _eptr;
                           });
+}
+void parallel(std::exception_ptr &eptr, struct ev_loop *loop, std::function<CORBA::async<>()> closure) {
+    closure().thenOrCatch(
+        [loop] {
+            ev_break(loop);
+        },
+        [&eptr, loop](std::exception_ptr _eptr) {
+            eptr = _eptr;
+            ev_break(loop);
+        });
 }
 
 vector<uint8_t> parseOmniDump(const string_view &data) {
