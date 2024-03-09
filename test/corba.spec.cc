@@ -180,7 +180,7 @@ kaffeeklatsch_spec([] {
 //   [X] object references
 //   [ ] special handling for octet sequences
 //   [X] string_view instead of string for 'in'
-//   [ ] ORB::_socketRcvd
+//   [ ] ORB::socketRcvd
 //     [ ] abort coroutines when connection gets lost
 //     [ ] timeout
 //       [ ] connect

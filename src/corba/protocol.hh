@@ -32,12 +32,8 @@ class Protocol {
 class Connection {
         friend class CORBA::ORB;
 
-        ORB *orb;
+        // ORB *orb;
 
-        /**
-         * counter to create new outgoing request ids
-         */
-        uint32_t requestId = 0;
 
         /**
          * for suspending coroutines via
@@ -46,16 +42,20 @@ class Connection {
          */
         interlock<uint32_t, GIOPDecoder *> interlock;
 
-        // public:
-        // bi-directional service context needs only to be send once
-        bool didSendBiDirIIOP = false;
-
         // stubs may contain OID received via this connection
         // TODO: WeakMap? refcount tests
         // objectId to stub?
         std::map<blob, Stub *> stubsById;
 
+        /**
+         * counter to create new outgoing request ids
+         */
+        uint32_t requestId = 0;
+
     public:
+        // bi-directional service context needs only to be send once
+        bool didSendBiDirIIOP = false;
+
         Connection(uint32_t initialRequestId = 0) {}
         // replies to be send back over this connection
         // number: RequestId
@@ -65,6 +65,7 @@ class Connection {
         // CSIv2 context tokens received by the client
         // BigInt: ContextId
         // initialContextTokens = new Map<BigInt, InitialContextToken>()
+        virtual void addPeer(const std::string_view &hostname, uint16_t port) {}
 
         virtual const std::string &localAddress() const = 0;
         virtual uint16_t localPort() const = 0;

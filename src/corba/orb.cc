@@ -152,7 +152,7 @@ async<shared_ptr<Object>> ORB::stringToObject(const std::string &iorString) {
 }
 
 async<detail::Connection *> ORB::getConnection(string host, uint16_t port) {
-    if (host == "::1") {
+    if (host == "::1" || host == "127.0.0.1") {
         host = "localhost";
     }
     for (auto conn : connections) {
@@ -172,6 +172,7 @@ async<detail::Connection *> ORB::getConnection(string host, uint16_t port) {
             }
         }
         CORBA::detail::Connection *connection = co_await proto->connect(this, host, port);
+        println("CREATED CONNECTION FROM {}:{} TO {}:{}", connection->localAddress(), connection->remotePort(), connection->remoteAddress(), connection->remotePort());
         connections.push_back(connection);
         co_return connection;
     }
@@ -285,13 +286,14 @@ void ORB::bind(const std::string &id, std::shared_ptr<CORBA::Skeleton> const obj
     namingService->bind(id, obj);
 }
 
-void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t size) {
+void ORB::socketRcvd(detail::Connection *connection, const void *buffer, size_t size) {
     if (debug) {
-        println("ORB::_socketRcvd()");
+        println("ORB::socketRcvd()");
         hexdump(buffer, size);
     }
     CDRDecoder data((const char *)buffer, size);
     GIOPDecoder decoder(data);
+    decoder.connection = connection;
     auto type = decoder.scanGIOPHeader();
     switch (type) {
         case MessageType::REQUEST: {
@@ -351,7 +353,7 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                                 auto length = encoder->buffer.offset;
                                 encoder->setGIOPHeader(MessageType::REPLY);
                                 encoder->setReplyHeader(requestId, ReplyStatus::NO_EXCEPTION);
-                                // println("ORB::_socketRcvd(): send REPLY via connection->send(...)");
+                                // println("ORB::socketRcvd(): send REPLY via connection->send(...)");
                                 connection->send((void *)encoder->buffer.data(), length);
                             }
                         },
@@ -403,23 +405,23 @@ void ORB::_socketRcvd(detail::Connection *connection, const void *buffer, size_t
                 if (request->responseExpected) {
                     // send reply
                 }
-                cerr << "ORB::_socketRcvd: EXCEPTION: " << e.what() << endl;
+                cerr << "ORB::socketRcvd: EXCEPTION: " << e.what() << endl;
             }
         } break;
         case MessageType::REPLY: {
             auto _data = decoder.scanReplyHeader();
             if (debug) {
-                println("ORB::_socketRcvd(): REPLY, resume requestId {}", _data->requestId);
+                println("ORB::socketRcvd(): REPLY, resume requestId {}", _data->requestId);
             }
             try {
                 connection->interlock.resume(_data->requestId, &decoder);
             } catch (...) {
-                println("ORB::_socketRcvd(): unexpected reply to requestId {}", _data->requestId);
+                println("ORB::socketRcvd(): unexpected reply to requestId {}", _data->requestId);
             }
             break;
         } break;
         default:
-            cout << "ORB::_socketRcvd(): GOT YET UNIMPLEMENTED REQUEST OF TYPE " << static_cast<unsigned>(type) << endl;
+            cout << "ORB::socketRcvd(): GOT YET UNIMPLEMENTED REQUEST OF TYPE " << static_cast<unsigned>(type) << endl;
             break;
     }
 }

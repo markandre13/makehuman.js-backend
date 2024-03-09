@@ -1,7 +1,7 @@
 #include "interface.hh"
 
-#include "../../util.hh"
 #include "../../fake.hh"
+#include "../../util.hh"
 #include "interface_skel.hh"
 #include "interface_stub.hh"
 #include "kaffeeklatsch.hh"
@@ -46,11 +46,6 @@ class Interface_impl : public Interface_skel {
 
         std::shared_ptr<Peer> peer;
         async<void> setPeer(std::shared_ptr<Peer> aPeer) override {
-            // auto ps = std::dynamic_pointer_cast<Peer, Peer_stub>(aPeer);
-            auto ptr = dynamic_cast<Peer_stub*>(aPeer.get());
-            if (ptr && ptr->connection == nullptr) {
-                println("NO CONNECTION IN STUB !!!!!!!!!!!!!!!!");
-            }
             this->peer = aPeer;
             co_return;
         }
@@ -121,6 +116,48 @@ kaffeeklatsch_spec([] {
             vector<FakeTcpProtocol *> protocols = {serverProtocol, clientProtocol};
             while (transmit(protocols))
                 ;
+
+            if (eptr) {
+                std::rethrow_exception(eptr);
+            }
+        });
+
+        it("iiop", [] {
+            // SERVER
+            auto serverORB = make_shared<ORB>();
+            auto serverProtocol = new FakeTcpProtocol(serverORB.get(), "backend.local", 2809);
+            serverORB->registerProtocol(serverProtocol);
+            // serverORB->debug = true;
+            auto backend = make_shared<Interface_impl>(serverORB);
+            serverORB->bind("Backend", backend);
+
+            // CLIENT
+            auto clientORB = make_shared<ORB>();
+            // clientORB->debug = true;
+            auto clientProtocol = new FakeTcpProtocol(clientORB.get(), "frontend.local", 32768);
+            clientORB->registerProtocol(clientProtocol);
+
+            std::exception_ptr eptr;
+
+            parallel(eptr, [&clientORB] -> async<> {
+                auto object = co_await clientORB->stringToObject("corbaname::backend.local:2809#Backend");
+                auto backend = co_await Interface::_narrow(object);
+
+                auto frontend = make_shared<Peer_impl>(clientORB);
+                co_await backend->setPeer(frontend);
+                expect(co_await backend->callPeer("hello")).to.equal("hello to the world.");
+            });
+
+            vector<FakeTcpProtocol *> protocols = {serverProtocol, clientProtocol};
+            {
+                auto packet = clientProtocol->packets.front();
+                // this should contain the bidiriiop payload
+                transmit(protocols); // client to server
+                // server should have created a connection to client mentioned in bidiriiop payload
+                // ws.cc currently uses a hardcoded 'frontend:2'
+                // ...
+                // the receive must do the lookup, not the protocol
+            }
 
             if (eptr) {
                 std::rethrow_exception(eptr);

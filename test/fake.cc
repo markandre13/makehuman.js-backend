@@ -25,7 +25,7 @@ bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
     for (auto src : protocols) {
         if (!src->packets.empty()) {
             // println("found a packet to send");
-            auto packet = src->packets.front();
+            auto &packet = src->packets.front();
             for (auto dst : protocols) {
                 if (dst->m_localAddress == packet.connection->remoteAddress() && dst->m_localPort == packet.connection->remotePort()) {
                     // println("found destination protocol {}:{}", dst->m_localAddress, dst->m_localPort);
@@ -49,7 +49,7 @@ bool transmit(std::vector<FakeTcpProtocol *> &protocols) {
                     }
                     println("==================== transmit from {}:{} to {}:{} ====================", packet.connection->localAddress(),
                             packet.connection->localPort(), packet.connection->remoteAddress(), packet.connection->remotePort());
-                    dst->m_orb->_socketRcvd(conn, packet.buffer.data(), packet.buffer.size());
+                    dst->m_orb->socketRcvd(conn, packet.buffer.data(), packet.buffer.size());
                     src->packets.erase(src->packets.begin());
                     return true;
                 }

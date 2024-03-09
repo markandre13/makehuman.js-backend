@@ -20,7 +20,6 @@ namespace detail {
     class Connection;
 }
 
-
 class ORB : public std::enable_shared_from_this<ORB> {
     public:
         bool debug = false;
@@ -32,18 +31,15 @@ class ORB : public std::enable_shared_from_this<ORB> {
         uint64_t servantIdCounter = 0;
 
         std::vector<detail::Protocol*> protocols;
+    public:
         std::vector<detail::Connection*> connections;
 
-    public:
         async<detail::Connection*> getConnection(std::string host, uint16_t port);
         void addConnection(detail::Connection *connection) { connections.push_back(connection); }
         ORB();
-        void run();
 
         inline void registerProtocol(detail::Protocol *protocol) { protocols.push_back(protocol); }
-
-        static void socketRcvd(const uint8_t *buffer, size_t size);
-        void _socketRcvd(detail::Connection *connection, const void *buffer, size_t size);
+        void socketRcvd(detail::Connection *connection, const void *buffer, size_t size);
 
         async<std::shared_ptr<Object>> stringToObject(const std::string &iorString);
 

@@ -128,7 +128,7 @@ void GIOPEncoder::setReplyHeader(uint32_t requestId, ReplyStatus replyStatus) {
     // fixme: create and use version methods like isVersionLessThan(1,2) or isVersionVersionGreaterEqual(1,2)
     if (majorVersion == 1 && minorVersion < 2) {
         // this.serviceContext()
-       writeUlong(0);  // skipReplyHeader needs a fixed size service context
+        writeUlong(0);  // skipReplyHeader needs a fixed size service context
     }
     writeUlong(requestId);
     writeUlong(static_cast<uint32_t>(replyStatus));
@@ -142,7 +142,7 @@ void GIOPEncoder::encodeRequest(const CORBA::blob& objectKey, const std::string&
     skipGIOPHeader();
 
     if (majorVersion == 1 && minorVersion <= 1) {
-        serviceContext();
+        writeServiceContext();
     }
     writeUlong(requestId);
     if (majorVersion == 1 && minorVersion <= 1) {
@@ -163,39 +163,40 @@ void GIOPEncoder::encodeRequest(const CORBA::blob& objectKey, const std::string&
     if (majorVersion == 1 && minorVersion <= 1) {
         writeUlong(0);  // Requesting Principal length
     } else {
-        serviceContext();
+        writeServiceContext();
         buffer.align8();  // alignAndReserve(8);
     }
 }
 
-void GIOPEncoder::serviceContext() {
+void GIOPEncoder::writeServiceContext() {
     // TODO: remove this, this happens only in tests
-    // if (connection == nullptr) {
+    if (connection == nullptr) {
+        writeUlong(0);
+        return;
+    }
+
+    auto count = 0;
+    auto offset = buffer.offset;
     writeUlong(0);
-    return;
-    // }
-
-    // auto count = 1;
-    // let initialToken
-    // if (this.connection.orb.outgoingAuthenticator) {
-    //     initialToken = this.connection.orb.outgoingAuthenticator(this.connection)
-    //     if (initialToken) {
-    //         ++count
-    //     }
-    // }
-
-    // ulong(count); // count
 
     // CORBA 3.4 Part 2, 9.8.1 Bi-directional IIOP Service Context
     // TODO: send listen point only once per connection
-    // beginEncapsulation(ServiceId.BI_DIR_IIOP);
-    // ulong(1); // number of listen points
-    // string(connection->getLocalAddress());
-    // ushort(connection->getLocalPort());
-    // endEncapsulation();
+    if (!connection->didSendBiDirIIOP) {
+        ++count;
+        connection->didSendBiDirIIOP = true;
+        writeEncapsulation(ServiceId::BI_DIR_IIOP, [this] {
+            writeUlong(1); // number of listen points
+            writeString(connection->localAddress());
+            writeUshort(connection->localPort());
+        });
+    }
 
-    // if (initialToken) {
-    //     this.establishSecurityContext(initialToken);
+    // if (connection.orb.outgoingAuthenticator) {
+    //     initialToken = connection.orb.outgoingAuthenticator(this.connection)
+    //     if (initialToken) {
+    //         ++count
+    //         this.establishSecurityContext(initialToken);
+    //     }
     // }
 
     /*
@@ -205,6 +206,11 @@ void GIOPEncoder::serviceContext() {
     this.ulong(0x00010109) // wcharset_id: UTF-16
     this.endEncapsulation()
     */
+
+   auto offset0 = buffer.offset;
+   buffer.offset = offset;
+   writeUlong(count);
+   buffer.offset = offset0;
 }
 
 ////////////////////////////////////////////
@@ -228,7 +234,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
     // auto header = reinterpret_cast<const RequestHeader*>(buffer.data() + offset);
     // make_unique<RequestHeader>();
     if (majorVersion == 1 && minorVersion <= 1) {
-        serviceContext();
+        readServiceContext();
         cout << "SERVICE CONTEXT" << endl;
     }
     auto header = new RequestHeader();
@@ -274,7 +280,7 @@ const RequestHeader* GIOPDecoder::scanRequestHeader() {
         auto requestingPrincipalLength = readUlong();
         // FIXME: this.offset += requestingPrincipalLength???
     } else {
-        serviceContext();
+        readServiceContext();
         // header->serviceContext = serviceContext();
         buffer.align8();
     }
@@ -304,27 +310,34 @@ const LocateRequest* GIOPDecoder::scanLocateRequest() {
 
 unique_ptr<ReplyHeader> GIOPDecoder::scanReplyHeader() {
     if (majorVersion == 1 && minorVersion <= 1) {
-        serviceContext();
+        readServiceContext();
     }
     this->requestId = readUlong();
     this->replyStatus = static_cast<ReplyStatus>(readUlong());
     if (majorVersion == 1 && minorVersion >= 2) {
-        serviceContext();
+        readServiceContext();
     }
     return make_unique<ReplyHeader>(this->requestId, this->replyStatus);
 }
 
-void GIOPDecoder::serviceContext() {
+void GIOPDecoder::readServiceContext() {
     auto serviceContextListLength = readUlong();
     for (size_t i = 0; i < serviceContextListLength; ++i) {
-        readEncapsulation([](ServiceId serviceId) {
+        readEncapsulation([this](ServiceId serviceId) {
             switch (serviceId) {
                 case ServiceId::CodeSets:
                     // std::cout << "ServiceContext CodeSets" << std::endl;
                     break;
-                case ServiceId::BI_DIR_IIOP:
+                case ServiceId::BI_DIR_IIOP: {  
                     cout << "ServiceContext BI_DIR_IIOP" << endl;
-                    break;
+                    auto count = readUlong();
+                    for(auto i = 0; i<count; ++i) {
+                        auto host = readStringView();
+                        auto port = readUshort();
+                        cout << "    " << host << ":" << port << endl;
+                        connection->addPeer(host, port);
+                    }
+                } break;
                 case ServiceId::SecurityAttributeService:
                     cout << "ServiceContext SecurityAttributeService" << endl;
                     break;

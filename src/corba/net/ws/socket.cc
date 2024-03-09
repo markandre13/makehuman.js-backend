@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <netinet/tcp.h>
 #include <unistd.h>
 
 #include <cstring>
@@ -43,15 +44,14 @@ void ignore_sig_pipe() {
 
 int create_listen_socket(const char *hostname, uint16_t port) {
     struct addrinfo hints;
-
-    int r;
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
-    struct addrinfo *addrinfo;
     auto service = std::to_string(port);
-    r = getaddrinfo(0, service.c_str(), &hints, &addrinfo);
+
+    struct addrinfo *addrinfo;
+    int r = getaddrinfo(0, service.c_str(), &hints, &addrinfo);
     if (r != 0) {
         std::cerr << "getaddrinfo: " << gai_strerror(r) << std::endl;
         return -1;
@@ -126,7 +126,7 @@ int connect_to(const char *host, uint16_t port) {
   return fd;
 }
 
-int make_non_block(int fd) {
+int set_non_block(int fd) {
     int flags, r;
     while ((flags = fcntl(fd, F_GETFL, 0)) == -1 && errno == EINTR)
         ;
@@ -139,4 +139,9 @@ int make_non_block(int fd) {
         return -1;
     }
     return 0;
+}
+
+int set_no_delay(int fd) {
+    int val = 1;
+    return setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val));
 }

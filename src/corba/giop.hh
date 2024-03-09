@@ -151,7 +151,7 @@ class GIOPBase {
         const unsigned ENDIAN_LITTLE = 0;
         const unsigned ENDIAN_BIG = 1;
 
-        detail::Connection *connection;
+        detail::Connection *connection = nullptr;
 };
 
 class GIOPEncoder : public GIOPBase {
@@ -196,7 +196,7 @@ class GIOPEncoder : public GIOPBase {
         void setGIOPHeader(MessageType type);
         void setReplyHeader(uint32_t requestId, CORBA::ReplyStatus replyStatus);
         void encodeRequest(const CORBA::blob &objectKey, const std::string &operation, uint32_t requestId, bool responseExpected);
-        void serviceContext();
+        void writeServiceContext();
 };
 
 class GIOPDecoder : public GIOPBase {
@@ -214,7 +214,7 @@ class GIOPDecoder : public GIOPBase {
         const LocateRequest *scanLocateRequest();
         std::unique_ptr<ReplyHeader> scanReplyHeader();
 
-        void serviceContext();
+        void readServiceContext();
 
         // CORBA 3.4 Part 2, 9.3.3 Encapsulation
         // Used for ServiceContext, Profile and Component

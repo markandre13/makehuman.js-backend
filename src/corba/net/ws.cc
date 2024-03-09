@@ -4,16 +4,15 @@
 #include "ws/createAcceptKey.hh"
 #include "ws/socket.hh"
 
-// #include <ev.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <stdio.h>  // for puts
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <unistd.h>
-// #include <wslay/wslay.h>
+#include <uuid/uuid.h>
+
 #include "../../../upstream/wslay/lib/wslay_event.h"
 
 #include <fstream>
@@ -80,6 +79,9 @@ void WsProtocol::listen(CORBA::ORB *orb, struct ev_loop *loop, const std::string
     ev_io_start(loop, &accept_watcher->watcher);
 }
 
+/**
+ * Attach the protocol to the libev loop but do not open a server socket.
+ */
 void WsProtocol::attach(CORBA::ORB *orb, struct ev_loop *loop) {
     m_orb = orb;
     m_loop = loop;
@@ -95,8 +97,8 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     }
 
     int fd = accept(watcher->fd, 0, 0);
-    int val = 1;
-    if (make_non_block(fd) == -1 || setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val)) == -1) {
+
+    if (set_non_block(fd) == -1 || set_no_delay(fd) == -1) {
         puts("failed to setup");
         close(fd);
         return;
@@ -111,15 +113,18 @@ void libev_accept_cb(struct ev_loop *loop, struct ev_io *watcher, int revents) {
     auto InitialResponderRequestIdBiDirectionalIIOP = 1;
     client_handler->connection =
         new WsConnection(handler->protocol->m_localAddress, handler->protocol->m_localPort, "frontend", 2, InitialResponderRequestIdBiDirectionalIIOP);
+    handler->protocol->m_orb->connections.push_back(client_handler->connection);
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &client_handler->watcher);
 }
 
 async<detail::Connection *> WsProtocol::connect(const CORBA::ORB *orb, const std::string &hostname, uint16_t port) {
+    println("WsProtocol::connect(orb, \"{}\", {})", hostname, port);
+
     int fd = connect_to(hostname.c_str(), port);
     int val = 1;
-    if (make_non_block(fd) == -1 || setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &val, (socklen_t)sizeof(val)) == -1) {
+    if (set_non_block(fd) == -1 || set_no_delay(fd) == -1) {
         puts("failed to setup");
         ::close(fd);
         co_return nullptr;
@@ -129,28 +134,27 @@ async<detail::Connection *> WsProtocol::connect(const CORBA::ORB *orb, const std
     client_handler->state = STATE_HTTP_CLIENT;
     client_handler->loop = m_loop;
     client_handler->orb = m_orb;
-    // a serve will only send requests when BiDir was negotiated, and then starts with
+    // a server will only send requests when BiDir was negotiated, and then starts with
     // requestId 1 and increments by 2
     // (while client starts with requestId 0 and also increments by 2)
     // auto InitialResponderRequestIdBiDirectionalIIOP = 1;
 
-    string localAddress;
-    unsigned localPort;
-
     if (m_localAddress.empty()) {
+        // this orb/protocol has no listen port, assume bi-directional iiop and makeup a hostname
+        // using a random number also helps avoiding collisions with other orbs on the peer
+        uuid_t uuid;
+        uuid_string_t uuid_str;
+        uuid_generate_random(uuid);
+        uuid_unparse_lower(uuid, uuid_str);
+        m_localAddress = uuid_str;
+
         struct sockaddr_in my_addr;
         bzero(&my_addr, sizeof(my_addr));
         socklen_t len = sizeof(my_addr);
         getsockname(fd, (struct sockaddr *)&my_addr, &len);
-        char myIP[16];
-        inet_ntop(AF_INET, &my_addr.sin_addr, myIP, sizeof(myIP));
-        localAddress = myIP;
-        localPort = ntohs(my_addr.sin_port);
-    } else {
-        localAddress = m_localAddress;
-        localPort = m_localPort;
+        m_localPort = ntohs(my_addr.sin_port);
     }
-    println("CONNECT LOCAL SOCKET IS {}:{}", localAddress, localPort);
+    println("CONNECT LOCAL SOCKET IS {}:{}", m_localAddress, m_localPort);
 
     string path = "/";
     client_handler->client_key = create_clientkey();
@@ -166,12 +170,12 @@ async<detail::Connection *> WsProtocol::connect(const CORBA::ORB *orb, const std
         path, hostname, port, client_handler->client_key);
 
     ssize_t r = send(fd, get.data(), get.size(), 0);
-    println("send http, got {}\n{}", r, get);
+    // println("send http, got {}\n{}", r, get);
     if (r != get.size()) {
         throw runtime_error("failed");
     }
 
-    client_handler->connection = new WsConnection(localAddress, localPort, hostname, port);
+    client_handler->connection = new WsConnection(m_localAddress, m_localPort, hostname, port);
     client_handler->connection->handler = client_handler;
     ev_io_init(&client_handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(m_loop, &client_handler->watcher);
@@ -406,7 +410,7 @@ ssize_t wslay_recv_callback(wslay_event_context_ptr ctx, uint8_t *data, size_t l
 void wslay_msg_rcv_callback(wslay_event_context_ptr ctx, const struct wslay_event_on_msg_recv_arg *arg, void *user_data) {
     println("wslay_msg_rcv_callback");
     auto handler = reinterpret_cast<client_handler_t *>(user_data);
-    handler->orb->_socketRcvd(handler->connection, arg->msg, arg->msg_length);
+    handler->orb->socketRcvd(handler->connection, arg->msg, arg->msg_length);
     // arg->msg = nullptr; // THIS NEEDS A CHANGE IN WSLAY
 }
 

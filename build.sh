@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-# brew install opencv@3 wslay
+# brew install opencv@3 wslay ossp-uuid
 
 # once mediapipe_cpp_lib has been build:
 

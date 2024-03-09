@@ -35,7 +35,7 @@ SRC =  corba/net/ws.spec.cc ../src/corba/net/ws.cc \
 	  makehuman.cc makehuman_impl.cc \
 	  main.cc util.cc fake.cc \
 	  ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
-	  ../src/corba/corba.cc ../src/corba/orb.cc \
+	  ../src/corba/orb.cc \
 	  ../src/corba/ior.cc ../src/corba/skeleton.cc ../src/corba/stub.cc \
 	  ../src/corba/giop.cc ../src/corba/cdr.cc \
 	  ../src/corba/url.cc ../src/corba/hexdump.cc \
