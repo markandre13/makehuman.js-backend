@@ -11,8 +11,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../../makehuman_impl.hh"
-#include "../../makehuman_stub.hh"
+#include "../interface/interface_impl.hh"
+#include "../interface/interface_skel.hh"
 #include "../../util.hh"
 #include "../src/corba/corba.hh"
 #include "kaffeeklatsch.hh"
@@ -70,7 +70,7 @@ kaffeeklatsch_spec([] {
                 // }
                 // freeaddrinfo(addrinfo);
             });
-            it("do it", [] {
+            it("bi-directional iiop connection", [] {
                 struct ev_loop *loop = EV_DEFAULT;
 
                 // start server & client on the same ev loop
@@ -80,7 +80,7 @@ kaffeeklatsch_spec([] {
                 serverORB->registerProtocol(protocol);
                 protocol->listen(serverORB.get(), loop, "localhost", 9002);
 
-                auto backend = make_shared<Backend_impl>(serverORB);
+                auto backend = make_shared<Interface_impl>(serverORB);
                 serverORB->bind("Backend", backend);
 
                 std::exception_ptr eptr;
@@ -88,7 +88,6 @@ kaffeeklatsch_spec([] {
                 auto clientORB = make_shared<CORBA::ORB>();
 
                 parallel(eptr, loop, [loop, clientORB] -> async<> {
-                   
                     auto protocol = new CORBA::net::WsProtocol();
                     clientORB->registerProtocol(protocol);
                     clientORB->debug = true;
@@ -97,21 +96,14 @@ kaffeeklatsch_spec([] {
 
                     println("CLIENT: resolve 'Backend'");
                     auto object = co_await clientORB->stringToObject("corbaname::localhost:9002#Backend");
-                    auto backend = co_await Backend::_narrow(object);
-                    // println("CLIENT: call backend");
-                    // auto result = co_await backend->hello("zoolock");
-                    // println("CLIENT: got '{}'", result);
-                    // expect(result).to.equal("zoolock world.");
-                    // println("CLIENT: expected", result);
-                    // ev_break(loop); // when the expect throws, we can't break the loop!!!
+                    auto backend = co_await Interface::_narrow(object);
+                    println("CLIENT: call backend");
+
+                    auto frontend = make_shared<Peer_impl>(clientORB);
+                    co_await backend->setPeer(frontend);
+                    expect(co_await backend->callPeer("hello")).to.equal("hello to the world.");
                 });
 
-                // initialise a timer watcher, then start it
-                // simple non-repeating 5.5 second timeout
-                // ev_timer_init(&timeout_watcher, timeout_cb, 5.5, 0.);
-                // ev_timer_start(loop, &timeout_watcher);
-
-                // ev_break
                 println("START LOOP");
                 ev_run(loop, 0);
 
@@ -136,8 +128,6 @@ kaffeeklatsch_spec([] {
 
                 expect(clientConn->localAddress()).to.equal(serverConn->remoteAddress());
                 expect(clientConn->localPort()).to.equal(serverConn->remotePort());
-
-                // that connection should have localhost (or it's ip) and the UUID for host and port
             });
         });
     });
