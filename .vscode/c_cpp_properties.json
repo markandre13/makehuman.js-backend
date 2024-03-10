@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${default}",
+                "${workspaceFolder}/upstream/kaffeeklatsch/src",
+                "${workspaceFolder}/upstream/corba.cc/src"
+            ],
+            "defines": [],
+            "macFrameworkPath": [
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/System/Library/Frameworks"
+            ],
+            "cStandard": "c17",
+            "intelliSenseMode": "macos-clang-x64",
+            "compilerPath": "/usr/local/opt/llvm/bin/clang++",
+            "compilerArgs": [
+                "-std=c++23",
+                "-fmodules"
+            ],
+            "cppStandard": "c++23"
+        }
+    ],
+    "version": 4
+}
