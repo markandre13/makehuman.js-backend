@@ -3,12 +3,7 @@
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 
-CORBA::async<std::string> Backend_impl::hello(const std::string_view &word) {
-    std::println("Backend_impl::hello(\"{}\") -> \"{} world.\"", word, word);
-    co_return std::string(word) + " world.";
-}
-
-CORBA::async<> Backend_impl::fail() {
-    throw CORBA::BAD_OPERATION(0, CORBA::YES);
+CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
+    frontend = aFrontend;
     co_return;
 }

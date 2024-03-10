@@ -1,6 +1,7 @@
 APP=backend
 
-APP_SRC=main.cc
+APP_SRC=main.cc makehuman_impl.cc makehuman.cc
+IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc hexdump.cc \
@@ -23,10 +24,7 @@ MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
 LIB=-lprotobuf -lgmod -lev -lwslay -lnettle
 
 SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC))
-
 OBJ = $(SRC:.cc=.o)
-
-.SUFFIXES: .idl .cc .c .h .hh .o
 
 all: $(APP)
 
@@ -40,7 +38,12 @@ valgrind:
         /usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
 
 clean:
-	rm -f $(OBJ)
+	rm -f $(OBJ) $(IDL_GEN)
+
+.SUFFIXES: .idl .cc .c .h .hh .o
+
+$(IDL_GEN): makehuman.idl
+	bun ../upstream/corba.js/src/idl/idl.ts --cc-all makehuman.idl
 
 $(APP): $(OBJ)
 	@echo "linking..."
@@ -51,11 +54,11 @@ $(APP): $(OBJ)
 	$(CXX) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
 	-c -o $*.o $*.cc
 
-makehuman.hh: makehuman.idl
-	bun ../upstream/corba.js/src/idl/idl.ts --cc-all makehuman.idl
-
 # DO NOT DELETE
 
+main.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
+makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
+makehuman.o: makehuman.hh makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh

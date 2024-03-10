@@ -1,26 +1,27 @@
+#include <print>
+
 #include <corba/corba.hh>
 #include <corba/net/ws.hh>
+
+#include "makehuman_impl.hh"
 
 using namespace std;
 
 int main(void) {
-    printf("running\n");
+    println("makehuman.js backend");
 
-    // auto orb = make_shared<CORBA::ORB>();
-    // auto protocol = new WsProtocol();
-    // orb->registerProtocol(protocol);
-    // auto backend = make_shared<Backend_impl>(orb);
-    // orb->bind("Backend", backend);
+    auto orb = make_shared<CORBA::ORB>();
+    auto backend = make_shared<Backend_impl>(orb);
+    orb->bind("Backend", backend);
 
-    // struct ev_loop *loop = EV_DEFAULT;
-    // protocol->listen(orb.get(), loop, "localhost", 9001);
+    struct ev_loop *loop = EV_DEFAULT;
+    auto protocol = new CORBA::net::WsProtocol();
+    protocol->listen(orb.get(), loop, "localhost", 9001);
 
-    // // initialise a timer watcher, then start it
-    // // simple non-repeating 5.5 second timeout
-    // // ev_timer_init(&timeout_watcher, timeout_cb, 5.5, 0.);
-    // // ev_timer_start(loop, &timeout_watcher);
+    orb->registerProtocol(protocol);
 
-    // ev_run(loop, 0);
+    println("the audience is listening...");
+    ev_run(loop, 0);
 
     return 0;
 }

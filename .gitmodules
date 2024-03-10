@@ -7,3 +7,6 @@
 [submodule "upstream/corba.cc"]
 	path = upstream/corba.cc
 	url = git@github.com:markandre13/corba.cc.git
+[submodule "upstream/makehuman.js"]
+	path = upstream/makehuman.js
+	url = git@github.com:markandre13/makehuman.js.git

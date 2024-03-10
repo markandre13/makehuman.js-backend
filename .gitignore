@@ -1,4 +1,8 @@
 src/backend
+src/makehuman.cc
+src/makehuman.hh
+src/makehuman_skel.hh
+src/makehuman_stub.hh
 test/tests
 .vscode
 .DS_Store
