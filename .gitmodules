@@ -1,9 +1,9 @@
 [submodule "upstream/kaffeeklatsch"]
 	path = upstream/kaffeeklatsch
 	url = git@github.com:markandre13/kaffeeklatsch.git
-[submodule "upstream/cpptask"]
-	path = upstream/cpptask
-	url = git@github.com:markandre13/cpptask.git
 [submodule "upstream/corba.js"]
 	path = upstream/corba.js
 	url = git@github.com:markandre13/corba.js.git
+[submodule "upstream/corba.cc"]
+	path = upstream/corba.cc
+	url = git@github.com:markandre13/corba.cc.git
