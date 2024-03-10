@@ -8,15 +8,14 @@ Experts only for now.
 
 ### Technical
 
-* the networking code is organized around the WebSocket library we are using
 * mediapipe will open a window, which on macOS means that the mediapipe code
   needs to run in the main thread
-* since there is still no WebTransport in Safari, the implementation currently
-  uses WebSockets and the client needs to pull events from the daemon.
+* frontend and backend use websocket to communicate with the intention to
+  move to webtransport later. the protocol on top of that is corba.
 
 ### Code
 
-I'm still in a prototyping stage hence the code layout is still messy.
+i'm still in the proof of concept stage hence the code is still messy.
 
 <!--
 once mediapipe_cpp_lib has been build:
