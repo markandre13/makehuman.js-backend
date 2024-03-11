@@ -4,6 +4,8 @@
 
 #include <print>
 
+#include <span>
+
 #include <corba/corba.hh>
 #include <corba/net/ws.hh>
 
@@ -88,7 +90,8 @@ int main(void) {
         // string message_type = observer->GetMessageType();
         // cout << message_type << endl;
         auto multi_face_landmarks = static_cast<MultiFaceLandmarks *>(observer->GetData());
-        auto lm = (*multi_face_landmarks)[0];
+        auto &lm = (*multi_face_landmarks)[0];
+
         // Landmark {float: x,y,z,visibility,presence }
         // cout << lm.landmark_size() << " landmarks: " << lm.landmark(0).x() << ", " << lm.landmark(0).x() << ", " << lm.landmark(0).z() << endl;
         // wsHandle();
@@ -96,12 +99,14 @@ int main(void) {
         ev_run(loop, EVRUN_NOWAIT);
 
         // if (isFaceRequested()) {
-        //     float float_array[lm.landmark_size() * 3];
-        //     for (int i = 0; i < lm.landmark_size(); ++i) {
-        //         float_array[i * 3] = lm.landmark(i).x();
-        //         float_array[i * 3 + 1] = lm.landmark(i).y();
-        //         float_array[i * 3 + 2] = lm.landmark(1).z();
-        //     }
+            float float_array[lm.landmark_size() * 3];
+            for (int i = 0; i < lm.landmark_size(); ++i) {
+                float_array[i * 3] = lm.landmark(i).x();
+                float_array[i * 3 + 1] = lm.landmark(i).y();
+                float_array[i * 3 + 2] = lm.landmark(1).z();
+            }
+            std::span s { float_array, static_cast<size_t>(lm.landmark_size() * 3)};
+            backend->mediapipe(s);
         //     sendFace(float_array, lm.landmark_size() * 3);
         // }
     });

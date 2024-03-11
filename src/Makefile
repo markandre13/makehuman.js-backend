@@ -56,6 +56,7 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
+main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
 main.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
 makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
 makehuman.o: makehuman.hh makehuman_skel.hh makehuman_stub.hh
