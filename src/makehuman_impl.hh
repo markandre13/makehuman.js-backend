@@ -7,6 +7,7 @@ class Backend_impl : public Backend_skel {
     public:
         Backend_impl(std::shared_ptr<CORBA::ORB> orb);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
+        CORBA::async<> setEngine(MotionCaptureEngine engine, MotionCaptureType type, EngineStatus status) override;
 };
 
 // this would only be needed for testing

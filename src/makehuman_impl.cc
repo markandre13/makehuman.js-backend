@@ -8,3 +8,8 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     co_await frontend->hello();
     co_return;
 }
+
+CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCaptureType type, EngineStatus status) {
+    std::println("SET ENGINE engine, type, status");
+    co_return; 
+}
