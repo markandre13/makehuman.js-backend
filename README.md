@@ -29,9 +29,9 @@ make install
 cp /Users/mark/upstream/mediapipe_cpp_lib/src/gmod_api.h .
 ln -s /Users/mark/upstream/mediapipe_cpp_lib/import_files mediapipe
 ln -s /Users/mark/upstream/mediapipe_cpp_lib/mediapipe_graphs .
+ln -s /Users/mark/upstream/mediapipe_cpp_lib/mediapipe_models .
 
 c++ -std=c++17 -I. -I/Users/mark/lib/include -I/usr/local/Cellar/opencv@3/3.4.16_4/include  -L/Users/mark/lib/lib -L /Users/mark/upstream/mediapipe_cpp_lib/library -lprotobuf -lgmod main.cc
 DYLD_LIBRARY_PATH=/Users/mark/upstream/mediapipe_cpp_lib/library ./a.out
-
 
 -->

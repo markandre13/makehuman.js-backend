@@ -32,7 +32,7 @@ depend:
 	makedepend -I. -Y $(SRC)
 
 run:
-	DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./$(APP)
+	cd .. && DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./src/$(APP)
 
 valgrind:
         /usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
