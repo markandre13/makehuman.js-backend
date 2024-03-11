@@ -42,8 +42,8 @@ clean:
 
 .SUFFIXES: .idl .cc .c .h .hh .o
 
-$(IDL_GEN): makehuman.idl
-	bun ../upstream/corba.js/src/idl/idl.ts --cc-all makehuman.idl
+$(IDL_GEN): ../upstream/makehuman.js/src/net/makehuman.idl
+	bun ../upstream/corba.js/src/idl/idl.ts --cc-all -o . ../upstream/makehuman.js/src/net/makehuman.idl
 
 $(APP): $(OBJ)
 	@echo "linking..."
