@@ -24,7 +24,7 @@ MEDIAPIPE_CC_LIB_DIR=$(MEDIAPIPE_CC_LIB)/bazel-bin/cc_lib
 MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR)
 MEDIAPIPE_FLAGS=-I$(MEDIAPIPE_CC_LIB)
 LIB=-lmediapipe \
-	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgcodecs \
+	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
 SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC))
@@ -39,7 +39,7 @@ run:
 	cd .. && DYLD_LIBRARY_PATH=upstream/mediapipe_cc_lib/bazel-bin/cc_lib ./src/$(APP)
 
 valgrind:
-        /usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
+	/usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
 
 clean:
 	rm -f $(OBJ) $(IDL_GEN)

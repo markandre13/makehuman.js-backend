@@ -47,23 +47,7 @@ int main(void) {
 
     struct ev_loop *loop = EV_DEFAULT;
     println("the audience is listening...");
-#if 0
-    auto server = make_shared<Server_impl>(orb);
-    orb->bind("Server", server);
 
-    auto protocol = new CORBA::net::TcpProtocol();
-    // TODO: support 0.0.0.0, etc.
-    protocol->listen(orb.get(), loop, "192.168.178.24", 9001);
-    orb->registerProtocol(protocol);
-
-
-    // http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#The_special_problem_of_fork:
-    // To support fork in your child processes, you have to call ev_loop_fork () after
-    // a fork in the child, enable EVFLAG_FORKCHECK, or resort to EVBACKEND_SELECT or
-    // EVBACKEND_POLL.
-
-    ev_run(loop, 0);
-#else
     auto backend = make_shared<Backend_impl>(orb);
     orb->bind("Backend", backend);
 
@@ -82,41 +66,51 @@ int main(void) {
     options->num_faces = 1;
     auto landmarker = FaceLandmarker::Create(std::move(options));
 
-    cv::Mat input = cv::imread("upstream/mediapipe_cc_lib/mediapipe/objc/testdata/sergey.png");
-    if (input.data == nullptr) {
-        cerr << "failed to load image" << endl;
+    cv::VideoCapture cap;
+    int deviceID = 0;             // 0 = open default camera
+    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
+    cap.open(deviceID, apiID);
+    if (!cap.isOpened()) {
+        cerr << "failed to open video" << endl;
         return 1;
     }
 
-    auto result = landmarker->Detect(input.channels(), input.cols, input.rows, input.step, input.data);
-    if (!result.has_value()) {
-        cerr << "failed to detect face landmarks" << endl;
-        return 1;
-    }
+    double w = cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2;
+    double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT) / 2;
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    auto backendName = cap.getBackendName();
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, w);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, h);
 
-    if (result->face_landmarks.size() != 1) {
-        cerr << "expect one face" << endl;
-        return 1;
-    }
-    if (result->face_landmarks[0].landmarks.size() != 478) {
-        cerr << "expected 478 landmarks for face, found " << result->face_landmarks[0].landmarks.size() << endl;
-        return 1;
-    }
-    auto &lm = result->face_landmarks[0].landmarks[0];
-    if (fabs(lm.x - 0.494063) > 0.000001) {
-        cerr << "expected x = 0.494063, got " << lm.x << endl;
-        return 1;
-    }
-    if (fabs(lm.y - 0.646164) > 0.000001) {
-        cerr << "expected x = 0.646164, got " << lm.x << endl;
-        return 1;
-    }
-    if (fabs(lm.z - -0.06861) > 0.000001) {
-        cerr << "expected x = -0.06861, got " << lm.x << endl;
-        return 1;
-    }
+    println("{}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
 
-    cout << "OKAY" << endl;
+    cv::Mat videoFrameCV;
+    while (true) {
+        cap >> videoFrameCV;
+        if (videoFrameCV.empty()) {
+            std::cout << "empty image" << std::endl;
+            return 1;
+        }
+
+        // ImageFrame imageFrameMP(videoFrameCV.channels() == 4 ? ImageFormat::SRGBA : ImageFormat::SRGB, videoFrameCV.cols, videoFrameCV.rows, videoFrameCV.step,
+        //                         videoFrameCV.data, [](uint8_t *) {});
+        // Image imageMP(std::make_shared<mediapipe::ImageFrame>(std::move(imageFrameMP)));
+
+        // struct timeval tv;
+        // gettimeofday(&tv, NULL);
+        // unsigned long long timestamp = (unsigned long long)(tv.tv_sec) * 1000 + (unsigned long long)(tv.tv_usec) / 1000;
+
+        // auto status = (*landmarker)->DetectAsync(imageMP, timestamp);
+        // if (!status.ok()) {
+        //     cerr << "Detection failed: " << status << endl;
+        //     return 1;
+        // }
+
+        cv::imshow("image", videoFrameCV);
+        if (cv::waitKey(30) >= 0) {
+            break;
+        }
+    }
 
 #else
     IGMOD *test = CreateGMOD();
@@ -213,7 +207,6 @@ int main(void) {
     // test->start("mediapipe_graphs/hair_segmentation/hair_segmentation_desktop_live.pbtxt");
 
     // there is a test->stop()
-#endif
 
 #endif
     return 0;
