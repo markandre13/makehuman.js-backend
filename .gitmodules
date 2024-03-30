@@ -10,3 +10,6 @@
 [submodule "upstream/makehuman.js"]
 	path = upstream/makehuman.js
 	url = git@github.com:markandre13/makehuman.js.git
+[submodule "upstream/mediapipe_cc_lib"]
+	path = upstream/mediapipe_cc_lib
+	url = git@github.com:markandre13/mediapipe_cc_lib.git

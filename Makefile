@@ -10,4 +10,4 @@ link:
 	ln -s $(MEDIAPIPE_CPP_DIR)/mediapipe_models .
 
 update:
-	git submodule update --remote --merge
+	git submodule update --remote --rebase --recursive

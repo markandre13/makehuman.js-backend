@@ -5,7 +5,7 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc hexdump.cc \
-	net/ws.cc net/ws/socket.cc net/ws/createAcceptKey.cc
+	net/ws.cc net/tcp.cc net/ws/socket.cc net/ws/createAcceptKey.cc
 
 CXX=/usr/local/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules \
@@ -15,13 +15,17 @@ CFLAGS=-std=c++23 -fmodules \
 	-I$(CORBA_PATH)
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
 
-PROTOBUF_FLAGS=-I/Users/mark/lib/include
+#PROTOBUF_FLAGS=-I/Users/mark/lib/include
 OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
 WSLAG_FLAGS=-I/usr/local/include
-PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
-MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
-MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
-LIB=-lprotobuf -lgmod -lev -lwslay -lnettle
+#PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
+MEDIAPIPE_CC_LIB=../upstream/mediapipe_cc_lib
+MEDIAPIPE_CC_LIB_DIR=$(MEDIAPIPE_CC_LIB)/bazel-bin/cc_lib
+MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR)
+MEDIAPIPE_FLAGS=-I$(MEDIAPIPE_CC_LIB)
+LIB=-lmediapipe \
+	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_video -lopencv_imgcodecs \
+	-lev -lwslay -lnettle
 
 SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC))
 OBJ = $(SRC:.cc=.o)
@@ -29,10 +33,10 @@ OBJ = $(SRC:.cc=.o)
 all: $(APP)
 
 depend:
-	makedepend -I. -Y $(SRC)
+	makedepend -I$(CORBA_PATH) -Y $(SRC)
 
 run:
-	cd .. && DYLD_LIBRARY_PATH=$(MEDIAPIPE_CPP_DIR)/library ./src/$(APP)
+	cd .. && DYLD_LIBRARY_PATH=upstream/mediapipe_cc_lib/bazel-bin/cc_lib ./src/$(APP)
 
 valgrind:
         /usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
@@ -51,15 +55,61 @@ $(APP): $(OBJ)
 
 .cc.o:
 	@echo compiling $*.cc ...
-	$(CXX) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
+	$(CXX) $(CFLAGS) $(MEDIAPIPE_FLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) $(PYTHON_FLAGS) \
 	-c -o $*.o $*.cc
 
 # DO NOT DELETE
 
 main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
-main.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
-makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh makehuman.hh
-makehuman.o: makehuman.hh makehuman_skel.hh makehuman_stub.hh
+main.o: ../upstream/corba.cc/src/corba/corba.hh
+main.o: ../upstream/corba.cc/src/corba/orb.hh
+main.o: ../upstream/corba.cc/src/corba/coroutine.hh
+main.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+main.o: ../upstream/corba.cc/src/corba/giop.hh
+main.o: ../upstream/corba.cc/src/corba/cdr.hh
+main.o: ../upstream/corba.cc/src/corba/blob.hh
+main.o: ../upstream/corba.cc/src/corba/skeleton.hh
+main.o: ../upstream/corba.cc/src/corba/object.hh
+main.o: ../upstream/corba.cc/src/corba/stub.hh
+main.o: ../upstream/corba.cc/src/corba/ior.hh
+main.o: ../upstream/corba.cc/src/corba/exception.hh
+main.o: ../upstream/corba.cc/src/corba/net/ws.hh
+main.o: ../upstream/corba.cc/src/corba/protocol.hh makehuman_impl.hh
+main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
+main.o: ../upstream/corba.cc/src/corba/giop.hh
+main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/corba.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+makehuman_impl.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/cdr.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/skeleton.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/object.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/stub.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/ior.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
+makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
+makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh
+makehuman.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+makehuman.o: ../upstream/corba.cc/src/corba/giop.hh
+makehuman.o: ../upstream/corba.cc/src/corba/cdr.hh
+makehuman.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman.o: ../upstream/corba.cc/src/corba/skeleton.hh
+makehuman.o: ../upstream/corba.cc/src/corba/object.hh
+makehuman.o: ../upstream/corba.cc/src/corba/stub.hh
+makehuman.o: ../upstream/corba.cc/src/corba/ior.hh
+makehuman.o: ../upstream/corba.cc/src/corba/exception.hh
+makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
+makehuman.o: ../upstream/corba.cc/src/corba/giop.hh
+makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+makehuman.o: makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
