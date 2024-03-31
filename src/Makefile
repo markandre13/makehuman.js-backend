@@ -60,7 +60,6 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: gmod_api.h ../mediapipe/framework/formats/landmark.pb.h
 main.o: ../upstream/corba.cc/src/corba/corba.hh
 main.o: ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh
@@ -73,8 +72,9 @@ main.o: ../upstream/corba.cc/src/corba/object.hh
 main.o: ../upstream/corba.cc/src/corba/stub.hh
 main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
-main.o: ../upstream/corba.cc/src/corba/net/ws.hh
-main.o: ../upstream/corba.cc/src/corba/protocol.hh makehuman_impl.hh
+main.o: ../upstream/corba.cc/src/corba/net/tcp.hh
+main.o: ../upstream/corba.cc/src/corba/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/ws.hh makehuman_impl.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
@@ -182,4 +182,14 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_event.h
 ../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_queue.h
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/net/tcp.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/protocol.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/orb.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/giop.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/hexdump.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh

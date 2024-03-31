@@ -103,6 +103,9 @@ int main(void) {
 
     println("{}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
 
+    // this doesn't work, but cv::waitKey() will display the window
+    // cv::namedWindow("image");
+
     cv::Mat frame;
     while (true) {
         cap >> frame;
@@ -116,12 +119,9 @@ int main(void) {
         uint64_t timestamp = (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
 
         cv::imshow("image", frame);
-
         landmarker->DetectAsync(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
 
-        if (cv::waitKey(30) >= 0) {
-            break;
-        }
+        cv::waitKey(1); // wait 1ms
     }
 
     return 0;

@@ -98,7 +98,16 @@
         "print": "cpp",
         "coroutine": "cpp",
         "version": "cpp",
-        "wslay_event.h": "c"
+        "wslay_event.h": "c",
+        "*.ipp": "cpp",
+        "expected": "cpp",
+        "ranges": "cpp",
+        "hash_map": "cpp",
+        "regex": "cpp",
+        "valarray": "cpp",
+        "rope": "cpp",
+        "slist": "cpp",
+        "*.inc": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",
