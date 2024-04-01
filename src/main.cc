@@ -1,8 +1,5 @@
 #include <opencv2/opencv.hpp>
 
-// #include "gmod_api.h"
-// #include "../mediapipe/framework/formats/landmark.pb.h"
-
 #include <cc_lib/mediapipe.hh>
 using mediapipe::cc_lib::vision::core::RunningMode;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerOptions;
@@ -10,7 +7,7 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 
 #include <corba/corba.hh>
-#include <corba/net/tcp.hh>
+
 #include <corba/net/ws.hh>
 
 #include <iostream>
@@ -21,22 +18,6 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 #include "makehuman_impl.hh"
 
 using namespace std;
-
-// typedef const vector<::mediapipe::NormalizedLandmarkList> MultiFaceLandmarks;
-
-// mediapipe        -> /Users/mark/upstream/mediapipe_cpp_lib/import_files
-// mediapipe_graphs -> /Users/mark/upstream/mediapipe_cpp_lib/mediapipe_graphs
-
-class Server_impl : public Server_skel {
-        std::shared_ptr<Frontend> frontend;
-
-    public:
-        Server_impl(std::shared_ptr<CORBA::ORB> orb) : Server_skel(orb) {}
-        CORBA::async<void> hello() override {
-            println("HELLO");
-            co_return;
-        }
-};
 
 int main(void) {
     println("makehuman.js backend");
@@ -66,24 +47,15 @@ int main(void) {
     options->output_face_blendshapes = true;
     options->output_facial_transformation_matrixes = true;
     options->num_faces = 1;
-    options->result_callback = [&](std::optional<FaceLandmarkerResult> result, int64_t timestamp_ms) {
-
+    options->result_callback = [&](auto result, auto timestamp_ms) {
         ev_run(loop, EVRUN_NOWAIT);
-
-        if (result.has_value() && result->face_landmarks.size() > 0) {
-            auto &lm = result->face_landmarks[0].landmarks;
-            float float_array[lm.size() * 3];
-            float *ptr = float_array;
-            for (size_t i = 0; i < lm.size(); ++i) {
-                *(ptr++) = lm[i].x;
-                *(ptr++) = lm[i].y;
-                *(ptr++) = lm[i].z;
-            }
-            std::span s{float_array, static_cast<size_t>(lm.size() * 3)};
-            backend->mediapipe(s);
-        }
+        backend->faceLandmarks(result, timestamp_ms);
     };
     auto landmarker = FaceLandmarker::Create(std::move(options));
+
+    //
+    // SETUP VIDEO CAMERA
+    //
 
     cv::VideoCapture cap;
     int deviceID = 0;             // 0 = open default camera
@@ -103,7 +75,11 @@ int main(void) {
 
     println("{}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
 
-    // this doesn't work, but cv::waitKey() will display the window
+    //
+    // STREAM MEDIAPIPE'S FACE LANDMARKS TO FRONTEND
+    //
+
+    // namedWindow() doesn't work, but cv::waitKey() will display the window
     // cv::namedWindow("image");
 
     cv::Mat frame;

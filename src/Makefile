@@ -5,25 +5,23 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc hexdump.cc \
-	net/ws.cc net/tcp.cc net/ws/socket.cc net/ws/createAcceptKey.cc
+	net/ws.cc net/ws/socket.cc net/ws/createAcceptKey.cc
 
 CXX=/usr/local/opt/llvm/bin/clang++
+LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
+
+OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
+WSLAG_FLAGS=-I/usr/local/include
+MEDIAPIPE_CC_LIB=../upstream/mediapipe_cc_lib
+MEDIAPIPE_CC_LIB_DIR=$(MEDIAPIPE_CC_LIB)/bazel-bin/cc_lib
+MEDIAPIPE_FLAGS=-I$(MEDIAPIPE_CC_LIB)
+
 CFLAGS=-std=c++23 -fmodules \
 	-Wall -Wextra -Werror=return-type -Werror=shadow \
 	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
 	-I$(CORBA_PATH)
-LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
-
-#PROTOBUF_FLAGS=-I/Users/mark/lib/include
-OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
-WSLAG_FLAGS=-I/usr/local/include
-#PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
-MEDIAPIPE_CC_LIB=../upstream/mediapipe_cc_lib
-MEDIAPIPE_CC_LIB_DIR=$(MEDIAPIPE_CC_LIB)/bazel-bin/cc_lib
-MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR)
-MEDIAPIPE_FLAGS=-I$(MEDIAPIPE_CC_LIB)
-LIB=-lmediapipe \
+LIB=-L$(MEDIAPIPE_CC_LIB_DIR) -lmediapipe \
 	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
@@ -51,7 +49,7 @@ $(IDL_GEN): ../upstream/makehuman.js/src/net/makehuman.idl
 
 $(APP): $(OBJ)
 	@echo "linking..."
-	$(CXX) $(LDFLAGS) $(PROTOBUF_LDFLAGS) $(MEDIAPIPE_CPP_LDFLAGS) $(LIB) $(OBJ) -o $(APP)
+	$(CXX) $(LDFLAGS) $(LIB) $(OBJ) -o $(APP)
 
 .cc.o:
 	@echo compiling $*.cc ...
@@ -72,9 +70,8 @@ main.o: ../upstream/corba.cc/src/corba/object.hh
 main.o: ../upstream/corba.cc/src/corba/stub.hh
 main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
-main.o: ../upstream/corba.cc/src/corba/net/tcp.hh
-main.o: ../upstream/corba.cc/src/corba/protocol.hh
-main.o: ../upstream/corba.cc/src/corba/net/ws.hh makehuman_impl.hh
+main.o: ../upstream/corba.cc/src/corba/net/ws.hh
+main.o: ../upstream/corba.cc/src/corba/protocol.hh makehuman_impl.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
@@ -182,14 +179,4 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_event.h
 ../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_queue.h
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/net/tcp.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/protocol.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/blob.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/coroutine.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/orb.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/giop.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/cdr.hh
-../upstream/corba.cc/src/corba/net/tcp.o: ../upstream/corba.cc/src/corba/hexdump.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
