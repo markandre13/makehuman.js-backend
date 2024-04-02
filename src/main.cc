@@ -1,23 +1,25 @@
-#include <opencv2/opencv.hpp>
-
 #include <cc_lib/mediapipe.hh>
+#include <opencv2/opencv.hpp>
 using mediapipe::cc_lib::vision::core::RunningMode;
-using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerOptions;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker;
+using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerOptions;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 
+#include <sys/time.h>
+
 #include <corba/corba.hh>
-
 #include <corba/net/ws.hh>
-
 #include <iostream>
 #include <print>
 #include <span>
-#include <sys/time.h>
+
+#include <set>
 
 #include "makehuman_impl.hh"
 
 using namespace std;
+
+static uint64_t getMilliseconds();
 
 int main(void) {
     println("makehuman.js backend");
@@ -47,8 +49,22 @@ int main(void) {
     options->output_face_blendshapes = true;
     options->output_facial_transformation_matrixes = true;
     options->num_faces = 1;
+
+    set<uint64_t> tids;
+
     options->result_callback = [&](auto result, auto timestamp_ms) {
         ev_run(loop, EVRUN_NOWAIT);
+
+        uint64_t tid;
+        pthread_threadid_np(NULL, &tid);
+        tids.insert(tid);
+
+        // rendering has too much latency (reason: the table in the expression tab)
+        // latency (cummulative) the frame was captured (3.5 GHz Intel Xeon E5)
+        // * mediapipe face landmarker: 5ms when no face detected, 17ms with face (12 threads)
+        // * received by browser      : 17ms to 100ms
+        // * render latency           : 62ms to 112ms
+        println("latency: {}ms, thread count: {}", getMilliseconds() - timestamp_ms, tids.size());
         backend->faceLandmarks(result, timestamp_ms);
     };
     auto landmarker = FaceLandmarker::Create(std::move(options));
@@ -58,8 +74,8 @@ int main(void) {
     //
 
     cv::VideoCapture cap;
-    int deviceID = 0;             // 0 = open default camera
-    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
+    int deviceID = 0;         // 0 = open default camera
+    int apiID = cv::CAP_ANY;  // 0 = autodetect default API
     cap.open(deviceID, apiID);
     if (!cap.isOpened()) {
         cerr << "failed to open video" << endl;
@@ -89,16 +105,19 @@ int main(void) {
             std::cout << "empty image" << std::endl;
             return 1;
         }
-
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        uint64_t timestamp = (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
+        auto timestamp = getMilliseconds();
 
         cv::imshow("image", frame);
         landmarker->DetectAsync(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
 
-        cv::waitKey(1); // wait 1ms
+        cv::waitKey(1);  // wait 1ms
     }
 
     return 0;
+}
+
+uint64_t getMilliseconds() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
 }

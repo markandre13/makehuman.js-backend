@@ -51,5 +51,5 @@ void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_l
     }
     std::span blendshapes{bs_array, bs.size()};
 
-    frontend->faceLandmarks(landmarks, blendshapes);
+    frontend->faceLandmarks(landmarks, blendshapes, timestamp_ms);
 }

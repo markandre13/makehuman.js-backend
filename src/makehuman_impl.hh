@@ -12,7 +12,10 @@ class Backend_impl : public Backend_skel {
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureEngine engine, MotionCaptureType type, EngineStatus status) override;
 
-        void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
+        void faceLandmarks(
+            std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result,
+            int64_t timestamp_ms
+        );
         // void mediapipe(std::span<float> &landmarks, std::span<float> &blendshapes);
 };
 
