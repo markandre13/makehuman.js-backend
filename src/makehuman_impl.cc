@@ -1,12 +1,20 @@
 #include "makehuman_impl.hh"
 
+#include <corba/orb.hh>
 #include <print>
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
+    std::println("set frontend: enter");
     frontend = aFrontend;
+    CORBA::installSystemExceptionHandler(aFrontend, [this] {
+        std::println("caught system exception in frontend stub, dropping reference");
+        this->frontend = nullptr;
+        std::println("frontend reference dropped");
+    });
     blendshapeNamesHaveBeenSend = false;
+    std::println("set frontend: leave");
     co_return;
 }
 

@@ -64,7 +64,8 @@ int main(void) {
         // * mediapipe face landmarker: 5ms when no face detected, 17ms with face (12 threads)
         // * received by browser      : 17ms to 100ms
         // * render latency           : 62ms to 112ms
-        println("latency: {}ms, thread count: {}", getMilliseconds() - timestamp_ms, tids.size());
+        // (render latency does not include skipped frames)
+        // println("latency: {}ms, thread count: {}", getMilliseconds() - timestamp_ms, tids.size());
         backend->faceLandmarks(result, timestamp_ms);
     };
     auto landmarker = FaceLandmarker::Create(std::move(options));
