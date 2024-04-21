@@ -112,5 +112,6 @@
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",
     "C_Cpp.default.cppStandard": "c++23",
-    "C_Cpp.vcFormat.indent.lambdaBracesWhenParameter": false
+    "C_Cpp.vcFormat.indent.lambdaBracesWhenParameter": false,
+    "C_Cpp.default.compilerPath": "/usr/local/opt/llvm/bin/clang++"
 }

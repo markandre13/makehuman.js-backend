@@ -6,7 +6,7 @@
                 "${default}",
                 "${workspaceFolder}/upstream/kaffeeklatsch/src",
                 "${workspaceFolder}/upstream/corba.cc/src",
-                "${workspaceFolder}/upstream/mediapipe_cc_lib",
+                "${workspaceFolder}/upstream/mediapipe_cc_lib"
             ],
             "defines": [],
             "macFrameworkPath": [

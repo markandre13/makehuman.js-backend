@@ -2,15 +2,18 @@
 
 #include <corba/orb.hh>
 #include <print>
+#include <atomic>
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     std::println("set frontend: enter");
-    frontend = aFrontend;
+    std::atomic_store(&frontend, aFrontend);
+    // frontend = aFrontend;
     CORBA::installSystemExceptionHandler(aFrontend, [this] {
         std::println("caught system exception in frontend stub, dropping reference");
-        this->frontend = nullptr;
+        frontend = nullptr;
+        // std::atomic_store(&frontend, std::make_shared<Frontend>(nullptr));
         std::println("frontend reference dropped");
     });
     blendshapeNamesHaveBeenSend = false;
@@ -23,13 +26,18 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCapture
     co_return;
 }
 
+#ifdef HAVE_MEDIAPIPE
+
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
-    if (!frontend) {
-        return;
-    }
     if (!result.has_value() || result->face_landmarks.size() == 0) {
         return;
     }
+
+    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+    if (!fe) {
+        return;
+    }
+
     auto &lm = result->face_landmarks[0].landmarks;
     float lm_array[lm.size() * 3];
     float *ptr = lm_array;
@@ -59,5 +67,7 @@ void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_l
     }
     std::span blendshapes{bs_array, bs.size()};
 
-    frontend->faceLandmarks(landmarks, blendshapes, timestamp_ms);
+    fe->faceLandmarks(landmarks, blendshapes, timestamp_ms);
 }
+
+#endif

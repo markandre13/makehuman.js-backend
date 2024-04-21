@@ -1,9 +1,14 @@
+#ifdef HAVE_MEDIAPIPE
+
 #include <cc_lib/mediapipe.hh>
-#include <opencv2/opencv.hpp>
 using mediapipe::cc_lib::vision::core::RunningMode;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerOptions;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
+
+#endif
+
+#include <opencv2/opencv.hpp>
 
 #include <sys/time.h>
 
@@ -39,6 +44,7 @@ int main(void) {
     auto protocol = new CORBA::net::WsProtocol();
     protocol->listen(orb.get(), loop, "localhost", 9001);
 
+#ifdef HAVE_MEDIAPIPE
     //
     // SETUP MEDIAPIPE
     //
@@ -69,6 +75,7 @@ int main(void) {
         backend->faceLandmarks(result, timestamp_ms);
     };
     auto landmarker = FaceLandmarker::Create(std::move(options));
+#endif
 
     //
     // SETUP VIDEO CAMERA
@@ -109,8 +116,11 @@ int main(void) {
         auto timestamp = getMilliseconds();
 
         cv::imshow("image", frame);
+#ifdef HAVE_MEDIAPIPE
         landmarker->DetectAsync(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
-
+#else
+        ev_run(loop, EVRUN_NOWAIT);
+#endif
         cv::waitKey(1);  // wait 1ms
     }
 
