@@ -10,6 +10,7 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 # bt all
 
 HAVE_MEDIAPIPE=1
+HAVE_METAL=1
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
@@ -29,16 +30,22 @@ MEDIAPIPE_CFLAGS=-I$(MEDIAPIPE_CC_LIB) -DHAVE_MEDIAPIPE=1
 MEDIAPIPE_LFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR) -lmediapipe
 endif
 
+ifeq ($(HAVE_METAL), 1)
+METAL_SRC=metal/metal.cc
+METAL_CFLAGS=-fno-objc-arc -I../upstream/metal-cpp -I../upstream/metal-cpp-extensions -DHAVE_METAL=1
+METAL_LFLAGS=-framework Metal -framework Foundation -framework Cocoa -framework CoreGraphics -framework MetalKit
+endif
+
 CFLAGS=-std=c++23 -fmodules \
 	-Wall -Wextra -Werror=return-type -Werror=shadow \
 	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
-	-I$(CORBA_PATH) $(MEDIAPIPE_CFLAGS)
-LIB=$(MEDIAPIPE_LFLAGS) \
+	-I$(CORBA_PATH) $(MEDIAPIPE_CFLAGS) $(METAL_CFLAGS)
+LIB=$(MEDIAPIPE_LFLAGS) $(METAL_LFLAGS) \
 	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
-SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC))
+SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC)) $(METAL_SRC)
 OBJ = $(SRC:.cc=.o)
 
 all: $(APP)
