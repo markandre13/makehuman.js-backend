@@ -23,36 +23,146 @@ using namespace std;
 /////////////////////////////////////////////
 
 @interface Renderer : NSObject <MTKViewDelegate> {
-    MTKView *view;
-    id<MTLDevice> device;
-    id<MTLCommandQueue> commandQueue;
+    MTKView *_view;
+    id<MTLDevice> _device;
+    id<MTLCommandQueue> _commandQueue;
+    id<MTLRenderPipelineState> _pPSO;
+    id<MTLBuffer> _pVertexPositionsBuffer;
+    id<MTLBuffer> _pVertexColorsBuffer;
 }
 @end
 
 @implementation Renderer : NSObject
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)aView {
     if (self = [super init]) {
-        // Initialize self
-        view = aView;
-        commandQueue = [view.device newCommandQueue];
+        if (!aView.device) {
+            println("ERROR: NO DEVICE IN VIEW");
+        }
+        _view = aView;
+        _device = _view.device;
+        _commandQueue = [_device newCommandQueue];
+        [self buildShaders];
+        [self buildBuffers];
     }
     return self;
+}
+- (void)buildShaders {
+    println("build shaders");
+
+    const char *shaderSrc = R"(
+            #include <metal_stdlib>
+            using namespace metal;
+
+            struct v2f
+            {
+                float4 position [[position]];
+                half3 color;
+            };
+
+            v2f vertex vertexMain( uint vertexId [[vertex_id]],
+                                device const float3* positions [[buffer(0)]],
+                                device const float3* colors [[buffer(1)]] )
+            {
+                v2f o;
+                o.position = float4( positions[ vertexId ], 1.0 );
+                o.color = half3 ( colors[ vertexId ] );
+                return o;
+            }
+
+            half4 fragment fragmentMain( v2f in [[stage_in]] )
+            {
+                return half4( in.color, 1.0 );
+            }
+        )";
+
+    NSError *error;
+    id<MTLLibrary> pLibrary = [_device newLibraryWithSource:[NSString stringWithUTF8String:shaderSrc] options:nil error:&error];
+    if (!pLibrary) {
+        [NSException raise:@"Failed to compile shaders" format:@"%@", [error localizedDescription]];
+    }
+
+    id<MTLFunction> pVertexFn = [pLibrary newFunctionWithName:@"vertexMain"];
+    id<MTLFunction> pFragFn = [pLibrary newFunctionWithName:@"fragmentMain"];
+
+    MTLRenderPipelineDescriptor *pDesc = [[MTLRenderPipelineDescriptor alloc] init];
+    pDesc.vertexFunction = pVertexFn;
+    pDesc.fragmentFunction = pFragFn;
+    pDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
+
+    _pPSO = [_device newRenderPipelineStateWithDescriptor:pDesc error:&error];
+    if (!_pPSO) {
+        [NSException raise:@"Failed to create pipeline state" format:@"%@", [error localizedDescription]];
+    }
+
+    [pVertexFn release];
+    [pFragFn release];
+    [pDesc release];
+    [pLibrary release];
+}
+- (void)buildBuffers {
+    println("build buffers");
+
+    const size_t NumVertices = 3;
+
+    simd::float3 positions[NumVertices] = {{-0.8f, 0.8f, 0.0f}, {0.0f, -0.8f, 0.0f}, {+0.8f, 0.8f, 0.0f}};
+
+    simd::float3 colors[NumVertices] = {{1.0, 0.3f, 0.2f}, {0.8f, 1.0, 0.0f}, {0.8f, 0.0f, 1.0}};
+
+    const size_t positionsDataSize = NumVertices * sizeof(simd::float3);
+    const size_t colorDataSize = NumVertices * sizeof(simd::float3);
+
+    id<MTLBuffer> pVertexPositionsBuffer = [_device newBufferWithLength:positionsDataSize options:MTLResourceStorageModeManaged];
+    id<MTLBuffer> pVertexColorsBuffer = [_device newBufferWithLength:colorDataSize options:MTLResourceStorageModeManaged];
+
+    _pVertexPositionsBuffer = pVertexPositionsBuffer;
+    _pVertexColorsBuffer = pVertexColorsBuffer;
+
+    memcpy([_pVertexPositionsBuffer contents], positions, positionsDataSize );
+    memcpy([_pVertexColorsBuffer contents], colors, colorDataSize );
+
+    [_pVertexPositionsBuffer didModifyRange: NSMakeRange( 0, [_pVertexPositionsBuffer length])];
+    [_pVertexColorsBuffer didModifyRange: NSMakeRange( 0, [_pVertexColorsBuffer length])];
 }
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
     println("metal view size {}x{}", size.width, size.height);
 }
-- (void)drawInMTKView:(nonnull MTKView *)view {
+- (void)drawInMTKView:(nonnull MTKView *)pView {
     println("metal view draw");
     id pool = [NSAutoreleasePool new];
 
-    id<MTLCommandBuffer> cmd = [commandQueue commandBuffer];
+    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+
+    // MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
+    MTLRenderPassDescriptor* passDescriptor = [pView currentRenderPassDescriptor];
+
+    // MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
+    id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
+
+    // pEnc->setRenderPipelineState( _pPSO );
+    // pEnc->setVertexBuffer( _pVertexPositionsBuffer, 0, 0 );
+    // pEnc->setVertexBuffer( _pVertexColorsBuffer, 0, 1 );
+    // pEnc->drawPrimitives( MTL::PrimitiveType::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(3) );
+
+    // pEnc->endEncoding();
+    // pCmd->presentDrawable( pView->currentDrawable() );
+
+
     // MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
     // MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
     // pEnc->endEncoding();
     // pCmd->presentDrawable( pView->currentDrawable() );
-    [cmd presentDrawable:[self->view currentDrawable]];
+
+    [commandEncoder setRenderPipelineState:_pPSO];
+    [commandEncoder setVertexBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
+    [commandEncoder setVertexBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
+    [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+    [commandEncoder endEncoding];
+    id<CAMetalDrawable> drawable = [pView currentDrawable];
+    [commandBuffer presentDrawable:drawable];
+
+
     // pCmd->commit();
-    [cmd commit];
+    [commandBuffer commit];
 
     [pool release];
 }
@@ -72,14 +182,14 @@ using namespace std;
 
 @implementation ToadDelegate : NSObject
 
-- (void)applicationWillFinishLaunching:(NSNotification *)notification;
+- (void)applicationWillFinishLaunching:(NSNotification *)notification
 {
     println("applicationWillFinishLaunching...");
     // normal app with menu and menu item
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [self createMenu];
 }
-- (void)applicationDidFinishLaunching:(NSNotification *)notification;
+- (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
     println("applicationDidFinishLaunching...");
     [self createWindow];
@@ -106,9 +216,9 @@ using namespace std;
 
 - (void)createWindow {
     println("create window...");
-    // toadView *view = [[toadView alloc] initWithFrame:NSMakeRect(0, 0, 320, 200)];
+    NSRect frame = NSMakeRect(0, 0, 640, 480);
     id window =
-        [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 640, 480)
+        [[NSWindow alloc] initWithContentRect:frame
                                     styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
                                       backing:NSBackingStoreBuffered
                                         defer:NO];
@@ -132,13 +242,12 @@ using namespace std;
         println("metal default device: {}\n", [[device name] cStringUsingEncoding:NSISOLatin1StringEncoding]);
     }
 
-    MTKView *view = [MTKView new];
-    view.device = device;
+    MTKView *view = [[MTKView alloc] initWithFrame:frame device:device];
     view.clearColor = MTLClearColorMake(0.0, 0.5, 1.0, 1.0);
+    view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
     view.enableSetNeedsDisplay = YES;
 
-    Renderer *renderer = [[Renderer alloc] initWithMetalKitView: view];
-    // Renderer *renderer = [Renderer new];
+    Renderer *renderer = [[Renderer alloc] initWithMetalKitView:view];
     view.delegate = renderer;
 
     [window setContentView:view];
