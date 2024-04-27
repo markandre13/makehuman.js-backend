@@ -5,21 +5,6 @@
 
 using namespace std;
 
-@interface toadView : NSView <NSTextInputClient> {
-@public
-    void *twindow;
-}
-@end
-
-@implementation toadView : NSView
-- (BOOL)isFlipped {
-    return TRUE;
-}
-- (BOOL)isOpaque {
-    return TRUE;
-}
-@end
-
 /////////////////////////////////////////////
 
 @interface Renderer : NSObject <MTKViewDelegate> {
@@ -105,7 +90,6 @@ using namespace std;
     const size_t NumVertices = 3;
 
     simd::float3 positions[NumVertices] = {{-0.8f, 0.8f, 0.0f}, {0.0f, -0.8f, 0.0f}, {+0.8f, 0.8f, 0.0f}};
-
     simd::float3 colors[NumVertices] = {{1.0, 0.3f, 0.2f}, {0.8f, 1.0, 0.0f}, {0.8f, 0.0f, 1.0}};
 
     const size_t positionsDataSize = NumVertices * sizeof(simd::float3);
@@ -132,36 +116,17 @@ using namespace std;
 
     id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 
-    // MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
     MTLRenderPassDescriptor* passDescriptor = [pView currentRenderPassDescriptor];
 
-    // MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
     id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
-
-    // pEnc->setRenderPipelineState( _pPSO );
-    // pEnc->setVertexBuffer( _pVertexPositionsBuffer, 0, 0 );
-    // pEnc->setVertexBuffer( _pVertexColorsBuffer, 0, 1 );
-    // pEnc->drawPrimitives( MTL::PrimitiveType::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(3) );
-
-    // pEnc->endEncoding();
-    // pCmd->presentDrawable( pView->currentDrawable() );
-
-
-    // MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
-    // MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder( pRpd );
-    // pEnc->endEncoding();
-    // pCmd->presentDrawable( pView->currentDrawable() );
-
     [commandEncoder setRenderPipelineState:_pPSO];
     [commandEncoder setVertexBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
     [commandEncoder setVertexBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
     [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [commandEncoder endEncoding];
+
     id<CAMetalDrawable> drawable = [pView currentDrawable];
     [commandBuffer presentDrawable:drawable];
-
-
-    // pCmd->commit();
     [commandBuffer commit];
 
     [pool release];
@@ -170,18 +135,22 @@ using namespace std;
 @end
 
 /////////////////////////////////////////////
-@interface ToadDelegate : NSObject <NSApplicationDelegate> {
+@interface RenderAppDelegate : NSObject <NSApplicationDelegate> {
+    Renderer *_renderer;
 }
-- (void)applicationWillFinishLaunching:(NSNotification *)notification;
-- (void)applicationDidFinishLaunching:(NSNotification *)notification;
-- (void)createWindow;
-- (void)createMenu;
+// - (void)applicationWillFinishLaunching:(NSNotification *)notification;
+// - (void)applicationDidFinishLaunching:(NSNotification *)notification;
+// - (void)createWindow;
+// - (void)createMenu;
 // - (void) windowWillMove:(NSNotification *)notification;
 // - (void) windowDidMove:(NSNotification *)notification;
 @end
 
-@implementation ToadDelegate : NSObject
-
+@implementation RenderAppDelegate : NSObject
+- (id)init: (Renderer*) renderer {
+    _renderer = renderer;
+    return self;
+}
 - (void)applicationWillFinishLaunching:(NSNotification *)notification
 {
     println("applicationWillFinishLaunching...");
@@ -215,6 +184,9 @@ using namespace std;
 }
 
 - (void)createWindow {
+    //
+    // NEXTSTEP WINDOW
+    //
     println("create window...");
     NSRect frame = NSMakeRect(0, 0, 640, 480);
     id window =
@@ -223,7 +195,6 @@ using namespace std;
                                       backing:NSBackingStoreBuffered
                                         defer:NO];
     [window cascadeTopLeftFromPoint:NSMakePoint(20, 20)];
-    // [window setBackgroundColor:[NSColor blueColor]];
 
     id appName = [[NSProcessInfo processInfo] processName];
     [window setTitle:appName];
@@ -231,15 +202,14 @@ using namespace std;
     [window makeKeyAndOrderFront:NSApp];
 
     //
-    // METAL
+    // METAL VIEW
     //
-
     id<MTLDevice> device;
     device = MTLCreateSystemDefaultDevice();
     if (!device) {
-        println("no metal default device\n");
+        println("no metal default device");
     } else {
-        println("metal default device: {}\n", [[device name] cStringUsingEncoding:NSISOLatin1StringEncoding]);
+        println("metal default device: {}", [[device name] cStringUsingEncoding:NSISOLatin1StringEncoding]);
     }
 
     MTKView *view = [[MTKView alloc] initWithFrame:frame device:device];
@@ -247,8 +217,8 @@ using namespace std;
     view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
     view.enableSetNeedsDisplay = YES;
 
-    Renderer *renderer = [[Renderer alloc] initWithMetalKitView:view];
-    view.delegate = renderer;
+    [_renderer initWithMetalKitView:view];
+    view.delegate = _renderer;
 
     [window setContentView:view];
 }
@@ -261,7 +231,9 @@ int main() {
     id pool = [NSAutoreleasePool new];
     id app = [NSApplication sharedApplication];
 
-    ToadDelegate *delegate = [ToadDelegate new];
+    Renderer *renderer = [Renderer alloc];
+
+    RenderAppDelegate *delegate = [[RenderAppDelegate alloc] init: renderer];
     [app setDelegate:delegate];
     // [app activateIgnoringOtherApps:YES];
 
