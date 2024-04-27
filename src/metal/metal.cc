@@ -1,200 +1,258 @@
-/*
- *
- * Copyright 2022 Apple Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#import <Cocoa/Cocoa.h>
+#import <MetalKit/MetalKit.h>
 
-#include <cassert>
+#include <print>
 
-#define NS_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-#define MTK_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
-#include <AppKit/AppKit.hpp>
-#include <Metal/Metal.hpp>
-#include <MetalKit/MetalKit.hpp>
+using namespace std;
 
-#pragma region Declarations {
-class Renderer {
-    public:
-        Renderer(MTL::Device* pDevice);
-        ~Renderer();
-        void draw(MTK::View* pView);
+/////////////////////////////////////////////
 
-    private:
-        MTL::Device* _pDevice;
-        MTL::CommandQueue* _pCommandQueue;
-};
+@interface Renderer : NSObject <MTKViewDelegate> {
+    MTKView *_view;
+    id<MTLDevice> _device;
+    id<MTLCommandQueue> _commandQueue;
+    id<MTLRenderPipelineState> _pPSO;
+}
+- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)aView;
+@end
 
-class MyMTKViewDelegate : public MTK::ViewDelegate {
-    public:
-        MyMTKViewDelegate(MTL::Device* pDevice);
-        virtual ~MyMTKViewDelegate() override;
-        virtual void drawInMTKView(MTK::View* pView) override;
+@implementation Renderer : NSObject
+- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)aView {
+    NSAssert(NO, @"initWithMetalKitView: needs to be implemented");
+    return self;
+}
+@end
 
-    private:
-        Renderer* _pRenderer;
-};
+/////////////////////////////////////////////
 
-class MyAppDelegate : public NS::ApplicationDelegate {
-    public:
-        ~MyAppDelegate();
+@interface TriangleRenderer : Renderer {
+    id<MTLBuffer> _pVertexPositionsBuffer;
+    id<MTLBuffer> _pVertexColorsBuffer;
+}
+@end
 
-        NS::Menu* createMenuBar();
+@implementation TriangleRenderer : Renderer
+- (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)aView {
+    if (self = [super init]) {
+        if (!aView.device) {
+            println("ERROR: NO DEVICE IN VIEW");
+        }
+        _view = aView;
+        _device = _view.device;
+        _commandQueue = [_device newCommandQueue];
+        [self buildShaders];
+        [self buildBuffers];
+    }
+    return self;
+}
+- (void)buildShaders {
+    println("build shaders");
 
-        virtual void applicationWillFinishLaunching(NS::Notification* pNotification) override;
-        virtual void applicationDidFinishLaunching(NS::Notification* pNotification) override;
-        virtual bool applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender) override;
+    const char *shaderSrc = R"(
+            #include <metal_stdlib>
+            using namespace metal;
 
-    private:
-        NS::Window* _pWindow;
-        MTK::View* _pMtkView;
-        MTL::Device* _pDevice;
-        MyMTKViewDelegate* _pViewDelegate = nullptr;
-};
+            struct v2f
+            {
+                float4 position [[position]];
+                half3 color;
+            };
 
-#pragma endregion Declarations }
+            v2f vertex vertexMain( uint vertexId [[vertex_id]],
+                                device const float3* positions [[buffer(0)]],
+                                device const float3* colors [[buffer(1)]] )
+            {
+                v2f o;
+                o.position = float4( positions[ vertexId ], 1.0 );
+                o.color = half3 ( colors[ vertexId ] );
+                return o;
+            }
 
-int mainX(int argc, char* argv[]) {
-    NS::AutoreleasePool* pAutoreleasePool = NS::AutoreleasePool::alloc()->init();
+            half4 fragment fragmentMain( v2f in [[stage_in]] )
+            {
+                return half4( in.color, 1.0 );
+            }
+        )";
 
-    MyAppDelegate del;
+    NSError *error;
+    id<MTLLibrary> pLibrary = [_device newLibraryWithSource:[NSString stringWithUTF8String:shaderSrc] options:nil error:&error];
+    if (!pLibrary) {
+        [NSException raise:@"Failed to compile shaders" format:@"%@", [error localizedDescription]];
+    }
 
-    NS::Application* pSharedApplication = NS::Application::sharedApplication();
-    pSharedApplication->setDelegate(&del);
-    pSharedApplication->run();
+    id<MTLFunction> pVertexFn = [pLibrary newFunctionWithName:@"vertexMain"];
+    id<MTLFunction> pFragFn = [pLibrary newFunctionWithName:@"fragmentMain"];
 
-    pAutoreleasePool->release();
+    MTLRenderPipelineDescriptor *pDesc = [[MTLRenderPipelineDescriptor alloc] init];
+    pDesc.vertexFunction = pVertexFn;
+    pDesc.fragmentFunction = pFragFn;
+    pDesc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
+
+    _pPSO = [_device newRenderPipelineStateWithDescriptor:pDesc error:&error];
+    if (!_pPSO) {
+        [NSException raise:@"Failed to create pipeline state" format:@"%@", [error localizedDescription]];
+    }
+
+    [pVertexFn release];
+    [pFragFn release];
+    [pDesc release];
+    [pLibrary release];
+}
+- (void)buildBuffers {
+    println("build buffers");
+
+    const size_t NumVertices = 3;
+
+    simd::float3 positions[NumVertices] = {{-0.8f, 0.8f, 0.0f}, {0.0f, -0.8f, 0.0f}, {+0.8f, 0.8f, 0.0f}};
+    simd::float3 colors[NumVertices] = {{1.0, 0.3f, 0.2f}, {0.8f, 1.0, 0.0f}, {0.8f, 0.0f, 1.0}};
+
+    const size_t positionsDataSize = NumVertices * sizeof(simd::float3);
+    const size_t colorDataSize = NumVertices * sizeof(simd::float3);
+
+    id<MTLBuffer> pVertexPositionsBuffer = [_device newBufferWithLength:positionsDataSize options:MTLResourceStorageModeManaged];
+    id<MTLBuffer> pVertexColorsBuffer = [_device newBufferWithLength:colorDataSize options:MTLResourceStorageModeManaged];
+
+    _pVertexPositionsBuffer = pVertexPositionsBuffer;
+    _pVertexColorsBuffer = pVertexColorsBuffer;
+
+    memcpy([_pVertexPositionsBuffer contents], positions, positionsDataSize );
+    memcpy([_pVertexColorsBuffer contents], colors, colorDataSize );
+
+    [_pVertexPositionsBuffer didModifyRange: NSMakeRange( 0, [_pVertexPositionsBuffer length])];
+    [_pVertexColorsBuffer didModifyRange: NSMakeRange( 0, [_pVertexColorsBuffer length])];
+}
+- (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
+    println("metal view size {}x{}", size.width, size.height);
+}
+- (void)drawInMTKView:(nonnull MTKView *)pView {
+    println("metal view draw");
+    id pool = [NSAutoreleasePool new];
+
+    id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
+
+    MTLRenderPassDescriptor* passDescriptor = [pView currentRenderPassDescriptor];
+
+    id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
+    [commandEncoder setRenderPipelineState:_pPSO];
+    [commandEncoder setVertexBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
+    [commandEncoder setVertexBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
+    [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+    [commandEncoder endEncoding];
+
+    id<CAMetalDrawable> drawable = [pView currentDrawable];
+    [commandBuffer presentDrawable:drawable];
+    [commandBuffer commit];
+
+    [pool release];
+}
+
+@end
+
+/////////////////////////////////////////////
+@interface RenderAppDelegate : NSObject <NSApplicationDelegate> {
+    Renderer *_renderer;
+}
+// - (void)applicationWillFinishLaunching:(NSNotification *)notification;
+// - (void)applicationDidFinishLaunching:(NSNotification *)notification;
+// - (void)createWindow;
+// - (void)createMenu;
+// - (void) windowWillMove:(NSNotification *)notification;
+// - (void) windowDidMove:(NSNotification *)notification;
+@end
+
+@implementation RenderAppDelegate : NSObject
+- (id)init: (Renderer*) renderer {
+    _renderer = renderer;
+    return self;
+}
+- (void)applicationWillFinishLaunching:(NSNotification *)notification
+{
+    println("applicationWillFinishLaunching...");
+    // normal app with menu and menu item
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    [self createMenu];
+}
+- (void)applicationDidFinishLaunching:(NSNotification *)notification
+{
+    println("applicationDidFinishLaunching...");
+    [self createWindow];
+    [NSApp activateIgnoringOtherApps:YES];
+}
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)Sender {
+    return YES;
+}
+
+- (void)createMenu {
+    println("create menu...");
+    id menubar = [[NSMenu new] autorelease];
+    id appMenuItem = [[NSMenuItem new] autorelease];
+    [menubar addItem:appMenuItem];
+    [NSApp setMainMenu:menubar];
+
+    id appMenu = [[NSMenu new] autorelease];
+    id appName = [[NSProcessInfo processInfo] processName];
+    id quitTitle = [@"Quit " stringByAppendingString:appName];
+    id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+    [appMenu addItem:quitMenuItem];
+    [appMenuItem setSubmenu:appMenu];
+}
+
+- (void)createWindow {
+    //
+    // NEXTSTEP WINDOW
+    //
+    println("create window...");
+    NSRect frame = NSMakeRect(0, 0, 640, 480);
+    id window =
+        [[NSWindow alloc] initWithContentRect:frame
+                                    styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
+                                      backing:NSBackingStoreBuffered
+                                        defer:NO];
+    [window cascadeTopLeftFromPoint:NSMakePoint(20, 20)];
+
+    id appName = [[NSProcessInfo processInfo] processName];
+    [window setTitle:appName];
+
+    [window makeKeyAndOrderFront:NSApp];
+
+    //
+    // METAL VIEW
+    //
+    id<MTLDevice> device;
+    device = MTLCreateSystemDefaultDevice();
+    if (!device) {
+        println("no metal default device");
+    } else {
+        println("metal default device: {}", [[device name] cStringUsingEncoding:NSISOLatin1StringEncoding]);
+    }
+
+    MTKView *view = [[MTKView alloc] initWithFrame:frame device:device];
+    view.clearColor = MTLClearColorMake(0.0, 0.5, 1.0, 1.0);
+    view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
+    view.enableSetNeedsDisplay = YES;
+
+    [_renderer initWithMetalKitView:view];
+    view.delegate = _renderer;
+
+    [window setContentView:view];
+}
+
+@end
+
+int main() {
+    println("Metal...");
+
+    id pool = [NSAutoreleasePool new];
+    id app = [NSApplication sharedApplication];
+
+    Renderer *renderer = [TriangleRenderer alloc];
+
+    RenderAppDelegate *delegate = [[RenderAppDelegate alloc] init: renderer];
+    [app setDelegate:delegate];
+    // [app activateIgnoringOtherApps:YES];
+
+    [app run];
+    [pool release];
 
     return 0;
 }
-
-#pragma mark - AppDelegate
-#pragma region AppDelegate {
-MyAppDelegate::~MyAppDelegate() {
-    _pMtkView->release();
-    _pWindow->release();
-    _pDevice->release();
-    delete _pViewDelegate;
-}
-
-NS::Menu* MyAppDelegate::createMenuBar() {
-    using NS::StringEncoding::UTF8StringEncoding;
-
-    NS::Menu* pMainMenu = NS::Menu::alloc()->init();
-    NS::MenuItem* pAppMenuItem = NS::MenuItem::alloc()->init();
-    NS::Menu* pAppMenu = NS::Menu::alloc()->init(NS::String::string("Appname", UTF8StringEncoding));
-
-    NS::String* appName = NS::RunningApplication::currentApplication()->localizedName();
-    NS::String* quitItemName = NS::String::string("Quit ", UTF8StringEncoding)->stringByAppendingString(appName);
-    SEL quitCb = NS::MenuItem::registerActionCallback("appQuit", [](void*, SEL, const NS::Object* pSender) {
-        auto pApp = NS::Application::sharedApplication();
-        pApp->terminate(pSender);
-    });
-
-    NS::MenuItem* pAppQuitItem = pAppMenu->addItem(quitItemName, quitCb, NS::String::string("q", UTF8StringEncoding));
-    pAppQuitItem->setKeyEquivalentModifierMask(NS::EventModifierFlagCommand);
-    pAppMenuItem->setSubmenu(pAppMenu);
-
-    NS::MenuItem* pWindowMenuItem = NS::MenuItem::alloc()->init();
-    NS::Menu* pWindowMenu = NS::Menu::alloc()->init(NS::String::string("Window", UTF8StringEncoding));
-
-    SEL closeWindowCb = NS::MenuItem::registerActionCallback("windowClose", [](void*, SEL, const NS::Object*) {
-        auto pApp = NS::Application::sharedApplication();
-        pApp->windows()->object<NS::Window>(0)->close();
-    });
-    NS::MenuItem* pCloseWindowItem =
-        pWindowMenu->addItem(NS::String::string("Close Window", UTF8StringEncoding), closeWindowCb, NS::String::string("w", UTF8StringEncoding));
-    pCloseWindowItem->setKeyEquivalentModifierMask(NS::EventModifierFlagCommand);
-
-    pWindowMenuItem->setSubmenu(pWindowMenu);
-
-    pMainMenu->addItem(pAppMenuItem);
-    pMainMenu->addItem(pWindowMenuItem);
-
-    pAppMenuItem->release();
-    pWindowMenuItem->release();
-    pAppMenu->release();
-    pWindowMenu->release();
-
-    return pMainMenu->autorelease();
-}
-
-void MyAppDelegate::applicationWillFinishLaunching(NS::Notification* pNotification) {
-    NS::Menu* pMenu = createMenuBar();
-    NS::Application* pApp = reinterpret_cast<NS::Application*>(pNotification->object());
-    pApp->setMainMenu(pMenu);
-    pApp->setActivationPolicy(NS::ActivationPolicy::ActivationPolicyRegular);
-}
-
-void MyAppDelegate::applicationDidFinishLaunching(NS::Notification* pNotification) {
-    CGRect frame = (CGRect){{100.0, 100.0}, {512.0, 512.0}};
-
-    _pWindow = NS::Window::alloc()->init(frame, NS::WindowStyleMaskClosable | NS::WindowStyleMaskTitled, NS::BackingStoreBuffered, false);
-
-    _pDevice = MTL::CreateSystemDefaultDevice();
-
-    _pMtkView = MTK::View::alloc()->init(frame, _pDevice);
-    _pMtkView->setColorPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
-    _pMtkView->setClearColor(MTL::ClearColor::Make(1.0, 0.0, 0.0, 1.0));
-
-    _pViewDelegate = new MyMTKViewDelegate(_pDevice);
-    _pMtkView->setDelegate(_pViewDelegate);
-
-    _pWindow->setContentView(_pMtkView);
-    _pWindow->setTitle(NS::String::string("00 - Window", NS::StringEncoding::UTF8StringEncoding));
-
-    _pWindow->makeKeyAndOrderFront(nullptr);
-
-    NS::Application* pApp = reinterpret_cast<NS::Application*>(pNotification->object());
-    pApp->activateIgnoringOtherApps(true);
-}
-
-bool MyAppDelegate::applicationShouldTerminateAfterLastWindowClosed(NS::Application* pSender) { return true; }
-
-#pragma endregion AppDelegate }
-
-#pragma mark - ViewDelegate
-#pragma region ViewDelegate {
-MyMTKViewDelegate::MyMTKViewDelegate(MTL::Device* pDevice) : MTK::ViewDelegate(), _pRenderer(new Renderer(pDevice)) {}
-
-MyMTKViewDelegate::~MyMTKViewDelegate() { delete _pRenderer; }
-
-void MyMTKViewDelegate::drawInMTKView(MTK::View* pView) { _pRenderer->draw(pView); }
-
-#pragma endregion ViewDelegate }
-
-#pragma mark - Renderer
-#pragma region Renderer {
-Renderer::Renderer(MTL::Device* pDevice) : _pDevice(pDevice->retain()) { _pCommandQueue = _pDevice->newCommandQueue(); }
-
-Renderer::~Renderer() {
-    _pCommandQueue->release();
-    _pDevice->release();
-}
-
-void Renderer::draw(MTK::View* pView) {
-    NS::AutoreleasePool* pPool = NS::AutoreleasePool::alloc()->init();
-
-    MTL::CommandBuffer* pCmd = _pCommandQueue->commandBuffer();
-    MTL::RenderPassDescriptor* pRpd = pView->currentRenderPassDescriptor();
-    MTL::RenderCommandEncoder* pEnc = pCmd->renderCommandEncoder(pRpd);
-    pEnc->endEncoding();
-    pCmd->presentDrawable(pView->currentDrawable());
-    pCmd->commit();
-
-    pPool->release();
-}
-
-#pragma endregion Renderer }
