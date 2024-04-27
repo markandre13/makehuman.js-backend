@@ -4,19 +4,18 @@
 
 using namespace std;
 
-@interface toadView : NSView <NSTextInputClient>
-{
-  @public
+@interface toadView : NSView <NSTextInputClient> {
+@public
     void *twindow;
 }
 @end
 
 @implementation toadView : NSView
 - (BOOL)isFlipped {
-  return TRUE;
+    return TRUE;
 }
 - (BOOL)isOpaque {
-  return TRUE;
+    return TRUE;
 }
 @end
 
@@ -25,7 +24,7 @@ using namespace std;
 @interface ToadDelegate : NSObject <NSApplicationDelegate> {
 }
 - (void)createWindow;
-// - (void) createMenu;
+- (void)createMenu;
 // - (void) applicationWillFinishLaunching:(NSNotification *)notification;
 - (void)applicationDidFinishLaunching:(NSNotification *)notification;
 // - (void) windowWillMove:(NSNotification *)notification;
@@ -34,26 +33,50 @@ using namespace std;
 
 @implementation ToadDelegate : NSObject
 
+- (void)createMenu {
+    println("create menu...");
+    // normal app with menu and menu item
+    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+
+    id menubar = [[NSMenu new] autorelease];
+    id appMenuItem = [[NSMenuItem new] autorelease];
+    [menubar addItem:appMenuItem];
+    [NSApp setMainMenu:menubar];
+
+
+    id appMenu = [[NSMenu new] autorelease];
+    id appName = [[NSProcessInfo processInfo] processName];
+    id quitTitle = [@"Quit " stringByAppendingString:appName];
+    id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
+    [appMenu addItem:quitMenuItem];
+    [appMenuItem setSubmenu:appMenu];
+}
+
 - (void)createWindow {
     println("create window...");
     // toadView *view = [[toadView alloc] initWithFrame:NSMakeRect(0, 0, 320, 200)];
-    NSRect frame = NSMakeRect(0, 0, 640, 480);
-    NSWindow* window  = [[[NSWindow alloc] initWithContentRect:frame
-                        styleMask:NSWindowStyleMaskTitled
-                                | NSWindowStyleMaskMiniaturizable
-                                | NSWindowStyleMaskClosable
-                                | NSWindowStyleMaskResizable
-                        backing:NSBackingStoreBuffered
-                        defer:NO] autorelease];
+    id window = [[NSWindow alloc]
+        initWithContentRect:NSMakeRect(0, 0, 640, 480)
+                  styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
+                    backing:NSBackingStoreBuffered
+                      defer:NO];
+    [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setBackgroundColor:[NSColor blueColor]];
+
+    id appName = [[NSProcessInfo processInfo] processName];
+    [window setTitle: appName];
+
     [window makeKeyAndOrderFront:NSApp];
-    [window setTitle: [NSString stringWithUTF8String: "makehuman.js metal"]];
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)notification;
 {
     println("applicationWillFinishLaunching...");
+    [self createMenu];
     [self createWindow];
+}
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)Sender {
+    return YES;
 }
 
 @end
@@ -61,13 +84,14 @@ using namespace std;
 int main() {
     println("Metal...");
 
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSApplication *app = [NSApplication sharedApplication];
+    id pool = [NSAutoreleasePool new];
+    id app = [NSApplication sharedApplication];
 
     ToadDelegate *delegate = [ToadDelegate new];
-    [NSApp setDelegate:delegate];
-    [app run];
+    [app setDelegate:delegate];
+    [app activateIgnoringOtherApps:YES];
 
+    [app run];
     [pool release];
 
     return 0;
