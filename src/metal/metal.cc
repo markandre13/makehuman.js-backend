@@ -12,6 +12,7 @@ using namespace std;
     id<MTLBuffer> _pArgBuffer;  // buffer of buffers to reuse buffers uploaded to the GPU between renders
     id<MTLBuffer> _pVertexPositionsBuffer;
     id<MTLBuffer> _pVertexColorsBuffer;
+    id<MTLBuffer> _pFrameData;  // data which may change per frame
 }
 @end
 
@@ -23,6 +24,7 @@ using namespace std;
         _commandQueue = [_device newCommandQueue];
         [self buildShaders];
         [self buildBuffers];
+        [self buildFrameData];
     }
     return self;
 }
@@ -42,6 +44,11 @@ using namespace std;
                 device float3* colors [[id(1)]];
             };
 
+            // additional data which may change per rendered frame
+            struct FrameData {
+                float angle;
+            };
+
             // vertex shader out
             struct v2f {
                 float4 position [[position]];
@@ -51,12 +58,13 @@ using namespace std;
             // we get two buffers from the app and a vertex number
             v2f vertex vertexMain(
                   device const VertexData* vertexData [[buffer(0)]],
+                  constant FrameData* frameData [[buffer(1)]],
                   uint vertexId [[vertex_id]]
             ) {
+                float a = frameData->angle;
+                float3x3 rotationMatrix = float3x3( sin(a), cos(a), 0.0, cos(a), -sin(a), 0.0, 0.0, 0.0, 1.0 );
                 v2f o;
-                // o.position = float4( positions[ vertexId ], 1.0 );
-                // o.color = half3 ( colors[ vertexId ] );
-                o.position = float4( vertexData->positions[ vertexId ], 1.0 );
+                o.position = float4( rotationMatrix * vertexData->positions[ vertexId ], 1.0 );
                 o.color = half3(vertexData->colors[ vertexId ]);
                 return o;
             }
@@ -112,13 +120,23 @@ using namespace std;
     NSUInteger indexOfArgumentBufferInFunctionsArgumentList = 0;
     id<MTLArgumentEncoder> argumentEncoder = [functionGettingTheArgumentBuffer newArgumentEncoderWithBufferIndex:indexOfArgumentBufferInFunctionsArgumentList];
     _pArgBuffer = [_device newBufferWithLength:[argumentEncoder encodedLength] options:MTLResourceStorageModeManaged];
-    [argumentEncoder setArgumentBuffer:_pArgBuffer startOffset: 0 arrayElement: 0];
-    [argumentEncoder setBuffer: _pVertexPositionsBuffer offset:0 atIndex: 0];
-    [argumentEncoder setBuffer: _pVertexColorsBuffer offset:0 atIndex: 1];
+    [argumentEncoder setArgumentBuffer:_pArgBuffer startOffset:0 arrayElement:0];
+    [argumentEncoder setBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
+    [argumentEncoder setBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
     [_pArgBuffer didModifyRange:NSMakeRange(0, [_pArgBuffer length])];
-    
+
     [functionGettingTheArgumentBuffer release];
     [argumentEncoder release];
+}
+- (void)buildFrameData {
+    println("build frame data...");
+    struct FrameData {
+            simd::float1 angle;
+    };
+    _pFrameData = [_device newBufferWithLength:sizeof(FrameData) options:MTLResourceStorageModeManaged];
+
+    reinterpret_cast<FrameData *>([_pFrameData contents])->angle = 0.4;
+    [_pFrameData didModifyRange:NSMakeRange(0, [_pFrameData length])];
 }
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
     println("metal view size {}x{}", size.width, size.height);
@@ -136,8 +154,10 @@ using namespace std;
     // [commandEncoder setVertexBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
     // [commandEncoder setVertexBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
     [commandEncoder setVertexBuffer:_pArgBuffer offset:0 atIndex:0];
-    [commandEncoder useResource:_pVertexPositionsBuffer usage: MTLResourceUsageRead];
-    [commandEncoder useResource:_pVertexColorsBuffer usage: MTLResourceUsageRead];
+    [commandEncoder useResource:_pVertexPositionsBuffer usage:MTLResourceUsageRead];
+    [commandEncoder useResource:_pVertexColorsBuffer usage:MTLResourceUsageRead];
+
+    [commandEncoder setVertexBuffer:_pFrameData offset:0 atIndex:1];
 
     [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [commandEncoder endEncoding];
