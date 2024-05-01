@@ -73,7 +73,7 @@ using namespace std;
     }
 
     MTKView *view = [[MTKView alloc] initWithFrame:frame device:device];
-    view.clearColor = MTLClearColorMake(0.1, 0.1, 0.1, 1.0);
+    view.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0);
     view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
     view.depthStencilPixelFormat = MTLPixelFormatDepth16Unorm;
     view.clearDepth = 1.0f;

@@ -12,14 +12,21 @@ float _angle = 0.00f;
 using namespace std;
 
 namespace shader_types {
+    struct VertexData {
+       simd::float3 position;
+       simd::float3 normal;
+    };
+
     struct InstanceData {
         simd::float4x4 instanceTransform;
+        simd::float3x3 instanceNormalTransform;
         simd::float4 instanceColor;
     };
 
     struct CameraData {
         simd::float4x4 perspectiveTransform;
         simd::float4x4 worldTransform;
+        simd::float3x3 worldNormalTransform;
     };
 }
 
@@ -33,6 +40,7 @@ namespace math
     simd::float4x4 makeZRotate( float angleRadians );
     simd::float4x4 makeTranslate( const simd::float3& v );
     simd::float4x4 makeScale( const simd::float3& v );
+    simd::float3x3 discardTranslation( const simd::float4x4& m );
 }
 
 @interface TriangleRenderer : Renderer {
@@ -67,23 +75,31 @@ namespace math
         #include <metal_stdlib>
         using namespace metal;
 
-        struct v2f {
+        struct v2f
+        {
             float4 position [[position]];
+            float3 normal;
             half3 color;
         };
 
-        struct VertexData {
+        struct VertexData
+        {
             float3 position;
+            float3 normal;
         };
 
-        struct InstanceData {
+        struct InstanceData
+        {
             float4x4 instanceTransform;
+            float3x3 instanceNormalTransform;
             float4 instanceColor;
         };
 
-        struct CameraData {
+        struct CameraData
+        {
             float4x4 perspectiveTransform;
             float4x4 worldTransform;
+            float3x3 worldNormalTransform;
         };
 
         v2f vertex vertexMain( device const VertexData* vertexData [[buffer(0)]],
@@ -93,16 +109,29 @@ namespace math
                                uint instanceId [[instance_id]] )
         {
             v2f o;
-            float4 pos = float4( vertexData[ vertexId ].position, 1.0 );
+
+            const device VertexData& vd = vertexData[ vertexId ];
+            float4 pos = float4( vd.position, 1.0 );
             pos = instanceData[ instanceId ].instanceTransform * pos;
             pos = cameraData.perspectiveTransform * cameraData.worldTransform * pos;
             o.position = pos;
+
+            float3 normal = instanceData[ instanceId ].instanceNormalTransform * vd.normal;
+            normal = cameraData.worldNormalTransform * normal;
+            o.normal = normal;
+
             o.color = half3( instanceData[ instanceId ].instanceColor.rgb );
             return o;
         }
 
-        half4 fragment fragmentMain( v2f in [[stage_in]] ) {
-            return half4( in.color, 1.0 );
+        half4 fragment fragmentMain( v2f in [[stage_in]] )
+        {
+            // assume light coming from (front-top-right)
+            float3 l = normalize(float3( 1.0, 1.0, 0.8 ));
+            float3 n = normalize( in.normal );
+
+            float ndotl = saturate( dot( n, l ) );
+            return half4( in.color * 0.1 + in.color * ndotl, 1.0 );
         }
     )";
 
@@ -140,36 +169,46 @@ namespace math
 
     using simd::float3;
     const float s = 2.0f;
-    float3 verts[] = {
-        { -s, -s, +s },
-        { +s, -s, +s },
-        { +s, +s, +s },
-        { -s, +s, +s },
+    shader_types::VertexData verts[] = {
+        //   Positions          Normals
+        { { -s, -s, +s }, { 0.f,  0.f,  1.f } },
+        { { +s, -s, +s }, { 0.f,  0.f,  1.f } },
+        { { +s, +s, +s }, { 0.f,  0.f,  1.f } },
+        { { -s, +s, +s }, { 0.f,  0.f,  1.f } },
 
-        { -s, -s, -s },
-        { -s, +s, -s },
-        { +s, +s, -s },
-        { +s, -s, -s }
+        { { +s, -s, +s }, { 1.f,  0.f,  0.f } },
+        { { +s, -s, -s }, { 1.f,  0.f,  0.f } },
+        { { +s, +s, -s }, { 1.f,  0.f,  0.f } },
+        { { +s, +s, +s }, { 1.f,  0.f,  0.f } },
+
+        { { +s, -s, -s }, { 0.f,  0.f, -1.f } },
+        { { -s, -s, -s }, { 0.f,  0.f, -1.f } },
+        { { -s, +s, -s }, { 0.f,  0.f, -1.f } },
+        { { +s, +s, -s }, { 0.f,  0.f, -1.f } },
+
+        { { -s, -s, -s }, { -1.f, 0.f,  0.f } },
+        { { -s, -s, +s }, { -1.f, 0.f,  0.f } },
+        { { -s, +s, +s }, { -1.f, 0.f,  0.f } },
+        { { -s, +s, -s }, { -1.f, 0.f,  0.f } },
+
+        { { -s, +s, +s }, { 0.f,  1.f,  0.f } },
+        { { +s, +s, +s }, { 0.f,  1.f,  0.f } },
+        { { +s, +s, -s }, { 0.f,  1.f,  0.f } },
+        { { -s, +s, -s }, { 0.f,  1.f,  0.f } },
+
+        { { -s, -s, -s }, { 0.f, -1.f,  0.f } },
+        { { +s, -s, -s }, { 0.f, -1.f,  0.f } },
+        { { +s, -s, +s }, { 0.f, -1.f,  0.f } },
+        { { -s, -s, +s }, { 0.f, -1.f,  0.f } },
     };
 
     uint16_t indices[] = {
-        0, 1, 2, /* front */
-        2, 3, 0,
-
-        1, 7, 6, /* right */
-        6, 2, 1,
-
-        7, 4, 5, /* back */
-        5, 6, 7,
-
-        4, 0, 3, /* left */
-        3, 5, 4,
-
-        3, 2, 6, /* top */
-        6, 5, 3,
-
-        4, 7, 1, /* bottom */
-        1, 0, 4
+         0,  1,  2,  2,  3,  0, /* front */
+         4,  5,  6,  6,  7,  4, /* right */
+         8,  9, 10, 10, 11,  8, /* back */
+        12, 13, 14, 14, 15, 12, /* left */
+        16, 17, 18, 18, 19, 16, /* top */
+        20, 21, 22, 22, 23, 20, /* bottom */
     };
 
     const size_t vertexDataSize = sizeof( verts );
@@ -221,10 +260,11 @@ namespace math
         float xoff = (iDivNumInstances * 2.0f - 1.0f) + (1.f/kNumInstances);
         float yoff = sin( ( iDivNumInstances + angle ) * 2.0f * M_PI);
         float4x4 scale = math::makeScale( (float3){ scl, scl, scl } );
-        float4x4 zrot = math::makeZRotate( angle );
-        float4x4 yrot = math::makeYRotate( angle );
+        float4x4 zrot = math::makeZRotate( _angle );
+        float4x4 yrot = math::makeYRotate( _angle );
         float4x4 translate = math::makeTranslate( math::add( objectPosition, { xoff, yoff, 0.f } ) );
         pInstanceData[i].instanceTransform = fullObjectRot * translate * yrot * zrot * scale;
+        pInstanceData[ i ].instanceNormalTransform = math::discardTranslation( pInstanceData[ i ].instanceTransform );
 
         float r = iDivNumInstances;
         float g = 1.0f - r;
@@ -236,11 +276,9 @@ namespace math
     // Update camera state:
     // MTL::Buffer* pCameraDataBuffer = _pCameraDataBuffer[ _frame ];
     shader_types::CameraData* pCameraData = reinterpret_cast< shader_types::CameraData *>([_pCameraDataBuffer contents]);
-    // pCameraData->perspectiveTransform = math::makePerspective( 45.f * M_PI / 180.f, 1.f, 0.03f, 500.0f ) ;
     pCameraData->perspectiveTransform = math::makePerspective( 45.f * M_PI / 180.f, 1.f, 0.03f, 500.0f ) ;
-    // pCameraData->worldTransform = math::makeIdentity();
     pCameraData->worldTransform = math::makeIdentity();
-    // pCameraDataBuffer->didModifyRange( NS::Range::Make( 0, sizeof( shader_types::CameraData ) ) ); 
+    pCameraData->worldNormalTransform = math::discardTranslation( pCameraData->worldTransform );
     [_pCameraDataBuffer didModifyRange:NSMakeRange(0, [_pCameraDataBuffer length])];
 
     MTLRenderPassDescriptor *passDescriptor = [pView currentRenderPassDescriptor];
@@ -289,13 +327,11 @@ int main() {
 
 namespace math
 {
-    constexpr simd::float3 add( const simd::float3& a, const simd::float3& b )
-    {
+    constexpr simd::float3 add( const simd::float3& a, const simd::float3& b ) {
         return { a.x + b.x, a.y + b.y, a.z + b.z };
     }
 
-    constexpr simd_float4x4 makeIdentity()
-    {
+    constexpr simd_float4x4 makeIdentity() {
         using simd::float4;
         return (simd_float4x4){ (float4){ 1.f, 0.f, 0.f, 0.f },
                                 (float4){ 0.f, 1.f, 0.f, 0.f },
@@ -303,8 +339,7 @@ namespace math
                                 (float4){ 0.f, 0.f, 0.f, 1.f } };
     }
 
-    simd::float4x4 makePerspective( float fovRadians, float aspect, float znear, float zfar )
-    {
+    simd::float4x4 makePerspective( float fovRadians, float aspect, float znear, float zfar ) {
         using simd::float4;
         float ys = 1.f / tanf(fovRadians * 0.5f);
         float xs = ys / aspect;
@@ -325,8 +360,7 @@ namespace math
                                      (float4){ 0.0f, 0.0f, 0.0f, 1.0f });
     }
 
-    simd::float4x4 makeYRotate( float angleRadians )
-    {
+    simd::float4x4 makeYRotate( float angleRadians ) {
         using simd::float4;
         const float a = angleRadians;
         return simd_matrix_from_rows((float4){ cosf( a ), 0.0f, sinf( a ), 0.0f },
@@ -335,8 +369,7 @@ namespace math
                                      (float4){ 0.0f, 0.0f, 0.0f, 1.0f });
     }
 
-    simd::float4x4 makeZRotate( float angleRadians )
-    {
+    simd::float4x4 makeZRotate( float angleRadians ) {
         using simd::float4;
         const float a = angleRadians;
         return simd_matrix_from_rows((float4){ cosf( a ), sinf( a ), 0.0f, 0.0f },
@@ -345,8 +378,7 @@ namespace math
                                      (float4){ 0.0f, 0.0f, 0.0f, 1.0f });
     }
 
-    simd::float4x4 makeTranslate( const simd::float3& v )
-    {
+    simd::float4x4 makeTranslate( const simd::float3& v ) {
         using simd::float4;
         const float4 col0 = { 1.0f, 0.0f, 0.0f, 0.0f };
         const float4 col1 = { 0.0f, 1.0f, 0.0f, 0.0f };
@@ -355,13 +387,16 @@ namespace math
         return simd_matrix( col0, col1, col2, col3 );
     }
 
-    simd::float4x4 makeScale( const simd::float3& v )
-    {
+    simd::float4x4 makeScale( const simd::float3& v ) {
         using simd::float4;
         return simd_matrix((float4){ v.x, 0, 0, 0 },
                            (float4){ 0, v.y, 0, 0 },
                            (float4){ 0, 0, v.z, 0 },
                            (float4){ 0, 0, 0, 1.0 });
+    }
+
+    simd::float3x3 discardTranslation( const simd::float4x4& m ) {
+        return simd_matrix( m.columns[0].xyz, m.columns[1].xyz, m.columns[2].xyz );
     }
 
 }
