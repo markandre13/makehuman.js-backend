@@ -5,14 +5,25 @@
 
 #include "renderapp.hh"
 
+static constexpr size_t kNumInstances = 32;
+static constexpr size_t kMaxFramesInFlight = 1;
+
 using namespace std;
+
+namespace shader_types {
+    struct InstanceData
+    {
+        simd::float4x4 instanceTransform;
+        simd::float4 instanceColor;
+    };
+}
 
 @interface TriangleRenderer : Renderer {
     id<MTLLibrary> _library;
     id<MTLBuffer> _pArgBuffer;  // buffer of buffers to reuse buffers uploaded to the GPU between renders
-    id<MTLBuffer> _pVertexPositionsBuffer;
-    id<MTLBuffer> _pVertexColorsBuffer;
-    id<MTLBuffer> _pFrameData;  // data which may change per frame
+    id<MTLBuffer> _pVertexDataBuffer;
+    id<MTLBuffer> _pIndexBuffer;
+    id<MTLBuffer> _pInstanceDataBuffer;
 }
 @end
 
@@ -24,7 +35,6 @@ using namespace std;
         _commandQueue = [_device newCommandQueue];
         [self buildShaders];
         [self buildBuffers];
-        [self buildFrameData];
     }
     return self;
 }
@@ -35,44 +45,43 @@ using namespace std;
     println("build shaders");
 
     const char *shaderSrc = R"(
-            #include <metal_stdlib>
-            using namespace metal;
+        #include <metal_stdlib>
+        using namespace metal;
 
-            // argument buffer
-            struct VertexData {
-                device float3* positions [[id(0)]];
-                device float3* colors [[id(1)]];
-            };
+        struct v2f
+        {
+            float4 position [[position]];
+            half3 color;
+        };
 
-            // additional data which may change per rendered frame
-            struct FrameData {
-                float angle;
-            };
+        struct VertexData
+        {
+            float3 position;
+        };
 
-            // vertex shader out
-            struct v2f {
-                float4 position [[position]];
-                half3 color;
-            };
+        struct InstanceData
+        {
+            float4x4 instanceTransform;
+            float4 instanceColor;
+        };
 
-            // we get two buffers from the app and a vertex number
-            v2f vertex vertexMain(
-                  device const VertexData* vertexData [[buffer(0)]],
-                  constant FrameData* frameData [[buffer(1)]],
-                  uint vertexId [[vertex_id]]
-            ) {
-                float a = frameData->angle;
-                float3x3 rotationMatrix = float3x3( sin(a), cos(a), 0.0, cos(a), -sin(a), 0.0, 0.0, 0.0, 1.0 );
-                v2f o;
-                o.position = float4( rotationMatrix * vertexData->positions[ vertexId ], 1.0 );
-                o.color = half3(vertexData->colors[ vertexId ]);
-                return o;
-            }
+        v2f vertex vertexMain( device const VertexData* vertexData [[buffer(0)]],
+                               device const InstanceData* instanceData [[buffer(1)]],
+                               uint vertexId [[vertex_id]],
+                               uint instanceId [[instance_id]] )
+        {
+            v2f o;
+            float4 pos = float4( vertexData[ vertexId ].position, 1.0 );
+            o.position = instanceData[ instanceId ].instanceTransform * pos;
+            o.color = half3( instanceData[ instanceId ].instanceColor.rgb );
+            return o;
+        }
 
-            half4 fragment fragmentMain( v2f in [[stage_in]] ) {
-                return half4( in.color, 1.0 );
-            }
-        )";
+        half4 fragment fragmentMain( v2f in [[stage_in]] )
+        {
+            return half4( in.color, 1.0 );
+        }
+    )";
 
     // compile shaders
     NSError *error;
@@ -98,68 +107,78 @@ using namespace std;
 - (void)buildBuffers {
     println("build buffers");
 
-    const size_t nVertices = 3;
-
-    simd::float3 positions[nVertices] = {{-0.8f, 0.8f, 0.0f}, {0.0f, -0.8f, 0.0f}, {+0.8f, 0.8f, 0.0f}};
-    simd::float3 colors[nVertices] = {{1.0, 0.3f, 0.2f}, {0.8f, 1.0, 0.0f}, {0.8f, 0.0f, 1.0}};
-
-    const size_t nbytesPositions = nVertices * sizeof(simd::float3);
-    const size_t nbytesColors = nVertices * sizeof(simd::float3);
-
-    _pVertexPositionsBuffer = [_device newBufferWithLength:nbytesPositions options:MTLResourceStorageModeManaged];
-    _pVertexColorsBuffer = [_device newBufferWithLength:nbytesColors options:MTLResourceStorageModeManaged];
-
-    memcpy([_pVertexPositionsBuffer contents], positions, nbytesPositions);
-    memcpy([_pVertexColorsBuffer contents], colors, nbytesColors);
-
-    [_pVertexPositionsBuffer didModifyRange:NSMakeRange(0, [_pVertexPositionsBuffer length])];
-    [_pVertexColorsBuffer didModifyRange:NSMakeRange(0, [_pVertexColorsBuffer length])];
-
-    // build argument buffer
-    id<MTLFunction> functionGettingTheArgumentBuffer = [_library newFunctionWithName:@"vertexMain"];
-    NSUInteger indexOfArgumentBufferInFunctionsArgumentList = 0;
-    id<MTLArgumentEncoder> argumentEncoder = [functionGettingTheArgumentBuffer newArgumentEncoderWithBufferIndex:indexOfArgumentBufferInFunctionsArgumentList];
-    _pArgBuffer = [_device newBufferWithLength:[argumentEncoder encodedLength] options:MTLResourceStorageModeManaged];
-    [argumentEncoder setArgumentBuffer:_pArgBuffer startOffset:0 arrayElement:0];
-    [argumentEncoder setBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
-    [argumentEncoder setBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
-    [_pArgBuffer didModifyRange:NSMakeRange(0, [_pArgBuffer length])];
-
-    [functionGettingTheArgumentBuffer release];
-    [argumentEncoder release];
-}
-- (void)buildFrameData {
-    println("build frame data...");
-    struct FrameData {
-            simd::float1 angle;
+    using simd::float3;
+    const float s = 0.5f;
+    // prettier-ignore
+    float3 verts[] = {
+        { -s, -s, +s },
+        { +s, -s, +s },
+        { +s, +s, +s },
+        { -s, +s, +s }
     };
-    _pFrameData = [_device newBufferWithLength:sizeof(FrameData) options:MTLResourceStorageModeManaged];
+    uint16_t indices[] = {
+        0, 1, 2,
+        2, 3, 0,
+    };
 
-    reinterpret_cast<FrameData *>([_pFrameData contents])->angle = 0.4;
-    [_pFrameData didModifyRange:NSMakeRange(0, [_pFrameData length])];
+    const size_t vertexDataSize = sizeof( verts );
+    const size_t indexDataSize = sizeof( indices );
+    _pVertexDataBuffer = [_device newBufferWithLength:vertexDataSize options:MTLResourceStorageModeManaged];
+    _pIndexBuffer = [_device newBufferWithLength:indexDataSize options:MTLResourceStorageModeManaged];
+    memcpy( [_pVertexDataBuffer contents], verts, vertexDataSize );
+    memcpy( [_pIndexBuffer contents], indices, indexDataSize );
+
+    [_pVertexDataBuffer didModifyRange:NSMakeRange(0, [_pVertexDataBuffer length])];
+    [_pIndexBuffer didModifyRange:NSMakeRange(0, [_pIndexBuffer length])];
+
+    const size_t instanceDataSize = kNumInstances * sizeof( shader_types::InstanceData );
+    _pInstanceDataBuffer = [_device newBufferWithLength:instanceDataSize options:MTLResourceStorageModeManaged];
 }
+
 - (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {
     println("metal view size {}x{}", size.width, size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView *)pView {
-    println("metal view draw");
-    id pool = [NSAutoreleasePool new];
+    using simd::float4;
+    using simd::float4x4;
 
+    println("metal view draw");
+
+    id pool = [NSAutoreleasePool new];
     id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 
-    MTLRenderPassDescriptor *passDescriptor = [pView currentRenderPassDescriptor];
+    const float _angle = 0.01f;
+    const float scl = 0.1f;
 
+    shader_types::InstanceData* pInstanceData = reinterpret_cast< shader_types::InstanceData *>([_pInstanceDataBuffer contents] );
+    for ( size_t i = 0; i < kNumInstances; ++i )
+    {
+        float iDivNumInstances = i / (float)kNumInstances;
+        float xoff = (iDivNumInstances * 2.0f - 1.0f) + (1.f/kNumInstances);
+        float yoff = sin( ( iDivNumInstances + _angle ) * 2.0f * M_PI);
+        pInstanceData[ i ].instanceTransform = (float4x4){ (float4){ scl * sinf(_angle), scl * cosf(_angle), 0.f, 0.f },
+                                                           (float4){ scl * cosf(_angle), scl * -sinf(_angle), 0.f, 0.f },
+                                                           (float4){ 0.f, 0.f, scl, 0.f },
+                                                           (float4){ xoff, yoff, 0.f, 1.f } };
+
+        float r = iDivNumInstances;
+        float g = 1.0f - r;
+        float b = sinf( M_PI * 2.0f * iDivNumInstances );
+        pInstanceData[ i ].instanceColor = (float4){ r, g, b, 1.0f };
+    }
+    [_pInstanceDataBuffer didModifyRange:NSMakeRange(0, [_pInstanceDataBuffer length])];
+    MTLRenderPassDescriptor *passDescriptor = [pView currentRenderPassDescriptor];
     id<MTLRenderCommandEncoder> commandEncoder = [commandBuffer renderCommandEncoderWithDescriptor:passDescriptor];
     [commandEncoder setRenderPipelineState:_pPSO];
-    // [commandEncoder setVertexBuffer:_pVertexPositionsBuffer offset:0 atIndex:0];
-    // [commandEncoder setVertexBuffer:_pVertexColorsBuffer offset:0 atIndex:1];
-    [commandEncoder setVertexBuffer:_pArgBuffer offset:0 atIndex:0];
-    [commandEncoder useResource:_pVertexPositionsBuffer usage:MTLResourceUsageRead];
-    [commandEncoder useResource:_pVertexColorsBuffer usage:MTLResourceUsageRead];
+    [commandEncoder setVertexBuffer:_pVertexDataBuffer offset:0 atIndex:0];
+    [commandEncoder setVertexBuffer:_pInstanceDataBuffer offset:0 atIndex:1];
+    [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                               indexCount:6
+                                indexType:MTLIndexTypeUInt16
+                                indexBuffer:_pIndexBuffer
+                                indexBufferOffset:0
+                                instanceCount:kNumInstances];
 
-    [commandEncoder setVertexBuffer:_pFrameData offset:0 atIndex:1];
-
-    [commandEncoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [commandEncoder endEncoding];
 
     id<CAMetalDrawable> drawable = [pView currentDrawable];
