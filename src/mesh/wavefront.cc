@@ -68,11 +68,12 @@ WavefrontObj::WavefrontObj(const std::string &filename) {
             vcount.push_back(token.size() - 1);
             for(size_t i=1; i<token.size(); ++i) {
                 auto edge = split(token[i], '/');
-                if (edge.size() != 2) {
-                    throw runtime_error(format("{}:{}: expected indices for vertex and texture", filename, lineNumber));   
+                if (edge.size() >= 1) {
+                    fxyz.push_back(stou(edge[0]) - 1);
                 }
-                fxyz.push_back(stou(edge[0]));
-                fuv.push_back(stou(edge[1]));
+                if (edge.size() >= 2) {
+                    fuv.push_back(stou(edge[1]) - 1);
+                }
             }
         }
     }
