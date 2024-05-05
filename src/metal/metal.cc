@@ -1,11 +1,49 @@
 #import <Cocoa/Cocoa.h>
 #import <MetalKit/MetalKit.h>
 
+#include <map>
 #include <print>
 
 #include "../mesh/wavefront.hh"
 #include "algorithms.hh"
 #include "renderapp.hh"
+
+// morph target
+class Target {
+        std::vector<unsigned> index;
+        std::vector<simd::float3> verts;
+
+    public:
+        /**
+         * calculate morph target from two lists of vertices
+         *
+         * @param src
+         * @param dst
+         */
+        void diff(const std::vector<float>& src, const std::vector<float>& dst);
+
+        /**
+         * apply morph target to vertices
+         *
+         * @param dst destination
+         * @param scale a value between 0 and 1
+         */
+        void apply(const std::vector<simd::float3>& dst, float scale);
+};
+
+class FaceRenderer {
+    public:
+        FaceRenderer();
+
+    // private:
+        struct BlendShape {
+                Target target;
+                float weight;
+        };
+        WavefrontObj neutral;
+        std::map<std::string, BlendShape> blendshapes;
+        void loadBlendShapes();
+};
 
 static constexpr size_t kNumInstances = 1;
 static constexpr size_t kMaxFramesInFlight = 1;
@@ -51,6 +89,9 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     id<MTLBuffer> _pIndexBuffer;
     id<MTLBuffer> _pInstanceDataBuffer;
     id<MTLBuffer> _pCameraDataBuffer;
+
+    size_t indiceCount;
+    FaceRenderer *faceRenderer;
 }
 @end
 
@@ -59,6 +100,7 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     if (self = [super init]) {
         _view = aView;
         _device = _view.device;
+        faceRenderer = new FaceRenderer();
         _commandQueue = [_device newCommandQueue];
         [self buildShaders];
         [self buildDepthStencilStates];
@@ -170,11 +212,13 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
     using simd::float3;
 
-    WavefrontObj obj("upstream/makehuman.js/base/3dobjs/mediapipe_canonical_face_model.obj");
+    // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/mediapipe_canonical_face_model.obj");
+    auto &obj = faceRenderer->neutral;
+    println("NEUTRAL {}", obj.vcount.size());
     // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/cube.obj");
     auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
     vector<shader_types::VertexData> verts(obj.fxyz.size());
-    const float s = 1;
+    const float s = 150.0;
     for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
         auto i3 = i * 3;
         verts[i].position.x = obj.xyz[i3] * s;
@@ -184,13 +228,14 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     }
     auto indices = triangles(obj.vcount, obj.fxyz);
     println("INDICES {}", indices.size());
+    indiceCount = indices.size();
 
     const size_t vertexDataSize = verts.size() * sizeof(shader_types::VertexData);
     const size_t indexDataSize = indices.size() * sizeof(uint16_t);
     _pVertexDataBuffer = [_device newBufferWithLength:vertexDataSize options:MTLResourceStorageModeManaged];
     _pIndexBuffer = [_device newBufferWithLength:indexDataSize options:MTLResourceStorageModeManaged];
-    memcpy( [_pVertexDataBuffer contents], verts.data(), vertexDataSize );
-    memcpy( [_pIndexBuffer contents], indices.data(), indexDataSize );
+    memcpy([_pVertexDataBuffer contents], verts.data(), vertexDataSize);
+    memcpy([_pIndexBuffer contents], indices.data(), indexDataSize);
 
     [_pVertexDataBuffer didModifyRange:NSMakeRange(0, [_pVertexDataBuffer length])];
     [_pIndexBuffer didModifyRange:NSMakeRange(0, [_pIndexBuffer length])];
@@ -265,7 +310,7 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     [commandEncoder setCullMode:MTLCullModeNone];
     [commandEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
     [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                               indexCount:2520
+                               indexCount:indiceCount
                                 indexType:MTLIndexTypeUInt16
                               indexBuffer:_pIndexBuffer
                         indexBufferOffset:0
@@ -353,3 +398,94 @@ simd::float4x4 makeScale(const simd::float3& v) {
 simd::float3x3 discardTranslation(const simd::float4x4& m) { return simd_matrix(m.columns[0].xyz, m.columns[1].xyz, m.columns[2].xyz); }
 
 }  // namespace math
+
+vector<string_view> blendshapeNames{
+    "_neutral",             // 0
+    "browDownLeft",         // 1
+    "browDownRight",        // 2
+    "browInnerUp",          // 3
+    "browOuterUpLeft",      // 4
+    "browOuterUpRight",     // 5
+    "cheekPuff",            // 6
+    "cheekSquintLeft",      // 7
+    "cheekSquintRight",     // 8
+    "eyeBlinkLeft",         // 9
+    "eyeBlinkRight",        // 10
+    "eyeLookDownLeft",      // 11
+    "eyeLookDownRight",     // 12
+    "eyeLookInLeft",        // 13
+    "eyeLookInRight",       // 14
+    "eyeLookOutLeft",       // 15
+    "eyeLookOutRight",      // 16
+    "eyeLookUpLeft",        // 17
+    "eyeLookUpRight",       // 18
+    "eyeSquintLeft",        // 19
+    "eyeSquintRight",       // 20
+    "eyeWideLeft",          // 21
+    "eyeWideRight",         // 22
+    "jawForward",           // 23
+    "jawLeft",              // 24
+    "jawOpen",              // 25
+    "jawRight",             // 26
+    "mouthClose",           // 27
+    "mouthDimpleLeft",      // 28
+    "mouthDimpleRight",     // 29
+    "mouthFrownLeft",       // 30
+    "mouthFrownRight",      // 31
+    "mouthFunnel",          // 32
+    "mouthLeft",            // 33
+    "mouthLowerDownLeft",   // 34
+    "mouthLowerDownRight",  // 35
+    "mouthPressLeft",       // 36
+    "mouthPressRight",      // 37
+    "mouthPucker",          // 38
+    "mouthRight",           // 39
+    "mouthRollLower",       // 40
+    "mouthRollUpper",       // 41
+    "mouthShrugLower",      // 42
+    "mouthShrugUpper",      // 43
+    "mouthSmileLeft",       // 44
+    "mouthSmileRight",      // 45
+    "mouthStretchLeft",     // 46
+    "mouthStretchRight",    // 47
+    "mouthUpperUpLeft",     // 48
+    "mouthUpperUpRight",    // 49
+    "noseSneerLeft",        // 50
+    "noseSneerRight"        // 51
+};
+
+FaceRenderer::FaceRenderer() : neutral("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/Neutral.obj") { loadBlendShapes(); }
+
+void FaceRenderer::loadBlendShapes() {
+    println("LOAD BLEND SHAPES");
+    for (auto blendshape : blendshapeNames) {
+        if (blendshape == "_neutral") {
+            continue;
+        }
+        WavefrontObj obj(format("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/{}.obj", blendshape));
+        auto bs = blendshapes.emplace(blendshape, BlendShape());
+        bs.first->second.target.diff(neutral.xyz, obj.xyz);
+    }
+}
+
+template <class T>
+inline bool isZero(T a) {
+    return fabsf(a) < std::numeric_limits<T>::epsilon();
+}
+
+void Target::diff(const vector<float>& src, const vector<float>& dst) {
+    if (src.size() != dst.size()) {
+        throw runtime_error(format("Target.diff(src, dst): src and dst must have the same length but they are {} and {}", src.size(), dst.size()));
+    }
+    for (size_t v = 0, i = 0; v < src.size(); v += 3, ++i) {
+        auto s = simd::make_float3(src[v], src[v + 1], src[v + 2]);
+        auto d = simd::make_float3(dst[v], dst[v + 1], dst[v + 2]);
+        auto vec = d - s;
+        if (!isZero(vec.x) || !isZero(vec.y) || !isZero(vec.z)) {
+            index.push_back(i);
+            verts.push_back(vec);
+        }
+    }
+}
+
+void Target::apply(const vector<simd::float3>& dst, float scale) {}
