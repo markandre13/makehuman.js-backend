@@ -8,8 +8,29 @@
 #include "algorithms.hh"
 #include "renderapp.hh"
 
+namespace shader_types {
+struct VertexData {
+        simd::float3 position;
+        simd::float3 normal;
+};
+
+struct InstanceData {
+        simd::float4x4 instanceTransform;
+        simd::float3x3 instanceNormalTransform;
+        simd::float4 instanceColor;
+};
+
+struct CameraData {
+        simd::float4x4 perspectiveTransform;
+        simd::float4x4 worldTransform;
+        simd::float3x3 worldNormalTransform;
+};
+}  // namespace shader_types
+
+
 // morph target
 class Target {
+        // fixme: make this one vector
         std::vector<unsigned> index;
         std::vector<simd::float3> verts;
 
@@ -28,7 +49,7 @@ class Target {
          * @param dst destination
          * @param scale a value between 0 and 1
          */
-        void apply(const std::vector<simd::float3>& dst, float scale);
+        void apply(std::vector<shader_types::VertexData>& dst, float scale);
 };
 
 class FaceRenderer {
@@ -50,25 +71,6 @@ static constexpr size_t kMaxFramesInFlight = 1;
 float _angle = 0.00f;
 
 using namespace std;
-
-namespace shader_types {
-struct VertexData {
-        simd::float3 position;
-        simd::float3 normal;
-};
-
-struct InstanceData {
-        simd::float4x4 instanceTransform;
-        simd::float3x3 instanceNormalTransform;
-        simd::float4 instanceColor;
-};
-
-struct CameraData {
-        simd::float4x4 perspectiveTransform;
-        simd::float4x4 worldTransform;
-        simd::float3x3 worldNormalTransform;
-};
-}  // namespace shader_types
 
 namespace math {
 constexpr simd::float3 add(const simd::float3& a, const simd::float3& b);
@@ -214,20 +216,24 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
     // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/mediapipe_canonical_face_model.obj");
     auto &obj = faceRenderer->neutral;
-    println("NEUTRAL {}", obj.vcount.size());
-    // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/cube.obj");
-    auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
+    auto &bs = faceRenderer->blendshapes["jawOpen"];
+    
     vector<shader_types::VertexData> verts(obj.fxyz.size());
-    const float s = 150.0;
     for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
         auto i3 = i * 3;
-        verts[i].position.x = obj.xyz[i3] * s;
-        verts[i].position.y = obj.xyz[i3 + 1] * s;
-        verts[i].position.z = obj.xyz[i3 + 2] * s;
+        verts[i].position.x = obj.xyz[i3];
+        verts[i].position.y = obj.xyz[i3 + 1];
+        verts[i].position.z = obj.xyz[i3 + 2];
+    }
+    bs.target.apply(verts, 1.0);
+    const float s = 150.0;
+    auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
+    for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
+        verts[i].position *= s;
         verts[i].normal = nxyz[i];
+
     }
     auto indices = triangles(obj.vcount, obj.fxyz);
-    println("INDICES {}", indices.size());
     indiceCount = indices.size();
 
     const size_t vertexDataSize = verts.size() * sizeof(shader_types::VertexData);
@@ -457,11 +463,12 @@ vector<string_view> blendshapeNames{
 FaceRenderer::FaceRenderer() : neutral("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/Neutral.obj") { loadBlendShapes(); }
 
 void FaceRenderer::loadBlendShapes() {
-    println("LOAD BLEND SHAPES");
-    for (auto blendshape : blendshapeNames) {
+    println("load blend shapes...");
+    for (auto &blendshape : blendshapeNames) {
         if (blendshape == "_neutral") {
             continue;
         }
+        println("{}", blendshape);
         WavefrontObj obj(format("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/{}.obj", blendshape));
         auto bs = blendshapes.emplace(blendshape, BlendShape());
         bs.first->second.target.diff(neutral.xyz, obj.xyz);
@@ -488,4 +495,8 @@ void Target::diff(const vector<float>& src, const vector<float>& dst) {
     }
 }
 
-void Target::apply(const vector<simd::float3>& dst, float scale) {}
+void Target::apply(vector<shader_types::VertexData>& dst, float scale) {
+    for(size_t i=0; i<index.size(); ++i) {
+        dst[index[i]].position += verts[i] * scale;
+    }
+}
