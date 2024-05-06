@@ -1,5 +1,8 @@
 #import <Cocoa/Cocoa.h>
 #import <MetalKit/MetalKit.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <map>
 #include <print>
@@ -26,7 +29,6 @@ struct CameraData {
         simd::float3x3 worldNormalTransform;
 };
 }  // namespace shader_types
-
 
 // morph target
 class Target {
@@ -56,7 +58,7 @@ class FaceRenderer {
     public:
         FaceRenderer();
 
-    // private:
+        // private:
         struct BlendShape {
                 Target target;
                 float weight;
@@ -93,7 +95,7 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     id<MTLBuffer> _pCameraDataBuffer;
 
     size_t indiceCount;
-    FaceRenderer *faceRenderer;
+    FaceRenderer* faceRenderer;
 }
 @end
 
@@ -215,9 +217,9 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     using simd::float3;
 
     // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/mediapipe_canonical_face_model.obj");
-    auto &obj = faceRenderer->neutral;
-    auto &bs = faceRenderer->blendshapes["jawOpen"];
-    
+    auto& obj = faceRenderer->neutral;
+    auto& bs = faceRenderer->blendshapes["jawOpen"];
+
     vector<shader_types::VertexData> verts(obj.fxyz.size());
     for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
         auto i3 = i * 3;
@@ -231,7 +233,6 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
         verts[i].position *= s;
         verts[i].normal = nxyz[i];
-
     }
     auto indices = triangles(obj.vcount, obj.fxyz);
     indiceCount = indices.size();
@@ -335,6 +336,54 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
 /////////////////////////////////////////////
 
+int setup_server_socket() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1) {
+        perror("socket");
+        exit(1);
+    }
+
+    int val = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, static_cast<socklen_t>(sizeof(val)));
+
+    struct sockaddr_in my_addr;
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_port = htons(8080);
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    memset(&(my_addr.sin_zero), '\0', 8);
+
+    int bind_status = bind(sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
+    if (bind_status == -1) {
+        perror("bind");
+        exit(1);
+    }
+
+    int listen_status = listen(sock, 10);
+    if (listen_status == -1) {
+        perror("listen");
+        exit(1);
+    }
+
+    return sock;
+}
+
+void connectionCB(CFSocketRef cf_sock, CFSocketCallBackType type, CFDataRef address, const void* data, void* info) {
+    int sock = *(int*)data;
+    printf("got connection = %i\n", sock);
+    close(sock);
+
+
+    // CFSocketRef child = CFSocketCreateWithNative(NULL,
+    // 					 sock,
+    // 					 kCFSocketReadCallBack,
+    // 					 readCB,
+    // 					 NULL);
+    // CFRunLoopSourceRef childSource = CFSocketCreateRunLoopSource(NULL, child, 0);
+    // CFRunLoopRef loop = CFRunLoopGetCurrent();
+    // CFRunLoopAddSource(loop, childSource, kCFRunLoopDefaultMode);
+    // CFRelease(childSource);
+}
+
 int main() {
     println("Metal...");
 
@@ -344,7 +393,34 @@ int main() {
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
     [app setDelegate:delegate];
 
+    CFRunLoopRef loop = CFRunLoopGetMain();
+    printf("loop = %p\n", loop);
+
+    int sock = setup_server_socket();
+    printf("socket = %i\n", sock);
+    CFSocketRef cf_sock = CFSocketCreateWithNative(NULL, sock, kCFSocketAcceptCallBack, connectionCB, NULL);
+    CFRunLoopSourceRef source = CFSocketCreateRunLoopSource(NULL, cf_sock, 0);
+    // CFRunLoopRef loop = CFRunLoopGetCurrent();
+    CFRunLoopAddSource(loop, source, kCFRunLoopDefaultMode);
+
+    // CFRunLoopContainsSource
+    // CFRunLoopRemoveSource
+
+#if 0
+    // https://www.cocoawithlove.com/2009/01/demystifying-nsapplication-by.html
+    [app finishLaunching];
+    while (true) {
+        [pool release];
+        pool = [NSAutoreleasePool new];
+
+        NSEvent* event = [app nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate distantFuture] inMode:NSDefaultRunLoopMode dequeue:YES];
+
+        [app sendEvent:event];
+        [app updateWindows];
+    }
+#else
     [app run];
+#endif
     [pool release];
 
     return 0;
@@ -464,7 +540,7 @@ FaceRenderer::FaceRenderer() : neutral("/Users/mark/public_html/makehuman.js/bas
 
 void FaceRenderer::loadBlendShapes() {
     println("load blend shapes...");
-    for (auto &blendshape : blendshapeNames) {
+    for (auto& blendshape : blendshapeNames) {
         if (blendshape == "_neutral") {
             continue;
         }
@@ -496,7 +572,7 @@ void Target::diff(const vector<float>& src, const vector<float>& dst) {
 }
 
 void Target::apply(vector<shader_types::VertexData>& dst, float scale) {
-    for(size_t i=0; i<index.size(); ++i) {
+    for (size_t i = 0; i < index.size(); ++i) {
         dst[index[i]].position += verts[i] * scale;
     }
 }
