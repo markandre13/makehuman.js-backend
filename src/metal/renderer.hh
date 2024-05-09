@@ -10,5 +10,6 @@
     id<MTLRenderPipelineState> _pPSO;
 }
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)View;
+- (void)invalidate;
 - (void)drawInMTKView:(nonnull MTKView *)view;
 @end

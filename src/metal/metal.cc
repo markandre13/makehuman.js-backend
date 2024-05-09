@@ -1,3 +1,5 @@
+#include "metal.hh"
+
 #import <Cocoa/Cocoa.h>
 #import <MetalKit/MetalKit.h>
 #include <netinet/in.h>
@@ -86,19 +88,6 @@ simd::float4x4 makeScale(const simd::float3& v);
 simd::float3x3 discardTranslation(const simd::float4x4& m);
 }  // namespace math
 
-@interface TriangleRenderer : Renderer {
-    id<MTLLibrary> _library;
-    id<MTLDepthStencilState> _pDepthStencilState;
-    id<MTLBuffer> _pVertexDataBuffer;
-    id<MTLBuffer> _pIndexBuffer;
-    id<MTLBuffer> _pInstanceDataBuffer;
-    id<MTLBuffer> _pCameraDataBuffer;
-
-    size_t indiceCount;
-    FaceRenderer* faceRenderer;
-}
-@end
-
 @implementation TriangleRenderer : Renderer
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView*)aView {
     if (self = [super init]) {
@@ -112,6 +101,7 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     }
     return self;
 }
+
 // halfX : float16[X]
 // floatX: float32[X]
 
@@ -227,7 +217,9 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
         verts[i].position.y = obj.xyz[i3 + 1];
         verts[i].position.z = obj.xyz[i3 + 2];
     }
+
     bs.target.apply(verts, 1.0);
+
     const float s = 150.0;
     auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
     for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
@@ -258,6 +250,8 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     // println("metal view size {}x{}", size.width, size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView*)pView {
+    println("drawInMTKView");
+
     using simd::float3;
     using simd::float4;
     using simd::float4x4;
@@ -336,60 +330,89 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
 /////////////////////////////////////////////
 
-int setup_server_socket() {
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == -1) {
-        perror("socket");
-        exit(1);
-    }
+// int setup_server_socket() {
+//     int sock = socket(AF_INET, SOCK_STREAM, 0);
+//     if (sock == -1) {
+//         perror("socket");
+//         exit(1);
+//     }
 
-    int val = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, static_cast<socklen_t>(sizeof(val)));
+//     int val = 1;
+//     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, static_cast<socklen_t>(sizeof(val)));
 
-    struct sockaddr_in my_addr;
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_port = htons(8080);
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    memset(&(my_addr.sin_zero), '\0', 8);
+//     struct sockaddr_in my_addr;
+//     my_addr.sin_family = AF_INET;
+//     my_addr.sin_port = htons(8080);
+//     my_addr.sin_addr.s_addr = INADDR_ANY;
+//     memset(&(my_addr.sin_zero), '\0', 8);
 
-    int bind_status = bind(sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
-    if (bind_status == -1) {
-        perror("bind");
-        exit(1);
-    }
+//     int bind_status = bind(sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
+//     if (bind_status == -1) {
+//         perror("bind");
+//         exit(1);
+//     }
 
-    int listen_status = listen(sock, 10);
-    if (listen_status == -1) {
-        perror("listen");
-        exit(1);
-    }
+//     int listen_status = listen(sock, 10);
+//     if (listen_status == -1) {
+//         perror("listen");
+//         exit(1);
+//     }
 
-    return sock;
-}
+//     return sock;
+// }
 
-void connectionCB(CFSocketRef cf_sock, CFSocketCallBackType type, CFDataRef address, const void* data, void* info) {
-    int sock = *(int*)data;
-    printf("got connection = %i\n", sock);
-    close(sock);
+// void connectionCB(CFSocketRef cf_sock, CFSocketCallBackType type, CFDataRef address, const void* data, void* info) {
+//     int sock = *(int*)data;
+//     printf("got connection = %i\n", sock);
+//     close(sock);
 
+//     // CFSocketRef child = CFSocketCreateWithNative(NULL,
+//     // 					 sock,
+//     // 					 kCFSocketReadCallBack,
+//     // 					 readCB,
+//     // 					 NULL);
+//     // CFRunLoopSourceRef childSource = CFSocketCreateRunLoopSource(NULL, child, 0);
+//     // CFRunLoopRef loop = CFRunLoopGetCurrent();
+//     // CFRunLoopAddSource(loop, childSource, kCFRunLoopDefaultMode);
+//     // CFRelease(childSource);
+// }
 
-    // CFSocketRef child = CFSocketCreateWithNative(NULL,
-    // 					 sock,
-    // 					 kCFSocketReadCallBack,
-    // 					 readCB,
-    // 					 NULL);
-    // CFRunLoopSourceRef childSource = CFSocketCreateRunLoopSource(NULL, child, 0);
-    // CFRunLoopRef loop = CFRunLoopGetCurrent();
-    // CFRunLoopAddSource(loop, childSource, kCFRunLoopDefaultMode);
-    // CFRelease(childSource);
-}
-
-void metal() {
+MetalFacerenderer* metal() {
     println("create metal renderer...");
+
     id app = [NSApplication sharedApplication];
-    RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
+    TriangleRenderer *r = [TriangleRenderer alloc];
+    RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:r];
     [app setDelegate:delegate];
     [app finishLaunching];
+
+    MetalFacerenderer* renderer = new MetalFacerenderer();
+    renderer->delegate = r;
+    return renderer;
+}
+
+void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
+    if (!result.has_value()) {
+        return;
+    }
+    if (!delegate || !delegate->faceRenderer) {
+        return;
+    }
+    auto &bs = result->face_blendshapes->at(0).categories;
+    for (auto &cat : bs) {
+        if (!cat.category_name) { // FIXME: this sometimes crashes...
+            println("no category name");
+            continue;
+        }
+        auto x = delegate->faceRenderer->blendshapes.find(*cat.category_name);
+        if (x == delegate->faceRenderer->blendshapes.end()) {
+            continue;
+        }
+        x->second.weight = cat.score;
+    }
+
+    // delegate->faceRenderer;
+    [delegate invalidate];
 }
 
 int mainX() {
@@ -559,7 +582,7 @@ void FaceRenderer::loadBlendShapes() {
         if (blendshape == "_neutral") {
             continue;
         }
-        println("{}", blendshape);
+        // println("{}", blendshape);
         WavefrontObj obj(format("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/{}.obj", blendshape));
         auto bs = blendshapes.emplace(blendshape, BlendShape());
         bs.first->second.target.diff(neutral.xyz, obj.xyz);

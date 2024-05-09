@@ -77,7 +77,10 @@ using namespace std;
     view.colorPixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
     view.depthStencilPixelFormat = MTLPixelFormatDepth16Unorm;
     view.clearDepth = 1.0f;
-    view.enableSetNeedsDisplay = YES;
+
+    // https://developer.apple.com/documentation/metalkit/mtkview?language=objc
+    view.paused = YES;
+    view.enableSetNeedsDisplay = FALSE;
 
     [_renderer initWithMetalKitView:view];
     view.delegate = _renderer;

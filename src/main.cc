@@ -63,7 +63,7 @@ int main(void) {
     }
 
 #ifdef HAVE_METAL
-    metal();
+    MetalFacerenderer *metalRenderer = metal();
 #endif
 
 #ifdef HAVE_MEDIAPIPE
@@ -88,6 +88,9 @@ int main(void) {
         tids.insert(tid);
 
         // TODO: UPDATE METAL
+#ifdef HAVE_METAL
+        metalRenderer->faceLandmarks(result, timestamp_ms);
+#endif
 
         // rendering has too much latency (reason: the table in the expression tab)
         // latency (cummulative) the frame was captured (3.5 GHz Intel Xeon E5)
