@@ -1,6 +1,6 @@
 APP=backend
 
-APP_SRC=main.cc makehuman_impl.cc makehuman.cc
+APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc
 IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 # how to get core dumps on macos
@@ -11,12 +11,12 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 HAVE_MEDIAPIPE=1
 HAVE_METAL=1
+MEMCHECK=-fsanitize=address -fsanitize=leak
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
 	naming.cc hexdump.cc \
 	net/ws.cc net/ws/socket.cc net/ws/createAcceptKey.cc
-
 CXX=/usr/local/opt/llvm/bin/clang++
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
 
@@ -31,20 +31,22 @@ MEDIAPIPE_LFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR) -lmediapipe
 endif
 
 ifeq ($(HAVE_METAL), 1)
-METAL_SRC=metal/metal.cc
-METAL_CFLAGS=-fno-objc-arc -I../upstream/metal-cpp -I../upstream/metal-cpp-extensions -DHAVE_METAL=1
+METAL_SRC=metal/metal.cc metal/renderer.cc metal/renderapp.cc metal/algorithms.cc
+METAL_CFLAGS=-ObjC++ -fno-objc-arc -I../upstream/metal-cpp -I../upstream/metal-cpp-extensions -DHAVE_METAL=1
 METAL_LFLAGS=-framework Metal -framework Foundation -framework Cocoa -framework CoreGraphics -framework MetalKit
 endif
 
-CFLAGS=-std=c++23 -fmodules \
+# CFLAGS=-std=c++23 -fmodules
+CFLAGS=-std=c++23 $(MEMCHECK) \
 	-Wall -Wextra -Werror=return-type -Werror=shadow \
 	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
 	-I$(CORBA_PATH) $(MEDIAPIPE_CFLAGS) $(METAL_CFLAGS)
-LIB=$(MEDIAPIPE_LFLAGS) $(METAL_LFLAGS) \
+LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(METAL_LFLAGS) -fno-objc-arc \
 	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
+# SRC=metal/metal.cc metal/renderer.cc metal/renderapp.cc metal/algorithms.cc util.cc mesh/wavefront.cc
 SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC)) $(METAL_SRC)
 OBJ = $(SRC:.cc=.o)
 
@@ -127,6 +129,8 @@ makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
 makehuman.o: makehuman_skel.hh makehuman_stub.hh
+util.o: util.hh
+mesh/wavefront.o: mesh/wavefront.hh util.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
@@ -211,8 +215,6 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_event.h
-../upstream/corba.cc/src/corba/net/ws.o: ../../../upstream/wslay/lib/wslay_queue.h
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/cdr.hh
@@ -220,3 +222,8 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
+metal/metal.o: mesh/wavefront.hh metal/algorithms.hh metal/renderapp.hh
+metal/metal.o: metal/renderer.hh
+metal/renderer.o: metal/renderer.hh
+metal/renderapp.o: metal/renderapp.hh metal/renderer.hh
+metal/algorithms.o: metal/algorithms.hh

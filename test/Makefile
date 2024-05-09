@@ -29,7 +29,7 @@ LIB=-lev -lwslay -lnettle
 
     #   corba/net/ws.spec.cc \
 
-SRC = mesh/wavefront.spec.cc \
+SRC = mesh/wavefront.spec.cc mesh/rendermesh.spec.cc \
 	  ../src/util.cc ../src/mesh/wavefront.cc \
 	  main.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc
 
@@ -78,6 +78,8 @@ makehuman.hh: makehuman.idl
 
 # DO NOT DELETE
 
+mesh/wavefront.spec.o: ../src/mesh/wavefront.hh
+mesh/rendermesh.spec.o: ../src/mesh/wavefront.hh
 ../src/util.o: ../src/util.hh
 ../src/mesh/wavefront.o: ../src/mesh/wavefront.hh ../src/util.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh

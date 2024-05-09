@@ -11,6 +11,7 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 #include <opencv2/opencv.hpp>
 
 #include <sys/time.h>
+#include <pthread.h>
 
 #include <corba/corba.hh>
 #include <corba/net/ws.hh>
@@ -22,9 +23,21 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 
 #include "makehuman_impl.hh"
 
+#ifdef HAVE_METAL
+#include "metal/metal.hh"
+#endif
+
 using namespace std;
 
 static uint64_t getMilliseconds();
+
+void* libev_thread(void *ptr) {
+    auto loop = static_cast<struct ev_loop *>(ptr);
+    println("started libev loop");
+    ev_run(loop, 0);
+    println("stopped libev loop");
+    return nullptr;
+}
 
 int main(void) {
     println("makehuman.js backend");
@@ -44,6 +57,15 @@ int main(void) {
     auto protocol = new CORBA::net::WsProtocol();
     protocol->listen(orb.get(), loop, "localhost", 9001);
 
+    pthread_t libevthread;
+    if (pthread_create(&libevthread, nullptr, libev_thread, loop) != 0) {
+        println("ERROR: failed to create libev thread");
+    }
+
+#ifdef HAVE_METAL
+    metal();
+#endif
+
 #ifdef HAVE_MEDIAPIPE
     //
     // SETUP MEDIAPIPE
@@ -59,11 +81,13 @@ int main(void) {
     set<uint64_t> tids;
 
     options->result_callback = [&](auto result, auto timestamp_ms) {
-        ev_run(loop, EVRUN_NOWAIT);
+        // ev_run(loop, EVRUN_NOWAIT);
 
         uint64_t tid;
         pthread_threadid_np(NULL, &tid);
         tids.insert(tid);
+
+        // TODO: UPDATE METAL
 
         // rendering has too much latency (reason: the table in the expression tab)
         // latency (cummulative) the frame was captured (3.5 GHz Intel Xeon E5)
@@ -106,6 +130,8 @@ int main(void) {
     // namedWindow() doesn't work, but cv::waitKey() will display the window
     // cv::namedWindow("image");
 
+    // https://developer.apple.com/documentation/corefoundation/cffiledescriptor?language=objc
+
     cv::Mat frame;
     while (true) {
         cap >> frame;
@@ -119,9 +145,9 @@ int main(void) {
 #ifdef HAVE_MEDIAPIPE
         landmarker->DetectAsync(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
 #else
-        ev_run(loop, EVRUN_NOWAIT);
+        // ev_run(loop, EVRUN_NOWAIT);
 #endif
-        cv::waitKey(1);  // wait 1ms
+        cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
     }
 
     return 0;

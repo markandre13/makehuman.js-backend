@@ -107,7 +107,9 @@
         "valarray": "cpp",
         "rope": "cpp",
         "slist": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "qtcore": "cpp",
+        "shared_mutex": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",

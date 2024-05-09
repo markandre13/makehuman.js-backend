@@ -384,7 +384,15 @@ void connectionCB(CFSocketRef cf_sock, CFSocketCallBackType type, CFDataRef addr
     // CFRelease(childSource);
 }
 
-int main() {
+void metal() {
+    println("create metal renderer...");
+    id app = [NSApplication sharedApplication];
+    RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
+    [app setDelegate:delegate];
+    [app finishLaunching];
+}
+
+int mainX() {
     println("Metal...");
 
     id pool = [NSAutoreleasePool new];
@@ -393,18 +401,25 @@ int main() {
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
     [app setDelegate:delegate];
 
-    CFRunLoopRef loop = CFRunLoopGetMain();
-    printf("loop = %p\n", loop);
+#if 0
+    // what this actually does is creating a thread which listens on the socket
+    // and then calls... connectionCB... why does it need a CFRunLoop at all?
+    // [ ] so we could basically place the network stuff into it's own thread
+    //     libev can do that (only fork() would need special care)
+    //     http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#THREADS_AND_COROUTINES
+    // [ ] can we call metal from a thread?
 
+    CFRunLoopRef loop = CFRunLoopGetMain();
+    // CFRunLoopRef loop = CFRunLoopGetCurrent();
+    printf("loop = %p\n", loop);
     int sock = setup_server_socket();
     printf("socket = %i\n", sock);
     CFSocketRef cf_sock = CFSocketCreateWithNative(NULL, sock, kCFSocketAcceptCallBack, connectionCB, NULL);
     CFRunLoopSourceRef source = CFSocketCreateRunLoopSource(NULL, cf_sock, 0);
-    // CFRunLoopRef loop = CFRunLoopGetCurrent();
     CFRunLoopAddSource(loop, source, kCFRunLoopDefaultMode);
-
     // CFRunLoopContainsSource
     // CFRunLoopRemoveSource
+#endif
 
 #if 0
     // https://www.cocoawithlove.com/2009/01/demystifying-nsapplication-by.html
