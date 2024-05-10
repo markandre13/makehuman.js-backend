@@ -29,7 +29,7 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCapture
 #ifdef HAVE_MEDIAPIPE
 
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
-    if (!result.has_value() || result->face_landmarks.size() == 0) {
+    if (!result.has_value() || result->face_landmarks.size() == 0 || !result->face_blendshapes.has_value()) {
         return;
     }
 

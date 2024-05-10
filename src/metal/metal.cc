@@ -366,9 +366,12 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
     if (!delegate || !delegate->faceRenderer) {
         return;
     }
+    if (!result->face_blendshapes.has_value()) {
+        return;
+    }
     auto &bs = result->face_blendshapes->at(0).categories;
     for (auto &cat : bs) {
-        if (!cat.category_name) { // FIXME: this sometimes crashes...
+        if (!cat.category_name.has_value()) {
             println("no category name");
             continue;
         }

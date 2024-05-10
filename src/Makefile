@@ -97,6 +97,7 @@ main.o: ../upstream/corba.cc/src/corba/protocol.hh makehuman_impl.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+main.o: metal/metal.hh metal/renderer.hh
 makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -130,7 +131,8 @@ makehuman.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
 makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh
-mesh/wavefront.o: mesh/wavefront.hh util.hh
+mesh/wavefront.o: mesh/wavefront.hh ../upstream/fast_float/fast_float.h
+mesh/wavefront.o: util.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
@@ -222,8 +224,8 @@ mesh/wavefront.o: mesh/wavefront.hh util.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
-metal/metal.o: mesh/wavefront.hh metal/algorithms.hh metal/renderapp.hh
-metal/metal.o: metal/renderer.hh
+metal/metal.o: metal/metal.hh metal/renderer.hh mesh/wavefront.hh
+metal/metal.o: metal/algorithms.hh metal/renderapp.hh
 metal/renderer.o: metal/renderer.hh
 metal/renderapp.o: metal/renderapp.hh metal/renderer.hh
 metal/algorithms.o: metal/algorithms.hh

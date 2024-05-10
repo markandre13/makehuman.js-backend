@@ -109,7 +109,8 @@
         "slist": "cpp",
         "*.inc": "cpp",
         "qtcore": "cpp",
-        "shared_mutex": "cpp"
+        "shared_mutex": "cpp",
+        "hash_set": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",
