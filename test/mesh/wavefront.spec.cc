@@ -21,8 +21,8 @@ kaffeeklatsch_spec([] {
                 -1.0, 1.0, -1.0,
             });
             expect(obj.fxyz).to.equal(vector<unsigned>{
-                1, 2, 3, 4,
-                5, 6, 7, 8
+                0, 1, 2, 3,
+                4, 5, 6, 7
             });
             expect(obj.uv).to.equal(vector<float>{
                 0, 0,
@@ -31,8 +31,8 @@ kaffeeklatsch_spec([] {
                 0, 1,
             });
             expect(obj.fuv).to.equal(vector<unsigned>{
-                1, 2, 3, 4,
-                1, 2, 3, 4,
+                0, 1, 2, 3,
+                0, 1, 2, 3,
             });
             expect(obj.vcount).to.equal(vector<unsigned>{
                 4, 4,
