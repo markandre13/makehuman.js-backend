@@ -13,6 +13,12 @@
 #include "algorithms.hh"
 #include "renderapp.hh"
 
+
+template <class T>
+inline bool isZero(T a) {
+    return fabsf(a) < std::numeric_limits<T>::epsilon();
+}
+
 namespace shader_types {
 struct VertexData {
         simd::float3 position;
@@ -208,35 +214,17 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
     // WavefrontObj obj("upstream/makehuman.js/base/3dobjs/mediapipe_canonical_face_model.obj");
     auto& obj = faceRenderer->neutral;
-    auto& bs = faceRenderer->blendshapes["jawOpen"];
 
-    vector<shader_types::VertexData> verts(obj.fxyz.size());
-    for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
-        auto i3 = i * 3;
-        verts[i].position.x = obj.xyz[i3];
-        verts[i].position.y = obj.xyz[i3 + 1];
-        verts[i].position.z = obj.xyz[i3 + 2];
-    }
+    const size_t vertexDataSize = obj.xyz.size() * sizeof(shader_types::VertexData);
+    _pVertexDataBuffer = [_device newBufferWithLength:vertexDataSize options:MTLResourceStorageModeManaged];
 
-    bs.target.apply(verts, 1.0);
-
-    const float s = 150.0;
-    auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
-    for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
-        verts[i].position *= s;
-        verts[i].normal = nxyz[i];
-    }
     auto indices = triangles(obj.vcount, obj.fxyz);
     indiceCount = indices.size();
 
-    const size_t vertexDataSize = verts.size() * sizeof(shader_types::VertexData);
-    const size_t indexDataSize = indices.size() * sizeof(uint16_t);
-    _pVertexDataBuffer = [_device newBufferWithLength:vertexDataSize options:MTLResourceStorageModeManaged];
-    _pIndexBuffer = [_device newBufferWithLength:indexDataSize options:MTLResourceStorageModeManaged];
-    memcpy([_pVertexDataBuffer contents], verts.data(), vertexDataSize);
-    memcpy([_pIndexBuffer contents], indices.data(), indexDataSize);
 
-    [_pVertexDataBuffer didModifyRange:NSMakeRange(0, [_pVertexDataBuffer length])];
+    const size_t indexDataSize = indices.size() * sizeof(uint16_t);
+    _pIndexBuffer = [_device newBufferWithLength:indexDataSize options:MTLResourceStorageModeManaged];
+    memcpy([_pIndexBuffer contents], indices.data(), indexDataSize);
     [_pIndexBuffer didModifyRange:NSMakeRange(0, [_pIndexBuffer length])];
 
     const size_t instanceDataSize = kNumInstances * sizeof(shader_types::InstanceData);
@@ -250,7 +238,7 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     // println("metal view size {}x{}", size.width, size.height);
 }
 - (void)drawInMTKView:(nonnull MTKView*)pView {
-    println("drawInMTKView");
+    // println("drawInMTKView");
 
     using simd::float3;
     using simd::float4;
@@ -261,8 +249,37 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
     id pool = [NSAutoreleasePool new];
     id<MTLCommandBuffer> commandBuffer = [_commandQueue commandBuffer];
 
-    _angle += 0.01f;
+    // _angle += 0.01f;
     const float scl = 0.1f;
+
+    auto& obj = faceRenderer->neutral;
+    // auto& bs = faceRenderer->blendshapes["jawOpen"];
+
+    vector<shader_types::VertexData> verts(obj.xyz.size());
+    for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
+        auto i3 = i * 3;
+        verts[i].position.x = obj.xyz[i3];
+        verts[i].position.y = obj.xyz[i3 + 1];
+        verts[i].position.z = obj.xyz[i3 + 2];
+    }
+
+    for(auto &bs: faceRenderer->blendshapes) {
+        if (!isZero(bs.second.weight)) {
+           bs.second.target.apply(verts, bs.second.weight);
+        }
+    }
+
+    const float s = 150.0;
+    auto nxyz = calculateNormals(obj.vcount, obj.fxyz, obj.xyz);
+    for (size_t i = 0; i < obj.xyz.size() / 3; ++i) {
+        verts[i].position *= s;
+        verts[i].normal = nxyz[i];
+    }
+
+    const size_t vertexDataSize = verts.size() * sizeof(shader_types::VertexData);
+    // _pVertexDataBuffer = [_device newBufferWithLength:vertexDataSize options:MTLResourceStorageModeManaged];
+    memcpy([_pVertexDataBuffer contents], verts.data(), vertexDataSize);
+    [_pVertexDataBuffer didModifyRange:NSMakeRange(0, [_pVertexDataBuffer length])];
 
     shader_types::InstanceData* pInstanceData = reinterpret_cast<shader_types::InstanceData*>([_pInstanceDataBuffer contents]);
     float3 objectPosition = {0.f, 0.f, -5.f};
@@ -328,55 +345,6 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 
 @end
 
-/////////////////////////////////////////////
-
-// int setup_server_socket() {
-//     int sock = socket(AF_INET, SOCK_STREAM, 0);
-//     if (sock == -1) {
-//         perror("socket");
-//         exit(1);
-//     }
-
-//     int val = 1;
-//     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, static_cast<socklen_t>(sizeof(val)));
-
-//     struct sockaddr_in my_addr;
-//     my_addr.sin_family = AF_INET;
-//     my_addr.sin_port = htons(8080);
-//     my_addr.sin_addr.s_addr = INADDR_ANY;
-//     memset(&(my_addr.sin_zero), '\0', 8);
-
-//     int bind_status = bind(sock, (struct sockaddr*)&my_addr, sizeof(struct sockaddr));
-//     if (bind_status == -1) {
-//         perror("bind");
-//         exit(1);
-//     }
-
-//     int listen_status = listen(sock, 10);
-//     if (listen_status == -1) {
-//         perror("listen");
-//         exit(1);
-//     }
-
-//     return sock;
-// }
-
-// void connectionCB(CFSocketRef cf_sock, CFSocketCallBackType type, CFDataRef address, const void* data, void* info) {
-//     int sock = *(int*)data;
-//     printf("got connection = %i\n", sock);
-//     close(sock);
-
-//     // CFSocketRef child = CFSocketCreateWithNative(NULL,
-//     // 					 sock,
-//     // 					 kCFSocketReadCallBack,
-//     // 					 readCB,
-//     // 					 NULL);
-//     // CFRunLoopSourceRef childSource = CFSocketCreateRunLoopSource(NULL, child, 0);
-//     // CFRunLoopRef loop = CFRunLoopGetCurrent();
-//     // CFRunLoopAddSource(loop, childSource, kCFRunLoopDefaultMode);
-//     // CFRelease(childSource);
-// }
-
 MetalFacerenderer* metal() {
     println("create metal renderer...");
 
@@ -411,7 +379,6 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
         x->second.weight = cat.score;
     }
 
-    // delegate->faceRenderer;
     [delegate invalidate];
 }
 
@@ -424,25 +391,7 @@ int mainX() {
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
     [app setDelegate:delegate];
 
-#if 0
-    // what this actually does is creating a thread which listens on the socket
-    // and then calls... connectionCB... why does it need a CFRunLoop at all?
-    // [ ] so we could basically place the network stuff into it's own thread
-    //     libev can do that (only fork() would need special care)
-    //     http://pod.tst.eu/http://cvs.schmorp.de/libev/ev.pod#THREADS_AND_COROUTINES
-    // [ ] can we call metal from a thread?
 
-    CFRunLoopRef loop = CFRunLoopGetMain();
-    // CFRunLoopRef loop = CFRunLoopGetCurrent();
-    printf("loop = %p\n", loop);
-    int sock = setup_server_socket();
-    printf("socket = %i\n", sock);
-    CFSocketRef cf_sock = CFSocketCreateWithNative(NULL, sock, kCFSocketAcceptCallBack, connectionCB, NULL);
-    CFRunLoopSourceRef source = CFSocketCreateRunLoopSource(NULL, cf_sock, 0);
-    CFRunLoopAddSource(loop, source, kCFRunLoopDefaultMode);
-    // CFRunLoopContainsSource
-    // CFRunLoopRemoveSource
-#endif
 
 #if 0
     // https://www.cocoawithlove.com/2009/01/demystifying-nsapplication-by.html
@@ -587,11 +536,6 @@ void FaceRenderer::loadBlendShapes() {
         auto bs = blendshapes.emplace(blendshape, BlendShape());
         bs.first->second.target.diff(neutral.xyz, obj.xyz);
     }
-}
-
-template <class T>
-inline bool isZero(T a) {
-    return fabsf(a) < std::numeric_limits<T>::epsilon();
 }
 
 void Target::diff(const vector<float>& src, const vector<float>& dst) {
