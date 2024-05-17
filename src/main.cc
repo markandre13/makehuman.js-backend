@@ -140,7 +140,7 @@ int main(void) {
         cap >> frame;
         if (frame.empty()) {
             std::cout << "empty image" << std::endl;
-            return 1;
+            continue;
         }
         auto timestamp = getMilliseconds();
 

@@ -10,57 +10,9 @@
 #include <print>
 
 #include "../mesh/wavefront.hh"
+#include "target.hh"
 #include "algorithms.hh"
 #include "renderapp.hh"
-
-
-template <class T>
-inline bool isZero(T a) {
-    return fabsf(a) < std::numeric_limits<T>::epsilon();
-}
-
-namespace shader_types {
-struct VertexData {
-        simd::float3 position;
-        simd::float3 normal;
-};
-
-struct InstanceData {
-        simd::float4x4 instanceTransform;
-        simd::float3x3 instanceNormalTransform;
-        simd::float4 instanceColor;
-};
-
-struct CameraData {
-        simd::float4x4 perspectiveTransform;
-        simd::float4x4 worldTransform;
-        simd::float3x3 worldNormalTransform;
-};
-}  // namespace shader_types
-
-// morph target
-class Target {
-        // fixme: make this one vector
-        std::vector<unsigned> index;
-        std::vector<simd::float3> verts;
-
-    public:
-        /**
-         * calculate morph target from two lists of vertices
-         *
-         * @param src
-         * @param dst
-         */
-        void diff(const std::vector<float>& src, const std::vector<float>& dst);
-
-        /**
-         * apply morph target to vertices
-         *
-         * @param dst destination
-         * @param scale a value between 0 and 1
-         */
-        void apply(std::vector<shader_types::VertexData>& dst, float scale);
-};
 
 class FaceRenderer {
     public:
@@ -81,18 +33,6 @@ static constexpr size_t kMaxFramesInFlight = 1;
 float _angle = 0.00f;
 
 using namespace std;
-
-namespace math {
-constexpr simd::float3 add(const simd::float3& a, const simd::float3& b);
-constexpr simd_float4x4 makeIdentity();
-simd::float4x4 makePerspective(float fovRadians, float aspect, float znear, float zfar);
-simd::float4x4 makeXRotate(float angleRadians);
-simd::float4x4 makeYRotate(float angleRadians);
-simd::float4x4 makeZRotate(float angleRadians);
-simd::float4x4 makeTranslate(const simd::float3& v);
-simd::float4x4 makeScale(const simd::float3& v);
-simd::float3x3 discardTranslation(const simd::float4x4& m);
-}  // namespace math
 
 @implementation TriangleRenderer : Renderer
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView*)aView {
@@ -348,6 +288,10 @@ simd::float3x3 discardTranslation(const simd::float4x4& m);
 MetalFacerenderer* metal() {
     println("create metal renderer...");
 
+    // NSArray* devices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
+    //         arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
+
+
     id app = [NSApplication sharedApplication];
     TriangleRenderer *r = [TriangleRenderer alloc];
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:r];
@@ -416,60 +360,7 @@ int mainX() {
     return 0;
 }
 
-namespace math {
-constexpr simd::float3 add(const simd::float3& a, const simd::float3& b) { return {a.x + b.x, a.y + b.y, a.z + b.z}; }
 
-constexpr simd_float4x4 makeIdentity() {
-    using simd::float4;
-    return (simd_float4x4){(float4){1.f, 0.f, 0.f, 0.f}, (float4){0.f, 1.f, 0.f, 0.f}, (float4){0.f, 0.f, 1.f, 0.f}, (float4){0.f, 0.f, 0.f, 1.f}};
-}
-
-simd::float4x4 makePerspective(float fovRadians, float aspect, float znear, float zfar) {
-    using simd::float4;
-    float ys = 1.f / tanf(fovRadians * 0.5f);
-    float xs = ys / aspect;
-    float zs = zfar / (znear - zfar);
-    return simd_matrix_from_rows((float4){xs, 0.0f, 0.0f, 0.0f}, (float4){0.0f, ys, 0.0f, 0.0f}, (float4){0.0f, 0.0f, zs, znear * zs}, (float4){0, 0, -1, 0});
-}
-
-simd::float4x4 makeXRotate(float angleRadians) {
-    using simd::float4;
-    const float a = angleRadians;
-    return simd_matrix_from_rows((float4){1.0f, 0.0f, 0.0f, 0.0f}, (float4){0.0f, cosf(a), sinf(a), 0.0f}, (float4){0.0f, -sinf(a), cosf(a), 0.0f},
-                                 (float4){0.0f, 0.0f, 0.0f, 1.0f});
-}
-
-simd::float4x4 makeYRotate(float angleRadians) {
-    using simd::float4;
-    const float a = angleRadians;
-    return simd_matrix_from_rows((float4){cosf(a), 0.0f, sinf(a), 0.0f}, (float4){0.0f, 1.0f, 0.0f, 0.0f}, (float4){-sinf(a), 0.0f, cosf(a), 0.0f},
-                                 (float4){0.0f, 0.0f, 0.0f, 1.0f});
-}
-
-simd::float4x4 makeZRotate(float angleRadians) {
-    using simd::float4;
-    const float a = angleRadians;
-    return simd_matrix_from_rows((float4){cosf(a), sinf(a), 0.0f, 0.0f}, (float4){-sinf(a), cosf(a), 0.0f, 0.0f}, (float4){0.0f, 0.0f, 1.0f, 0.0f},
-                                 (float4){0.0f, 0.0f, 0.0f, 1.0f});
-}
-
-simd::float4x4 makeTranslate(const simd::float3& v) {
-    using simd::float4;
-    const float4 col0 = {1.0f, 0.0f, 0.0f, 0.0f};
-    const float4 col1 = {0.0f, 1.0f, 0.0f, 0.0f};
-    const float4 col2 = {0.0f, 0.0f, 1.0f, 0.0f};
-    const float4 col3 = {v.x, v.y, v.z, 1.0f};
-    return simd_matrix(col0, col1, col2, col3);
-}
-
-simd::float4x4 makeScale(const simd::float3& v) {
-    using simd::float4;
-    return simd_matrix((float4){v.x, 0, 0, 0}, (float4){0, v.y, 0, 0}, (float4){0, 0, v.z, 0}, (float4){0, 0, 0, 1.0});
-}
-
-simd::float3x3 discardTranslation(const simd::float4x4& m) { return simd_matrix(m.columns[0].xyz, m.columns[1].xyz, m.columns[2].xyz); }
-
-}  // namespace math
 
 vector<string_view> blendshapeNames{
     "_neutral",             // 0
@@ -538,26 +429,5 @@ void FaceRenderer::loadBlendShapes() {
         WavefrontObj obj(format("/Users/mark/public_html/makehuman.js/base/blendshapes/arkit/{}.obj", blendshape));
         auto bs = blendshapes.emplace(blendshape, BlendShape());
         bs.first->second.target.diff(neutral.xyz, obj.xyz);
-    }
-}
-
-void Target::diff(const vector<float>& src, const vector<float>& dst) {
-    if (src.size() != dst.size()) {
-        throw runtime_error(format("Target.diff(src, dst): src and dst must have the same length but they are {} and {}", src.size(), dst.size()));
-    }
-    for (size_t v = 0, i = 0; v < src.size(); v += 3, ++i) {
-        auto s = simd::make_float3(src[v], src[v + 1], src[v + 2]);
-        auto d = simd::make_float3(dst[v], dst[v + 1], dst[v + 2]);
-        auto vec = d - s;
-        if (!isZero(vec.x) || !isZero(vec.y) || !isZero(vec.z)) {
-            index.push_back(i);
-            verts.push_back(vec);
-        }
-    }
-}
-
-void Target::apply(vector<shader_types::VertexData>& dst, float scale) {
-    for (size_t i = 0; i < index.size(); ++i) {
-        dst[index[i]].position += verts[i] * scale;
     }
 }
