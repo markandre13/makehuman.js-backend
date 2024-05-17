@@ -1,8 +1,8 @@
 #include "makehuman_impl.hh"
 
+#include <atomic>
 #include <corba/orb.hh>
 #include <print>
-#include <atomic>
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 
@@ -29,7 +29,8 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCapture
 #ifdef HAVE_MEDIAPIPE
 
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
-    if (!result.has_value() || result->face_landmarks.size() == 0 || !result->face_blendshapes.has_value()) {
+    if (!result.has_value() || result->face_landmarks.size() == 0 || !result->face_blendshapes.has_value() ||
+        !result->facial_transformation_matrixes.has_value()) {
         return;
     }
 
@@ -67,7 +68,7 @@ void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_l
     }
     std::span blendshapes{bs_array, bs.size()};
 
-    fe->faceLandmarks(landmarks, blendshapes, timestamp_ms);
+    fe->faceLandmarks(landmarks, blendshapes, result->facial_transformation_matrixes->at(0).data, timestamp_ms);
 }
 
 #endif
