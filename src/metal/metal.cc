@@ -303,13 +303,52 @@ void getVideoInputs() {
     for(int i=0; i<deviceCount; ++i) {
         AVCaptureDevice *device = 
         device = [devices objectAtIndex: i];
-        println("video capture device: idx: {}, uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", 
+        println("{}: uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", 
                 i,
                 [[device uniqueID] UTF8String],
                 [[device localizedName] UTF8String],
                 [[device manufacturer] UTF8String],
                 [[device modelID] UTF8String]
                 );
+        NSArray<AVCaptureDeviceFormat*> *formats = [device formats];
+
+        bool unknownFrameRate = true;
+        Float64 minFrameRate, maxFrameRate;
+        for(int j=0; j<[formats count]; ++j) {
+            // println("    {}", j);
+            AVCaptureDeviceFormat *format = [formats objectAtIndex: i];
+
+            NSArray<AVFrameRateRange*> *ranges = [format videoSupportedFrameRateRanges];
+            for(int k=0; k<[ranges count]; ++k) {
+                AVFrameRateRange *range =  [ranges objectAtIndex: k];
+                // println("        {} to {} fps", [range minFrameRate], [range maxFrameRate]);
+                if (unknownFrameRate) {
+                    unknownFrameRate = false;
+                    minFrameRate = [range minFrameRate];
+                    maxFrameRate = [range maxFrameRate];
+                } else {
+                    minFrameRate = min(minFrameRate, [range minFrameRate]);
+                    maxFrameRate = min(maxFrameRate, [range maxFrameRate]);
+                }
+            }
+        }
+        if (unknownFrameRate) {
+            println("        unknown fps");
+        } else {
+            println("        {} to {} fps", minFrameRate, maxFrameRate);
+        }
+    }
+
+    NSError* error;
+    AVCaptureDeviceInput *mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:[devices objectAtIndex: 0] error:&error];
+    NSArray<AVCaptureInputPort*>* ports = mCaptureDeviceInput.ports;
+    println("found {} ports", [ports count]);
+    for(int i=0; i<[ports count]; ++i) {
+        AVCaptureInputPort* port = [ports objectAtIndex: i];
+        CMFormatDescriptionRef format = [port formatDescription];
+        // CMFormatDescriptionRef format = [[ports objectAtIndex:0] formatDescription];
+        CGSize s1 = CMVideoFormatDescriptionGetPresentationDimensions(format, YES, YES);
+        println("    size {} x {} px", s1.width, s1.height);
     }
 
     // if ([devices count] == 0) {
@@ -322,7 +361,7 @@ void getVideoInputs() {
 MetalFacerenderer* metal() {
     println("create metal renderer...");
 
-    getVideoInputs();
+    // getVideoInputs();
 
     id app = [NSApplication sharedApplication];
     TriangleRenderer* r = [TriangleRenderer alloc];
