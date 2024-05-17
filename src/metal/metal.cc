@@ -2,6 +2,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import <MetalKit/MetalKit.h>
+#import <AVFoundation/AVFoundation.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -10,9 +11,9 @@
 #include <print>
 
 #include "../mesh/wavefront.hh"
-#include "target.hh"
 #include "algorithms.hh"
 #include "renderapp.hh"
+#include "target.hh"
 
 class FaceRenderer {
     public:
@@ -161,7 +162,6 @@ using namespace std;
     auto indices = triangles(obj.vcount, obj.fxyz);
     indiceCount = indices.size();
 
-
     const size_t indexDataSize = indices.size() * sizeof(uint16_t);
     _pIndexBuffer = [_device newBufferWithLength:indexDataSize options:MTLResourceStorageModeManaged];
     memcpy([_pIndexBuffer contents], indices.data(), indexDataSize);
@@ -203,9 +203,9 @@ using namespace std;
         verts[i].position.z = obj.xyz[i3 + 2];
     }
 
-    for(auto &bs: faceRenderer->blendshapes) {
+    for (auto& bs : faceRenderer->blendshapes) {
         if (!isZero(bs.second.weight)) {
-           bs.second.target.apply(verts, bs.second.weight);
+            bs.second.target.apply(verts, bs.second.weight);
         }
     }
 
@@ -285,15 +285,47 @@ using namespace std;
 
 @end
 
+void getVideoInputs() {
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+
+    AVCaptureDeviceDiscoverySession *captureDeviceDiscoverySession 
+        = [AVCaptureDeviceDiscoverySession 
+            discoverySessionWithDeviceTypes: @[
+                AVCaptureDeviceTypeExternalUnknown,
+                AVCaptureDeviceTypeBuiltInWideAngleCamera,
+            ] 
+            mediaType:AVMediaTypeVideo 
+            position:AVCaptureDevicePositionUnspecified];
+    NSArray *devices = [captureDeviceDiscoverySession devices];
+    auto deviceCount = [devices count];
+    println("found {} video capture devices", [devices count]);
+
+    for(int i=0; i<deviceCount; ++i) {
+        AVCaptureDevice *device = 
+        device = [devices objectAtIndex: i];
+        println("video capture device: idx: {}, uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", 
+                i,
+                [[device uniqueID] UTF8String],
+                [[device localizedName] UTF8String],
+                [[device manufacturer] UTF8String],
+                [[device modelID] UTF8String]
+                );
+    }
+
+    // if ([devices count] == 0) {
+        // std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
+        [localpool drain];
+        // return 0;
+    // }
+}
+
 MetalFacerenderer* metal() {
     println("create metal renderer...");
 
-    // NSArray* devices = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]
-    //         arrayByAddingObjectsFromArray:[AVCaptureDevice devicesWithMediaType:AVMediaTypeMuxed]];
-
+    getVideoInputs();
 
     id app = [NSApplication sharedApplication];
-    TriangleRenderer *r = [TriangleRenderer alloc];
+    TriangleRenderer* r = [TriangleRenderer alloc];
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:r];
     [app setDelegate:delegate];
     [app finishLaunching];
@@ -313,8 +345,8 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
     if (!result->face_blendshapes.has_value()) {
         return;
     }
-    auto &bs = result->face_blendshapes->at(0).categories;
-    for (auto &cat : bs) {
+    auto& bs = result->face_blendshapes->at(0).categories;
+    for (auto& cat : bs) {
         if (!cat.category_name.has_value()) {
             println("no category name");
             continue;
@@ -338,8 +370,6 @@ int mainX() {
     RenderAppDelegate* delegate = [[RenderAppDelegate alloc] init:[TriangleRenderer alloc]];
     [app setDelegate:delegate];
 
-
-
 #if 0
     // https://www.cocoawithlove.com/2009/01/demystifying-nsapplication-by.html
     [app finishLaunching];
@@ -359,8 +389,6 @@ int mainX() {
 
     return 0;
 }
-
-
 
 vector<string_view> blendshapeNames{
     "_neutral",             // 0
