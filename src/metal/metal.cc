@@ -223,35 +223,12 @@ using namespace std;
     [_pVertexDataBuffer didModifyRange:NSMakeRange(0, [_pVertexDataBuffer length])];
 
     shader_types::InstanceData* pInstanceData = reinterpret_cast<shader_types::InstanceData*>([_pInstanceDataBuffer contents]);
-    float3 objectPosition = {0.f, 0.f, -5.f};
-
-    // Update instance positions:
-    float4x4 rt = math::makeTranslate(objectPosition);
-    float4x4 rr = math::makeYRotate(-_angle);
-    float4x4 rtInv = math::makeTranslate({-objectPosition.x, -objectPosition.y, -objectPosition.z});
-    float4x4 fullObjectRot = rt * rr * rtInv;
-
-    // const auto &m = pInstanceData[0].instanceTransform.columns;
-    // println("{} {} {} {}", m[0][0], m[0][1], m[0][2], m[0][3]);
-    // println("{} {} {} {}", m[1][0], m[1][1], m[1][2], m[1][3]);
-    // println("{} {} {} {}", m[2][0], m[2][1], m[2][2], m[2][3]);
-    // println("{} {} {} {}", m[3][0], m[3][1], m[3][2], m[3][3]);
-
-    //  0.99 -0.00 0.11 0.00
-    // -0.06 0.86 0.51 0.00
-    // -0.10 -0.51 0.85 0.00
-    // 0.58 -0.19 -42.15 1.00
 
     auto &d = faceRenderer->facial_transformation_matrix;
     pInstanceData[0].instanceTransform.columns[0] = (float4){d[0], d[1], d[2], d[3]};
     pInstanceData[0].instanceTransform.columns[1] = (float4){d[4], d[5], d[6], d[7]};
     pInstanceData[0].instanceTransform.columns[2] = (float4){d[8], d[9], d[10], d[11]};
     pInstanceData[0].instanceTransform.columns[3] = (float4){d[12], d[13], d[14] - 10.0f, d[15]};
-
-    // pInstanceData[0].instanceTransform.columns[1] = (float4){0, .1, 0, 0};
-    // pInstanceData[0].instanceTransform.columns[2] = (float4){0, 0, .1, 0};
-    // pInstanceData[0].instanceTransform.columns[3] = (float4){0, 0, -5, 1};
-    // columns[0] = (float4){v.x,0,0,0}; columns[1] = (float4){0,v.y,0,0}; columns[2] = (float4){0,0,v.z,0}; columns[3] = (float4){0,0,0,v.w}; }
 
     pInstanceData[0].instanceNormalTransform = math::discardTranslation(pInstanceData[0].instanceTransform);
     pInstanceData[0].instanceColor = (float4){1.0f, 0.8f, 0.7f, 1.0f};
@@ -260,6 +237,7 @@ using namespace std;
     // Update camera state:
     // MTL::Buffer* pCameraDataBuffer = _pCameraDataBuffer[ _frame ];
     shader_types::CameraData* pCameraData = reinterpret_cast<shader_types::CameraData*>([_pCameraDataBuffer contents]);
+    // TODO: get actual view size to calculate aspect
     pCameraData->perspectiveTransform = math::makePerspective(45.f * M_PI / 180.f, 1.f, 0.03f, 500.0f);
     pCameraData->worldTransform = math::makeIdentity();
     pCameraData->worldNormalTransform = math::discardTranslation(pCameraData->worldTransform);

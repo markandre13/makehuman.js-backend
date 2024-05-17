@@ -48,7 +48,7 @@ using namespace std;
     // NEXTSTEP WINDOW
     //
     println("create window...");
-    NSRect frame = NSMakeRect(0, 0, 640, 480);
+    NSRect frame = NSMakeRect(0, 0, 640, 640);
     id window =
         [[NSWindow alloc] initWithContentRect:frame
                                     styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable
