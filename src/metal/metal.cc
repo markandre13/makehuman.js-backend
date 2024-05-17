@@ -1,8 +1,8 @@
 #include "metal.hh"
 
+#import <AVFoundation/AVFoundation.h>
 #import <Cocoa/Cocoa.h>
 #import <MetalKit/MetalKit.h>
-#import <AVFoundation/AVFoundation.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -26,6 +26,7 @@ class FaceRenderer {
         };
         WavefrontObj neutral;
         std::map<std::string, BlendShape> blendshapes;
+        float facial_transformation_matrix[16];
         void loadBlendShapes();
 };
 
@@ -230,23 +231,30 @@ using namespace std;
     float4x4 rtInv = math::makeTranslate({-objectPosition.x, -objectPosition.y, -objectPosition.z});
     float4x4 fullObjectRot = rt * rr * rtInv;
 
-    for (size_t i = 0; i < kNumInstances; ++i) {
-        float angle = 0.0f;
-        float iDivNumInstances = i / (float)kNumInstances;
-        float xoff = (iDivNumInstances * 2.0f - 1.0f) + (1.f / kNumInstances);
-        float yoff = sin((iDivNumInstances + angle) * 2.0f * M_PI);
-        float4x4 scale = math::makeScale((float3){scl, scl, scl});
-        float4x4 zrot = math::makeZRotate(_angle);
-        float4x4 yrot = math::makeYRotate(_angle);
-        float4x4 translate = math::makeTranslate(math::add(objectPosition, {xoff, yoff, 0.f}));
-        pInstanceData[i].instanceTransform = fullObjectRot * translate * yrot * zrot * scale;
-        pInstanceData[i].instanceNormalTransform = math::discardTranslation(pInstanceData[i].instanceTransform);
+    // const auto &m = pInstanceData[0].instanceTransform.columns;
+    // println("{} {} {} {}", m[0][0], m[0][1], m[0][2], m[0][3]);
+    // println("{} {} {} {}", m[1][0], m[1][1], m[1][2], m[1][3]);
+    // println("{} {} {} {}", m[2][0], m[2][1], m[2][2], m[2][3]);
+    // println("{} {} {} {}", m[3][0], m[3][1], m[3][2], m[3][3]);
 
-        float r = iDivNumInstances;
-        float g = 1.0f - r;
-        float b = sinf(M_PI * 2.0f * iDivNumInstances);
-        pInstanceData[i].instanceColor = (float4){r, g, b, 1.0f};
-    }
+    //  0.99 -0.00 0.11 0.00
+    // -0.06 0.86 0.51 0.00
+    // -0.10 -0.51 0.85 0.00
+    // 0.58 -0.19 -42.15 1.00
+
+    auto &d = faceRenderer->facial_transformation_matrix;
+    pInstanceData[0].instanceTransform.columns[0] = (float4){d[0], d[1], d[2], d[3]};
+    pInstanceData[0].instanceTransform.columns[1] = (float4){d[4], d[5], d[6], d[7]};
+    pInstanceData[0].instanceTransform.columns[2] = (float4){d[8], d[9], d[10], d[11]};
+    pInstanceData[0].instanceTransform.columns[3] = (float4){d[12], d[13], d[14] - 10.0f, d[15]};
+
+    // pInstanceData[0].instanceTransform.columns[1] = (float4){0, .1, 0, 0};
+    // pInstanceData[0].instanceTransform.columns[2] = (float4){0, 0, .1, 0};
+    // pInstanceData[0].instanceTransform.columns[3] = (float4){0, 0, -5, 1};
+    // columns[0] = (float4){v.x,0,0,0}; columns[1] = (float4){0,v.y,0,0}; columns[2] = (float4){0,0,v.z,0}; columns[3] = (float4){0,0,0,v.w}; }
+
+    pInstanceData[0].instanceNormalTransform = math::discardTranslation(pInstanceData[0].instanceTransform);
+    pInstanceData[0].instanceColor = (float4){1.0f, 0.8f, 0.7f, 1.0f};
     [_pInstanceDataBuffer didModifyRange:NSMakeRange(0, [_pInstanceDataBuffer length])];
 
     // Update camera state:
@@ -288,39 +296,32 @@ using namespace std;
 void getVideoInputs() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    AVCaptureDeviceDiscoverySession *captureDeviceDiscoverySession 
-        = [AVCaptureDeviceDiscoverySession 
-            discoverySessionWithDeviceTypes: @[
-                AVCaptureDeviceTypeExternalUnknown,
-                AVCaptureDeviceTypeBuiltInWideAngleCamera,
-            ] 
-            mediaType:AVMediaTypeVideo 
-            position:AVCaptureDevicePositionUnspecified];
-    NSArray *devices = [captureDeviceDiscoverySession devices];
+    AVCaptureDeviceDiscoverySession* captureDeviceDiscoverySession =
+        [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[
+            AVCaptureDeviceTypeExternalUnknown,
+            AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        ]
+                                                               mediaType:AVMediaTypeVideo
+                                                                position:AVCaptureDevicePositionUnspecified];
+    NSArray* devices = [captureDeviceDiscoverySession devices];
     auto deviceCount = [devices count];
     println("found {} video capture devices", [devices count]);
 
-    for(int i=0; i<deviceCount; ++i) {
-        AVCaptureDevice *device = 
-        device = [devices objectAtIndex: i];
-        println("{}: uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", 
-                i,
-                [[device uniqueID] UTF8String],
-                [[device localizedName] UTF8String],
-                [[device manufacturer] UTF8String],
-                [[device modelID] UTF8String]
-                );
-        NSArray<AVCaptureDeviceFormat*> *formats = [device formats];
+    for (int i = 0; i < deviceCount; ++i) {
+        AVCaptureDevice* device = device = [devices objectAtIndex:i];
+        println("{}: uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", i, [[device uniqueID] UTF8String], [[device localizedName] UTF8String],
+                [[device manufacturer] UTF8String], [[device modelID] UTF8String]);
+        NSArray<AVCaptureDeviceFormat*>* formats = [device formats];
 
         bool unknownFrameRate = true;
         Float64 minFrameRate, maxFrameRate;
-        for(int j=0; j<[formats count]; ++j) {
+        for (int j = 0; j < [formats count]; ++j) {
             // println("    {}", j);
-            AVCaptureDeviceFormat *format = [formats objectAtIndex: i];
+            AVCaptureDeviceFormat* format = [formats objectAtIndex:i];
 
-            NSArray<AVFrameRateRange*> *ranges = [format videoSupportedFrameRateRanges];
-            for(int k=0; k<[ranges count]; ++k) {
-                AVFrameRateRange *range =  [ranges objectAtIndex: k];
+            NSArray<AVFrameRateRange*>* ranges = [format videoSupportedFrameRateRanges];
+            for (int k = 0; k < [ranges count]; ++k) {
+                AVFrameRateRange* range = [ranges objectAtIndex:k];
                 // println("        {} to {} fps", [range minFrameRate], [range maxFrameRate]);
                 if (unknownFrameRate) {
                     unknownFrameRate = false;
@@ -340,11 +341,11 @@ void getVideoInputs() {
     }
 
     NSError* error;
-    AVCaptureDeviceInput *mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:[devices objectAtIndex: 0] error:&error];
+    AVCaptureDeviceInput* mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:[devices objectAtIndex:0] error:&error];
     NSArray<AVCaptureInputPort*>* ports = mCaptureDeviceInput.ports;
     println("found {} ports", [ports count]);
-    for(int i=0; i<[ports count]; ++i) {
-        AVCaptureInputPort* port = [ports objectAtIndex: i];
+    for (int i = 0; i < [ports count]; ++i) {
+        AVCaptureInputPort* port = [ports objectAtIndex:i];
         CMFormatDescriptionRef format = [port formatDescription];
         // CMFormatDescriptionRef format = [[ports objectAtIndex:0] formatDescription];
         CGSize s1 = CMVideoFormatDescriptionGetPresentationDimensions(format, YES, YES);
@@ -352,9 +353,9 @@ void getVideoInputs() {
     }
 
     // if ([devices count] == 0) {
-        // std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
-        [localpool drain];
-        // return 0;
+    // std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
+    [localpool drain];
+    // return 0;
     // }
 }
 
@@ -384,6 +385,8 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
     if (!result->face_blendshapes.has_value()) {
         return;
     }
+
+    // copy blendshape weights
     auto& bs = result->face_blendshapes->at(0).categories;
     for (auto& cat : bs) {
         if (!cat.category_name.has_value()) {
@@ -395,6 +398,17 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
             continue;
         }
         x->second.weight = cat.score;
+    }
+
+    // copy transformation matrix
+    if (result->facial_transformation_matrixes.has_value()) {
+        auto& d = result->facial_transformation_matrixes->at(0).data;
+        // println("have facial_transformation_matrix");
+        // println("{:.2f} {:.2f} {:.2f} {:.2f}", d[0], d[1], d[2], d[3]);
+        // println("{:.2f} {:.2f} {:.2f} {:.2f}", d[4], d[5], d[6], d[7]);
+        // println("{:.2f} {:.2f} {:.2f} {:.2f}", d[8], d[9], d[10], d[11]);
+        // println("{:.2f} {:.2f} {:.2f} {:.2f}", d[12], d[13], d[14], d[15]);
+        memcpy(delegate->faceRenderer->facial_transformation_matrix, d, 16 * sizeof(float));
     }
 
     [delegate invalidate];

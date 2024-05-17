@@ -39,6 +39,8 @@ void* libev_thread(void *ptr) {
     return nullptr;
 }
 
+// https://www.bannaflak.com/face-cap/ is a blendshape iphone app using the osc protocol like chordata motion!
+
 int main(void) {
     println("makehuman.js backend");
 
@@ -120,6 +122,7 @@ int main(void) {
     double w = cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2;
     double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT) / 2;
     double fps = cap.get(cv::CAP_PROP_FPS);
+    fps = 30;
     auto backendName = cap.getBackendName();
     cap.set(cv::CAP_PROP_FRAME_WIDTH, w);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, h);
