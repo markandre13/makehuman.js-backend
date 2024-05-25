@@ -11,6 +11,7 @@
 #include <print>
 
 #include "../mesh/wavefront.hh"
+#include "../livelink/livelinkframe.hh"
 #include "algorithms.hh"
 #include "renderapp.hh"
 #include "target.hh"
@@ -353,6 +354,7 @@ MetalFacerenderer* metal() {
     return renderer;
 }
 
+#ifdef HAVE_MEDIAPIPE
 void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
     if (!result.has_value()) {
         return;
@@ -388,6 +390,28 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
         // println("{:.2f} {:.2f} {:.2f} {:.2f}", d[12], d[13], d[14], d[15]);
         memcpy(delegate->faceRenderer->facial_transformation_matrix, d, 16 * sizeof(float));
     }
+
+    [delegate invalidate];
+}
+#endif
+
+void MetalFacerenderer::faceLandmarks(const LiveLinkFrame &frame) {
+    for(int i=0; i<61; ++i) {
+        auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i]);
+        if (x == delegate->faceRenderer->blendshapes.end()) {
+            continue;
+        }
+        x->second.weight = frame.weights[i];
+    }
+
+    static float transform[16] {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        1, 0.62, -45, 1
+    };
+
+    memcpy(delegate->faceRenderer->facial_transformation_matrix, transform, 16 * sizeof(float));
 
     [delegate invalidate];
 }

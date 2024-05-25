@@ -1,6 +1,7 @@
 APP=backend
 
-APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc
+APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
+	    livelink/livelink.cc livelink/livelinkframe.cc livelink/udpserver.cc
 IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 # how to get core dumps on macos
@@ -93,7 +94,8 @@ main.o: ../upstream/corba.cc/src/corba/stub.hh
 main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
 main.o: ../upstream/corba.cc/src/corba/net/ws.hh
-main.o: ../upstream/corba.cc/src/corba/protocol.hh makehuman_impl.hh
+main.o: ../upstream/corba.cc/src/corba/protocol.hh livelink/livelink.hh
+main.o: livelink/udpserver.hh livelink/livelinkframe.hh makehuman_impl.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
@@ -132,6 +134,12 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh
 mesh/wavefront.o: mesh/wavefront.hh ../upstream/fast_float/fast_float.h
 mesh/wavefront.o: util.hh
+livelink/livelink.o: livelink/livelink.hh livelink/udpserver.hh
+livelink/livelink.o: livelink/livelinkframe.hh
+livelink/livelink.o: ../upstream/corba.cc/src/corba/hexdump.hh
+livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh
+livelink/livelinkframe.o: livelink/livelinkframe.hh
+livelink/udpserver.o: livelink/udpserver.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
@@ -224,8 +232,8 @@ mesh/wavefront.o: util.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
 metal/metal.o: metal/metal.hh metal/renderer.hh mesh/wavefront.hh
-metal/metal.o: metal/target.hh metal/shadertypes.hh metal/algorithms.hh
-metal/metal.o: metal/renderapp.hh
+metal/metal.o: metal/algorithms.hh metal/renderapp.hh metal/target.hh
+metal/metal.o: metal/shadertypes.hh
 metal/target.o: metal/target.hh metal/shadertypes.hh metal/algorithms.hh
 metal/renderer.o: metal/renderer.hh
 metal/renderapp.o: metal/renderapp.hh metal/renderer.hh

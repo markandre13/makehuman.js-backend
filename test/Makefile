@@ -30,6 +30,7 @@ LIB=-lev -lwslay -lnettle
     #   corba/net/ws.spec.cc \
 
 SRC = mesh/wavefront.spec.cc mesh/rendermesh.spec.cc \
+	  livelink/livelink.spec.cc ../src/livelink/livelinkframe.cc \
 	  ../src/util.cc ../src/mesh/wavefront.cc \
 	  main.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc
 
@@ -80,6 +81,9 @@ makehuman.hh: makehuman.idl
 
 mesh/wavefront.spec.o: ../src/mesh/wavefront.hh
 mesh/rendermesh.spec.o: ../src/mesh/wavefront.hh
+facecap/livelink.spec.o: ../src/facecap/livelinkframe.hh
+../src/facecap/livelinkframe.o: ../src/facecap/livelinkframe.hh
 ../src/util.o: ../src/util.hh
-../src/mesh/wavefront.o: ../src/mesh/wavefront.hh ../src/util.hh
+../src/mesh/wavefront.o: ../src/mesh/wavefront.hh
+../src/mesh/wavefront.o: ../upstream/fast_float/fast_float.h ../src/util.hh
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh

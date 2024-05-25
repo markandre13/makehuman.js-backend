@@ -21,6 +21,8 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 
 #include <set>
 
+#include "livelink/livelink.hh"
+#include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
 
 #ifdef HAVE_METAL
@@ -38,8 +40,6 @@ void* libev_thread(void *ptr) {
     println("stopped libev loop");
     return nullptr;
 }
-
-// https://www.bannaflak.com/face-cap/ is a blendshape iphone app using the osc protocol like chordata motion!
 
 int main(void) {
     println("makehuman.js backend");
@@ -59,14 +59,20 @@ int main(void) {
     auto protocol = new CORBA::net::WsProtocol();
     protocol->listen(orb.get(), loop, "localhost", 9001);
 
+#ifdef HAVE_METAL
+    MetalFacerenderer *metalRenderer = metal();
+#ifndef HAVE_MEDIAPIPE
+    auto facecap = new LiveLink(loop, 11111, [&](const LiveLinkFrame &frame){
+        // println("frame {}.{}", frame.frame, frame.subframe);
+        metalRenderer->faceLandmarks(frame);
+    });
+#endif
+#endif
+
     pthread_t libevthread;
     if (pthread_create(&libevthread, nullptr, libev_thread, loop) != 0) {
         println("ERROR: failed to create libev thread");
     }
-
-#ifdef HAVE_METAL
-    MetalFacerenderer *metalRenderer = metal();
-#endif
 
 #ifdef HAVE_MEDIAPIPE
     //

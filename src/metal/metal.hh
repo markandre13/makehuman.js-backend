@@ -11,6 +11,7 @@
 
 class MetalFacerenderer;
 class FaceRenderer;
+class LiveLinkFrame;
 
 @interface TriangleRenderer : Renderer {
     id<MTLLibrary> _library;
@@ -29,7 +30,10 @@ class FaceRenderer;
 class MetalFacerenderer {
     public:
         TriangleRenderer* delegate;
+#ifdef HAVE_MEDIAPIPE
         void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
+#endif
+        void faceLandmarks(const LiveLinkFrame &frame);
 };
 
 MetalFacerenderer* metal();
