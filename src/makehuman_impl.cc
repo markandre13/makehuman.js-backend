@@ -26,6 +26,14 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCapture
     co_return;
 }
 
+void Backend_impl::chordata(const char *buffer, size_t nbytes) {
+    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+    if (!fe) {
+        return;
+    }
+    fe->chordata(CORBA::blob_view(buffer, nbytes));
+}
+
 #ifdef HAVE_MEDIAPIPE
 
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {

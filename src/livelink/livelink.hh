@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "udpserver.hh"
+#include "../ev/udpserver.hh"
 
 class LiveLinkFrame;
 
@@ -9,8 +9,9 @@ class LiveLinkFrame;
  * Epic Games / Unreal Engine Live Link Face
  */
 class LiveLink: UDPServer {
-    public: 
         std::function<void(const LiveLinkFrame&)> callback;
+    public: 
         LiveLink(struct ev_loop *loop, unsigned port, std::function<void(const LiveLinkFrame&)>);
+    protected:
         void read() override;
 };

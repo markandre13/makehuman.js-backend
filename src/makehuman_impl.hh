@@ -15,6 +15,9 @@ class Backend_impl : public Backend_skel {
         Backend_impl(std::shared_ptr<CORBA::ORB> orb);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureEngine engine, MotionCaptureType type, EngineStatus status) override;
+
+        void chordata(const char *buffer, size_t nbytes);
+
 #ifdef HAVE_MEDIAPIPE
         void faceLandmarks(
             std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result,

@@ -18,9 +18,9 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 #include <iostream>
 #include <print>
 #include <span>
-
 #include <set>
 
+#include "chordata/chordata.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
@@ -58,6 +58,10 @@ int main(void) {
 
     auto protocol = new CORBA::net::WsProtocol();
     protocol->listen(orb.get(), loop, "localhost", 9001);
+
+    auto chordata = new Chordata(loop, 6565, [&](const char *buffer, size_t nbytes){
+        backend->chordata(buffer, nbytes);
+    });
 
 #ifdef HAVE_METAL
     MetalFacerenderer *metalRenderer = metal();
@@ -127,12 +131,12 @@ int main(void) {
 
     double w = cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2;
     double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT) / 2;
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    fps = 30;
     auto backendName = cap.getBackendName();
     cap.set(cv::CAP_PROP_FRAME_WIDTH, w);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, h);
+    cap.set(cv::CAP_PROP_FPS, 60);
 
+    double fps = cap.get(cv::CAP_PROP_FPS);
     println("{}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
 
     //
