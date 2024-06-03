@@ -8,17 +8,16 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 
 #endif
 
-#include <opencv2/opencv.hpp>
-
+#include <thread>
 #include <sys/time.h>
-#include <pthread.h>
 
 #include <corba/corba.hh>
 #include <corba/net/ws.hh>
 #include <iostream>
+#include <opencv2/opencv.hpp>
 #include <print>
-#include <span>
 #include <set>
+#include <span>
 
 #include "chordata/chordata.hh"
 #include "livelink/livelink.hh"
@@ -32,14 +31,6 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 using namespace std;
 
 static uint64_t getMilliseconds();
-
-void* libev_thread(void *ptr) {
-    auto loop = static_cast<struct ev_loop *>(ptr);
-    println("started libev loop");
-    ev_run(loop, 0);
-    println("stopped libev loop");
-    return nullptr;
-}
 
 int main(void) {
     println("makehuman.js backend");
@@ -59,24 +50,22 @@ int main(void) {
     auto protocol = new CORBA::net::WsProtocol();
     protocol->listen(orb.get(), loop, "localhost", 9001);
 
-    auto chordata = new Chordata(loop, 6565, [&](const char *buffer, size_t nbytes){
+    auto chordata = new Chordata(loop, 6565, [&](const char *buffer, size_t nbytes) {
+        // println("got chordata packet of {} bytes", nbytes);
         backend->chordata(buffer, nbytes);
     });
 
 #ifdef HAVE_METAL
     MetalFacerenderer *metalRenderer = metal();
 #ifndef HAVE_MEDIAPIPE
-    auto facecap = new LiveLink(loop, 11111, [&](const LiveLinkFrame &frame){
+    auto facecap = new LiveLink(loop, 11111, [&](const LiveLinkFrame &frame) {
         // println("frame {}.{}", frame.frame, frame.subframe);
         metalRenderer->faceLandmarks(frame);
     });
 #endif
 #endif
 
-    pthread_t libevthread;
-    if (pthread_create(&libevthread, nullptr, libev_thread, loop) != 0) {
-        println("ERROR: failed to create libev thread");
-    }
+std::thread libevthread(ev_run, loop, 0);
 
 #ifdef HAVE_MEDIAPIPE
     //
@@ -90,20 +79,12 @@ int main(void) {
     options->output_facial_transformation_matrixes = true;
     options->num_faces = 1;
 
-    set<uint64_t> tids;
-
     options->result_callback = [&](auto result, auto timestamp_ms) {
-        // ev_run(loop, EVRUN_NOWAIT);
 
-        uint64_t tid;
-        pthread_threadid_np(NULL, &tid);
-        tids.insert(tid);
-
-        // TODO: UPDATE METAL
+    // TODO: UPDATE METAL
 #ifdef HAVE_METAL
         metalRenderer->faceLandmarks(result, timestamp_ms);
 #endif
-
         // rendering has too much latency (reason: the table in the expression tab)
         // latency (cummulative) the frame was captured (3.5 GHz Intel Xeon E5)
         // * mediapipe face landmarker: 5ms when no face detected, 17ms with face (12 threads)
