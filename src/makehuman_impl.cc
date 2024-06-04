@@ -6,6 +6,11 @@
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
 
+template <typename E>
+auto as_int(E const value) -> typename std::underlying_type<E>::type {
+    return static_cast<typename std::underlying_type<E>::type>(value);
+}
+
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     std::println("set frontend: enter");
     std::atomic_store(&frontend, aFrontend);
@@ -21,8 +26,8 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     co_return;
 }
 
-CORBA::async<> Backend_impl::setEngine(MotionCaptureEngine engine, MotionCaptureType type, EngineStatus status) {
-    std::println("SET ENGINE engine, type, status");
+CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
+    std::println("Backend::setEngine(tpye={}, engine={})", as_int(type), as_int(engine));
     co_return;
 }
 

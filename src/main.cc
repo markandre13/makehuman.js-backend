@@ -39,7 +39,7 @@ int main(void) {
     // SETUP ORB
     //
     auto orb = make_shared<CORBA::ORB>();
-    orb->debug = true;
+    // orb->debug = true;
 
     struct ev_loop *loop = EV_DEFAULT;
     println("the audience is listening...");
