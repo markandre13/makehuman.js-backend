@@ -22,9 +22,12 @@ void LiveLink::read() {
     if (nbytes > 0) {
         // println("livelink: received {} bytes", nbytes);
         // hexdump(buffer, nbytes);
-
-        LiveLinkFrame frame(buffer, nbytes);
-        callback(frame);
+        try {
+            LiveLinkFrame frame(buffer, nbytes);
+            callback(frame);
+        } catch(exception &ex) {
+            println("LiveLink::read(): {}", ex.what());
+        }
     } else {
         // println("recv -> {}", nbytes);
         if (nbytes < 0) {

@@ -8,6 +8,7 @@
 #endif
 
 class CaptureEngine;
+class LiveLinkFrame;
 
 class Backend_impl : public Backend_skel {
         struct ev_loop *loop;
@@ -24,6 +25,7 @@ class Backend_impl : public Backend_skel {
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
 
         void chordata(const char *buffer, size_t nbytes);
+        void livelink(LiveLinkFrame &frame);
 
 #ifdef HAVE_MEDIAPIPE
         void faceLandmarks(

@@ -60,7 +60,7 @@ string_view LiveLinkFrame::getString() {
     return str;
 }
 
-const char * LiveLinkFrame::blendshapeNames[] = {
+std::vector<std::string_view> LiveLinkFrame::blendshapeNames {
     "eyeBlinkLeft", // 0
     "eyeLookDownLeft", // 1
     "eyeLookInLeft", // 2

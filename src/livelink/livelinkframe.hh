@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <cstdint>
 
 class LiveLinkFrame {
@@ -15,7 +16,7 @@ class LiveLinkFrame {
         uint32_t fps;
         uint32_t fpsDenominator;
         uint8_t blendshapeCount;
-        static const char * blendshapeNames[61];
+        static std::vector<std::string_view> blendshapeNames;
         float weights[61];
 
     protected:

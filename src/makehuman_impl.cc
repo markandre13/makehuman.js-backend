@@ -34,6 +34,7 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
 CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
     switch(type) {
         case MotionCaptureType::FACE:
+            blendshapeNamesHaveBeenSend = false;
             switch(engine) {
                 case MotionCaptureEngine::NONE:
                     // face = nullptr;
@@ -48,7 +49,8 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngi
                     // NOTE: loop runs in it's own thread... but CORBA is on the same thread
                     //       so adding a udp listener here should work
                     face = make_unique<LiveLink>(loop, 11111, [&](const LiveLinkFrame &frame) {
-                        println("frame {}.{}", frame.frame, frame.subframe);
+                        // println("frame {}.{}", frame.frame, frame.subframe);
+                        this->livelink(const_cast<LiveLinkFrame &>(frame));
                         // metalRenderer->faceLandmarks(frame);
                     });
                     break;
@@ -70,9 +72,29 @@ void Backend_impl::chordata(const char *buffer, size_t nbytes) {
     fe->chordata(CORBA::blob_view(buffer, nbytes));
 }
 
+void Backend_impl::livelink(LiveLinkFrame &frame) {
+    if (!blendshapeNamesHaveBeenSend) {
+        frontend->faceBlendshapeNames(LiveLinkFrame::blendshapeNames);
+        blendshapeNamesHaveBeenSend = true;
+    }
+    // TODO: "headYaw" 52, "headPitch" 53, headRoll 54
+    float identity[] {
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,-20,1
+    };
+    frontend->faceLandmarks({}, frame.weights, identity, frame.frame);
+}
+
+
 #ifdef HAVE_MEDIAPIPE
 
+
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
+    if (face != nullptr) {
+        return;
+    }
     if (!result.has_value() || result->face_landmarks.size() == 0 || !result->face_blendshapes.has_value() ||
         !result->facial_transformation_matrixes.has_value()) {
         return;
