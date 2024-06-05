@@ -84,7 +84,11 @@ void Backend_impl::livelink(LiveLinkFrame &frame) {
         0,0,1,0,
         0,0,-20,1
     };
-    frontend->faceLandmarks({}, frame.weights, identity, frame.frame);
+    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+    if (!fe) {
+        return;
+    }
+    fe->faceLandmarks({}, frame.weights, identity, frame.frame);
 }
 
 
