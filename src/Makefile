@@ -13,7 +13,7 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 # bt all
 
 HAVE_MEDIAPIPE=1
-HAVE_METAL=1
+# HAVE_METAL=1
 MEMCHECK=-fsanitize=address -fsanitize=leak
 
 CORBA_PATH=../upstream/corba.cc/src
@@ -118,6 +118,8 @@ makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh
+makehuman_impl.o: livelink/livelinkframe.hh
 makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh

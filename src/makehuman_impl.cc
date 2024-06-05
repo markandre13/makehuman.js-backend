@@ -1,10 +1,15 @@
 #include "makehuman_impl.hh"
 
+#include "livelink/livelink.hh"
+#include "livelink/livelinkframe.hh"
+
 #include <atomic>
 #include <corba/orb.hh>
 #include <print>
 
-Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb) : Backend_skel(orb) {}
+using namespace std;
+
+Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop) : Backend_skel(orb), loop(loop) {}
 
 template <typename E>
 auto as_int(E const value) -> typename std::underlying_type<E>::type {
@@ -27,7 +32,33 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
 }
 
 CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
-    std::println("Backend::setEngine(tpye={}, engine={})", as_int(type), as_int(engine));
+    switch(type) {
+        case MotionCaptureType::FACE:
+            switch(engine) {
+                case MotionCaptureEngine::NONE:
+                    // face = nullptr;
+                    face.reset();
+                    break;
+                case MotionCaptureEngine::MEDIAPIPE:
+                    // face = nullptr;
+                    face.reset();
+                    // captureEngine = new MediaPipe(...);
+                    break;
+                case MotionCaptureEngine::LIVELINK:
+                    // NOTE: loop runs in it's own thread... but CORBA is on the same thread
+                    //       so adding a udp listener here should work
+                    face = make_unique<LiveLink>(loop, 11111, [&](const LiveLinkFrame &frame) {
+                        println("frame {}.{}", frame.frame, frame.subframe);
+                        // metalRenderer->faceLandmarks(frame);
+                    });
+                    break;
+                default:
+                    ;
+            }
+            break;
+        default:
+            std::println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
+    }
     co_return;
 }
 

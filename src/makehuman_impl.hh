@@ -1,18 +1,25 @@
 #pragma once
 
 #include "makehuman_skel.hh"
-#include <span>
+#include <ev.h>
 
 #ifdef HAVE_MEDIAPIPE
 #include <cc_lib/mediapipe.hh>
 #endif
 
+class CaptureEngine;
+
 class Backend_impl : public Backend_skel {
+        struct ev_loop *loop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
+        std::unique_ptr<CaptureEngine> body;
+        std::unique_ptr<CaptureEngine> face;
+        std::unique_ptr<CaptureEngine> hand;
+
         bool blendshapeNamesHaveBeenSend = false;
     public:
-        Backend_impl(std::shared_ptr<CORBA::ORB> orb);
+        Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
 

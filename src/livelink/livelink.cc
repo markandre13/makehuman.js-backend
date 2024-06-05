@@ -1,14 +1,20 @@
 #include "livelink.hh"
-#include "livelinkframe.hh"
 
 #include <sys/socket.h>
+
 #include <corba/hexdump.hh>
 #include <print>
 #include <string>
 
+#include "livelinkframe.hh"
+
 using namespace std;
 
 LiveLink::LiveLink(struct ev_loop *loop, unsigned port, std::function<void(const LiveLinkFrame &)> callback) : UDPServer(loop, port), callback(callback) {}
+
+LiveLink::~LiveLink() {}
+
+CaptureEngine::~CaptureEngine() {}
 
 void LiveLink::read() {
     unsigned char buffer[8192];

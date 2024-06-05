@@ -12,6 +12,6 @@ class UDPServer {
         int fd;
     public:
         UDPServer(struct ev_loop *loop, unsigned port);
-        ~UDPServer();
+        virtual ~UDPServer();
         virtual void read() = 0;
 };
