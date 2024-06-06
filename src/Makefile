@@ -20,6 +20,9 @@ CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
 	naming.cc hexdump.cc \
 	net/ws.cc net/ws/socket.cc net/ws/createAcceptKey.cc
+
+GLM_FLAGS=-I../upstream/glm
+
 CXX=/usr/local/opt/llvm/bin/clang++
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
 
@@ -44,7 +47,7 @@ CFLAGS=-std=c++23 $(MEMCHECK) \
 	-Wall -Wextra -Werror=return-type -Werror=shadow \
 	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
-	-I$(CORBA_PATH) $(MEDIAPIPE_CFLAGS) $(METAL_CFLAGS)
+	-I$(CORBA_PATH) $(GLM_FLAGS) $(MEDIAPIPE_CFLAGS) $(METAL_CFLAGS)
 LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(METAL_LFLAGS) -fno-objc-arc \
 	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle

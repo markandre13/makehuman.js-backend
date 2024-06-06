@@ -3,6 +3,11 @@
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 
+#include <glm/mat4x4.hpp> // glm::mat4
+#include <glm/vec4.hpp> // glm::vec4
+#include <glm/ext/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale
+#include <glm/gtc/type_ptr.hpp>
+
 #include <atomic>
 #include <corba/orb.hh>
 #include <print>
@@ -77,18 +82,22 @@ void Backend_impl::livelink(LiveLinkFrame &frame) {
         frontend->faceBlendshapeNames(LiveLinkFrame::blendshapeNames);
         blendshapeNamesHaveBeenSend = true;
     }
-    // TODO: "headYaw" 52, "headPitch" 53, headRoll 54
-    float identity[] {
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,-20,1
-    };
+    const size_t headYaw = 52; // Y
+    const size_t headPitch = 53; // X
+    const size_t headRoll = 54; // Z
+
+    auto m = glm::identity<glm::mat4x4>();
+    m = glm::rotate(m, frame.weights[headRoll], glm::vec3(0.0f, 0.0f, 1.0f));
+    m = glm::rotate(m, frame.weights[headPitch], glm::vec3(-1.0f, 0.0f, 0.0f));
+    m = glm::rotate(m, frame.weights[headYaw], glm::vec3(0.0f, 1.0f, 0.0f));
+    m = glm::translate(m, glm::vec3(0.0f, 0.0f, -20));
+    auto transform = span(const_cast<float*>(glm::value_ptr(m)), 16);
+
     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
     if (!fe) {
         return;
     }
-    fe->faceLandmarks({}, frame.weights, identity, frame.frame);
+    fe->faceLandmarks({}, frame.weights, transform, frame.frame);
 }
 
 
