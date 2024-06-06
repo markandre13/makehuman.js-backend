@@ -13,3 +13,6 @@
 [submodule "upstream/mediapipe_cc_lib"]
 	path = upstream/mediapipe_cc_lib
 	url = git@github.com:markandre13/mediapipe_cc_lib.git
+[submodule "upstream/glm"]
+	path = upstream/glm
+	url = https://github.com/g-truc/glm.git

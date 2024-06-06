@@ -397,7 +397,7 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
 
 void MetalFacerenderer::faceLandmarks(const LiveLinkFrame &frame) {
     for(int i=0; i<61; ++i) {
-        auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i]);
+        auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i].data());
         if (x == delegate->faceRenderer->blendshapes.end()) {
             continue;
         }
