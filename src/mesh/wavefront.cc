@@ -6,6 +6,7 @@
 #include <vector>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/mman.h>
 
 #define HAVE_FAST_FLOAT 1
