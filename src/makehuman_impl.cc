@@ -90,7 +90,7 @@ void Backend_impl::livelink(LiveLinkFrame &frame) {
     m = glm::rotate(m, frame.weights[headRoll], glm::vec3(0.0f, 0.0f, 1.0f));
     m = glm::rotate(m, frame.weights[headPitch], glm::vec3(-1.0f, 0.0f, 0.0f));
     m = glm::rotate(m, frame.weights[headYaw], glm::vec3(0.0f, 1.0f, 0.0f));
-    m = glm::translate(m, glm::vec3(0.0f, 0.0f, -20));
+    // m = glm::translate(m, glm::vec3(0.0f, 0.0f, -20));
     auto transform = span(const_cast<float*>(glm::value_ptr(m)), 16);
 
     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
@@ -100,9 +100,7 @@ void Backend_impl::livelink(LiveLinkFrame &frame) {
     fe->faceLandmarks({}, frame.weights, transform, frame.frame);
 }
 
-
 #ifdef HAVE_MEDIAPIPE
-
 
 void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
     if (face != nullptr) {
