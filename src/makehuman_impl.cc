@@ -8,9 +8,15 @@
 #include <glm/ext/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale
 #include <glm/gtc/type_ptr.hpp>
 
-#include <atomic>
 #include <corba/orb.hh>
+
+#include <atomic>
 #include <print>
+#include <fstream>
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
 
 using namespace std;
 
@@ -22,17 +28,17 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
 }
 
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
-    std::println("set frontend: enter");
-    std::atomic_store(&frontend, aFrontend);
+    println("set frontend: enter");
+    atomic_store(&frontend, aFrontend);
     // frontend = aFrontend;
     CORBA::installSystemExceptionHandler(aFrontend, [this] {
-        std::println("caught system exception in frontend stub, dropping reference");
+        println("caught system exception in frontend stub, dropping reference");
         frontend = nullptr;
         // std::atomic_store(&frontend, std::make_shared<Frontend>(nullptr));
-        std::println("frontend reference dropped");
+        println("frontend reference dropped");
     });
     blendshapeNamesHaveBeenSend = false;
-    std::println("set frontend: leave");
+    println("set frontend: leave");
     co_return;
 }
 
@@ -64,7 +70,7 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngi
             }
             break;
         default:
-            std::println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
+            println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
     }
     co_return;
 }
@@ -149,3 +155,44 @@ void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_l
 }
 
 #endif
+
+static void checkFilename(const std::string_view &filename) {
+    if (filename.size() == 0) {
+        throw runtime_error("Backend_impl::save(): filename must not be empty");
+    }
+    if (filename[0] == '.') {
+        throw runtime_error("Backend_impl::save(): filename must not start with a dot");
+    }
+    if (filename.find('/') != filename.npos) {
+        throw runtime_error("Backend_impl::save(): filename must not contain a '/'");
+    }
+}
+
+CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
+    checkFilename(filename);
+    std::ofstream("file.txt") << data;
+    co_return;
+}
+CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
+    checkFilename(filename);
+
+    int fd = open(filename.data(), O_RDONLY);
+    if (fd < 0) {
+        throw runtime_error(format("failed to open file '{}': {}", filename, strerror(errno)));
+    }
+    off_t len = lseek(fd, 0, SEEK_END);
+    if (len < 0) {
+        throw runtime_error(format("failed to get size of file '{}': {}", filename, strerror(errno)));
+    }
+    const char * data = (const char*)mmap(nullptr, len, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
+    if (data == MAP_FAILED) {
+        throw runtime_error(format("failed to mmap file '{}': {}", filename, strerror(errno)));
+    }
+
+    string result(data, len);
+
+    munmap((void*)data, len);
+    close(fd);
+
+    co_return result;
+}

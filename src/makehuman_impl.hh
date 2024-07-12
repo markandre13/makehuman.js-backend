@@ -1,7 +1,8 @@
 #pragma once
 
-#include "makehuman_skel.hh"
 #include <ev.h>
+
+#include "makehuman_skel.hh"
 
 #ifdef HAVE_MEDIAPIPE
 #include <cc_lib/mediapipe.hh>
@@ -19,19 +20,19 @@ class Backend_impl : public Backend_skel {
         std::unique_ptr<CaptureEngine> hand;
 
         bool blendshapeNamesHaveBeenSend = false;
+
     public:
         Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
+        CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
+        CORBA::async<std::string> load(const std::string_view &filename) override;
 
         void chordata(const char *buffer, size_t nbytes);
         void livelink(LiveLinkFrame &frame);
 
 #ifdef HAVE_MEDIAPIPE
-        void faceLandmarks(
-            std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result,
-            int64_t timestamp_ms
-        );
+        void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
 #endif
 };
 
