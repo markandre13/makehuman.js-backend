@@ -11,6 +11,7 @@
 
 #include "chordata/chordata.hh"
 #include "mediapipe/face.hh"
+#include "mediapipe/pose.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
@@ -58,8 +59,11 @@ int main(void) {
 
     std::thread libevthread(ev_run, loop, 0);
 
-    auto landmarker = make_unique<MediapipeFace>([&](auto result, int64_t timestamp_ms) {
-        backend->faceLandmarks(result, timestamp_ms);
+    // auto landmarker = make_unique<MediapipeFace>([&](auto result, int64_t timestamp_ms) {
+    //     backend->faceLandmarks(result, timestamp_ms);
+    // });
+    auto landmarker = make_unique<MediapipePose>([&](auto result, int64_t timestamp_ms) {
+        backend->poseLandmarks(result, timestamp_ms);
     });
 
     //

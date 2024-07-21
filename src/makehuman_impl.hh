@@ -33,6 +33,7 @@ class Backend_impl : public Backend_skel {
 
 #ifdef HAVE_MEDIAPIPE
         void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
+        void poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_landmarker::PoseLandmarkerResult> result, int64_t timestamp_ms);
 #endif
 };
 

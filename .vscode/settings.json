@@ -110,7 +110,15 @@
         "*.inc": "cpp",
         "qtcore": "cpp",
         "shared_mutex": "cpp",
-        "hash_set": "cpp"
+        "hash_set": "cpp",
+        "__std_stream": "cpp",
+        "cfenv": "cpp",
+        "csetjmp": "cpp",
+        "csignal": "cpp",
+        "future": "cpp",
+        "scoped_allocator": "cpp",
+        "strstream": "cpp",
+        "stdfloat": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",

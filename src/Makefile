@@ -1,7 +1,7 @@
 APP=backend
 
 APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
-		mediapipe/face.cc \
+		mediapipe/face.cc mediapipe/pose.cc \
 	    livelink/livelink.cc livelink/livelinkframe.cc \
 		chordata/chordata.cc \
 		ev/udpserver.cc
@@ -101,8 +101,8 @@ main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
 main.o: ../upstream/corba.cc/src/corba/net/ws.hh
 main.o: ../upstream/corba.cc/src/corba/protocol.hh chordata/chordata.hh
-main.o: ev/udpserver.hh mediapipe/face.hh livelink/livelink.hh
-main.o: captureengine.hh livelink/livelinkframe.hh makehuman_impl.hh
+main.o: ev/udpserver.hh mediapipe/face.hh captureengine.hh mediapipe/pose.hh
+main.o: livelink/livelink.hh livelink/livelinkframe.hh makehuman_impl.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
@@ -143,7 +143,8 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh
 mesh/wavefront.o: mesh/wavefront.hh ../upstream/fast_float/fast_float.h
 mesh/wavefront.o: util.hh
-mediapipe/face.o: mediapipe/face.hh
+mediapipe/face.o: mediapipe/face.hh captureengine.hh
+mediapipe/pose.o: mediapipe/pose.hh captureengine.hh
 livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/hexdump.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh

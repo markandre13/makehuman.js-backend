@@ -13,10 +13,6 @@ MediapipeFace::MediapipeFace(std::function<void(std::optional<FaceLandmarkerResu
     options->output_facial_transformation_matrixes = true;
     options->num_faces = 1;
     options->result_callback = callback;
-
-    // options->result_callback = [&](auto result, auto timestamp_ms) {
-    //     backend->faceLandmarks(result, timestamp_ms);
-    // };
     mp = FaceLandmarker::Create(std::move(options));
 }
 MediapipeFace::~MediapipeFace() {}

@@ -170,6 +170,29 @@ void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_l
     fe->faceLandmarks(landmarks, blendshapes, result->facial_transformation_matrixes->at(0).data, timestamp_ms);
 }
 
+void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_landmarker::PoseLandmarkerResult> result, int64_t timestamp_ms) {
+    if (!result.has_value() || result->pose_landmarks.size() == 0) {
+        return;
+    }
+
+    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+    if (!fe) {
+        return;
+    }
+
+    auto &lm = result->pose_landmarks[0].landmarks;
+    float lm_array[lm.size() * 3];
+    float *ptr = lm_array;
+    for (size_t i = 0; i < lm.size(); ++i) {
+        *(ptr++) = lm[i].x;
+        *(ptr++) = lm[i].y;
+        *(ptr++) = lm[i].z;
+    }
+    std::span landmarks{lm_array, lm.size() * 3zu};
+
+    fe->poseLandmarks(landmarks, timestamp_ms);
+}
+
 #endif
 
 static void checkFilename(const std::string_view &filename) {
