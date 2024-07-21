@@ -54,6 +54,7 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngi
                 case MotionCaptureEngine::MEDIAPIPE:
                     // face = nullptr;
                     face.reset();
+                    // TODO: this is currently always on...
                     // captureEngine = new MediaPipe(...);
                     break;
                 case MotionCaptureEngine::LIVELINK:
@@ -64,6 +65,21 @@ CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngi
                         this->livelink(const_cast<LiveLinkFrame &>(frame));
                         // metalRenderer->faceLandmarks(frame);
                     });
+                    break;
+                default:
+                    ;
+            }
+            break;
+        case MotionCaptureType::BODY:
+            switch(engine) {
+                case MotionCaptureEngine::NONE:
+                    // face = nullptr;
+                    body.reset();
+                    break;
+                case MotionCaptureEngine::MEDIAPIPE:
+                    // face = nullptr;
+                    body.reset();
+                    // captureEngine = new MediaPipe(...);
                     break;
                 default:
                     ;

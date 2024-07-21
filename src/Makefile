@@ -1,6 +1,7 @@
 APP=backend
 
 APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
+		mediapipe/face.cc \
 	    livelink/livelink.cc livelink/livelinkframe.cc \
 		chordata/chordata.cc \
 		ev/udpserver.cc
@@ -100,9 +101,9 @@ main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
 main.o: ../upstream/corba.cc/src/corba/net/ws.hh
 main.o: ../upstream/corba.cc/src/corba/protocol.hh chordata/chordata.hh
-main.o: ev/udpserver.hh livelink/livelink.hh livelink/livelinkframe.hh
-main.o: makehuman_impl.hh makehuman_skel.hh
-main.o: ../upstream/corba.cc/src/corba/orb.hh
+main.o: ev/udpserver.hh mediapipe/face.hh livelink/livelink.hh
+main.o: captureengine.hh livelink/livelinkframe.hh makehuman_impl.hh
+main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
 makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh
@@ -121,7 +122,7 @@ makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
-makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh
+makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
 makehuman_impl.o: livelink/livelinkframe.hh
 makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -142,10 +143,11 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh
 mesh/wavefront.o: mesh/wavefront.hh ../upstream/fast_float/fast_float.h
 mesh/wavefront.o: util.hh
-livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh
-livelink/livelink.o: livelink/livelinkframe.hh
+mediapipe/face.o: mediapipe/face.hh
+livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/hexdump.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh
+livelink/livelink.o: livelink/livelinkframe.hh
 livelink/livelinkframe.o: livelink/livelinkframe.hh
 chordata/chordata.o: chordata/chordata.hh ev/udpserver.hh
 ev/udpserver.o: ev/udpserver.hh
@@ -240,10 +242,3 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
-metal/metal.o: metal/metal.hh metal/renderer.hh mesh/wavefront.hh
-metal/metal.o: livelink/livelinkframe.hh metal/algorithms.hh
-metal/metal.o: metal/renderapp.hh metal/target.hh metal/shadertypes.hh
-metal/target.o: metal/target.hh metal/shadertypes.hh metal/algorithms.hh
-metal/renderer.o: metal/renderer.hh
-metal/renderapp.o: metal/renderapp.hh metal/renderer.hh
-metal/algorithms.o: metal/algorithms.hh

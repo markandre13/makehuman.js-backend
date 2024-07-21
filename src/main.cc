@@ -1,13 +1,3 @@
-#ifdef HAVE_MEDIAPIPE
-
-#include <cc_lib/mediapipe.hh>
-using mediapipe::cc_lib::vision::core::RunningMode;
-using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker;
-using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerOptions;
-using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
-
-#endif
-
 #include <sys/time.h>
 
 #include <corba/corba.hh>
@@ -20,6 +10,7 @@ using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult;
 #include <thread>
 
 #include "chordata/chordata.hh"
+#include "mediapipe/face.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
@@ -67,35 +58,9 @@ int main(void) {
 
     std::thread libevthread(ev_run, loop, 0);
 
-#ifdef HAVE_MEDIAPIPE
-    //
-    // SETUP MEDIAPIPE
-    //
-
-    auto options = std::make_unique<FaceLandmarkerOptions>();
-    options->base_options.model_asset_path = "/Users/mark/python/py311-venv-mediapipe/face_landmarker_v2_with_blendshapes.task";
-    options->running_mode = RunningMode::LIVE_STREAM;
-    options->output_face_blendshapes = true;
-    options->output_facial_transformation_matrixes = true;
-    options->num_faces = 1;
-
-    options->result_callback = [&](auto result, auto timestamp_ms) {
-
-    // TODO: UPDATE METAL
-#ifdef HAVE_METAL
-    // metalRenderer->faceLandmarks(result, timestamp_ms);
-#endif
-        // rendering has too much latency (reason: the table in the expression tab)
-        // latency (cummulative) the frame was captured (3.5 GHz Intel Xeon E5)
-        // * mediapipe face landmarker: 5ms when no face detected, 17ms with face (12 threads)
-        // * received by browser      : 17ms to 100ms
-        // * render latency           : 62ms to 112ms
-        // (render latency does not include skipped frames)
-        // println("latency: {}ms, thread count: {}", getMilliseconds() - timestamp_ms, tids.size());
+    auto landmarker = make_unique<MediapipeFace>([&](auto result, int64_t timestamp_ms) {
         backend->faceLandmarks(result, timestamp_ms);
-    };
-    auto landmarker = FaceLandmarker::Create(std::move(options));
-#endif
+    });
 
     //
     // SETUP VIDEO CAMERA
@@ -139,9 +104,7 @@ int main(void) {
         auto timestamp = getMilliseconds();
 
         cv::imshow("image", frame);
-#ifdef HAVE_MEDIAPIPE
-        landmarker->DetectAsync(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
-#endif
+        landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
         cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
     }
 

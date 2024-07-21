@@ -2,11 +2,7 @@
 
 #include <functional>
 #include "../ev/udpserver.hh"
-
-class CaptureEngine {
-    public:
-        virtual ~CaptureEngine();
-};
+#include "../captureengine.hh"
 
 class LiveLinkFrame;
 
