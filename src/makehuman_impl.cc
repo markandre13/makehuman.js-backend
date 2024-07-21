@@ -169,11 +169,19 @@ static void checkFilename(const std::string_view &filename) {
 }
 
 CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
+    println("save {}", filename);
     checkFilename(filename);
-    std::ofstream("file.txt") << data;
+    std::ofstream file(filename);
+    if (!file) {
+        println("failed to write");
+    }
+    file << data;
+    println("ok");
     co_return;
 }
 CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
+    println("load {}", filename);
+
     checkFilename(filename);
 
     int fd = open(filename.data(), O_RDONLY);
@@ -193,6 +201,8 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
 
     munmap((void*)data, len);
     close(fd);
+
+    println("ok");
 
     co_return result;
 }
