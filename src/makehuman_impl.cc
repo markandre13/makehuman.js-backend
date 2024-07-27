@@ -180,7 +180,7 @@ void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_l
         return;
     }
 
-    auto &lm = result->pose_landmarks[0].landmarks;
+    auto &lm = result->pose_world_landmarks[0].landmarks;
     float lm_array[lm.size() * 3];
     float *ptr = lm_array;
     for (size_t i = 0; i < lm.size(); ++i) {
@@ -194,6 +194,12 @@ void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_l
 }
 
 #endif
+
+/*
+ *
+ * load/save files
+ * 
+ */
 
 static void checkFilename(const std::string_view &filename) {
     if (filename.size() == 0) {
@@ -244,4 +250,17 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
     println("ok");
 
     co_return result;
+}
+
+/*
+ *
+ * record video
+ * 
+ */
+
+CORBA::async<void> Backend_impl::record(const std::string_view & filename) {
+    co_return;
+}
+CORBA::async<void> Backend_impl::stop() {
+    co_return;
 }

@@ -37,3 +37,4 @@ class MetalFacerenderer {
 };
 
 MetalFacerenderer* metal();
+void getVideoInputs();

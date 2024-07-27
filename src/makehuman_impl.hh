@@ -27,6 +27,8 @@ class Backend_impl : public Backend_skel {
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
         CORBA::async<std::string> load(const std::string_view &filename) override;
+        CORBA::async<void> record(const std::string_view & filename) override;
+        CORBA::async<void> stop() override;
 
         void chordata(const char *buffer, size_t nbytes);
         void livelink(LiveLinkFrame &frame);

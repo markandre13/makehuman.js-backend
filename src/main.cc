@@ -70,6 +70,10 @@ int main(void) {
     // SETUP VIDEO CAMERA
     //
 
+    // macOS native APIs
+    // Core Video / AVFoundation
+    // getVideoInputs();
+
     cv::VideoCapture cap;
     int deviceID = 0;         // 0 = open default camera
     int apiID = cv::CAP_ANY;  // 0 = autodetect default API
@@ -88,6 +92,13 @@ int main(void) {
 
     double fps = cap.get(cv::CAP_PROP_FPS);
     println("opened video capture device {}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
+
+    // result = cv2.VideoWriter('filename.avi',  
+    //                      cv2.VideoWriter_fourcc(*'MJPG'), 
+    //                      10, size);
+    // result.write(frame);
+    // result.release();
+
 
     //
     // STREAM MEDIAPIPE'S FACE LANDMARKS TO FRONTEND

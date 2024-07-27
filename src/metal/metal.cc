@@ -10,8 +10,8 @@
 #include <map>
 #include <print>
 
-#include "../mesh/wavefront.hh"
 #include "../livelink/livelinkframe.hh"
+#include "../mesh/wavefront.hh"
 #include "algorithms.hh"
 #include "renderapp.hh"
 #include "target.hh"
@@ -225,7 +225,7 @@ using namespace std;
 
     shader_types::InstanceData* pInstanceData = reinterpret_cast<shader_types::InstanceData*>([_pInstanceDataBuffer contents]);
 
-    auto &d = faceRenderer->facial_transformation_matrix;
+    auto& d = faceRenderer->facial_transformation_matrix;
     pInstanceData[0].instanceTransform.columns[0] = (float4){d[0], d[1], d[2], d[3]};
     pInstanceData[0].instanceTransform.columns[1] = (float4){d[4], d[5], d[6], d[7]};
     pInstanceData[0].instanceTransform.columns[2] = (float4){d[8], d[9], d[10], d[11]};
@@ -275,17 +275,18 @@ using namespace std;
 void getVideoInputs() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    AVCaptureDeviceDiscoverySession* captureDeviceDiscoverySession =
-        [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[
-            AVCaptureDeviceTypeExternalUnknown,
-            AVCaptureDeviceTypeBuiltInWideAngleCamera,
-        ]
-                                                               mediaType:AVMediaTypeVideo
-                                                                position:AVCaptureDevicePositionUnspecified];
+    // get video devices
+    auto captureDeviceDiscoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[
+        AVCaptureDeviceTypeExternalUnknown,
+        AVCaptureDeviceTypeBuiltInWideAngleCamera,
+    ]
+                                                                                                mediaType:AVMediaTypeVideo
+                                                                                                 position:AVCaptureDevicePositionUnspecified];
     NSArray* devices = [captureDeviceDiscoverySession devices];
     auto deviceCount = [devices count];
     println("found {} video capture devices", [devices count]);
 
+    // print video devices
     for (int i = 0; i < deviceCount; ++i) {
         AVCaptureDevice* device = device = [devices objectAtIndex:i];
         println("{}: uniqueID: {}, localizedName: {}, manufacturer: {}, modelID: {}", i, [[device uniqueID] UTF8String], [[device localizedName] UTF8String],
@@ -297,11 +298,9 @@ void getVideoInputs() {
         for (int j = 0; j < [formats count]; ++j) {
             // println("    {}", j);
             AVCaptureDeviceFormat* format = [formats objectAtIndex:i];
-
             NSArray<AVFrameRateRange*>* ranges = [format videoSupportedFrameRateRanges];
             for (int k = 0; k < [ranges count]; ++k) {
                 AVFrameRateRange* range = [ranges objectAtIndex:k];
-                // println("        {} to {} fps", [range minFrameRate], [range maxFrameRate]);
                 if (unknownFrameRate) {
                     unknownFrameRate = false;
                     minFrameRate = [range minFrameRate];
@@ -319,8 +318,11 @@ void getVideoInputs() {
         }
     }
 
+    // print additional device info
+    auto deviceIndex = 0;
+
     NSError* error;
-    AVCaptureDeviceInput* mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:[devices objectAtIndex:0] error:&error];
+    AVCaptureDeviceInput* mCaptureDeviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:[devices objectAtIndex:deviceIndex] error:&error];
     NSArray<AVCaptureInputPort*>* ports = mCaptureDeviceInput.ports;
     println("found {} ports", [ports count]);
     for (int i = 0; i < [ports count]; ++i) {
@@ -330,6 +332,23 @@ void getVideoInputs() {
         CGSize s1 = CMVideoFormatDescriptionGetPresentationDimensions(format, YES, YES);
         println("    size {} x {} px", s1.width, s1.height);
     }
+
+    // AVCaptureSession* session = [[AVCaptureSession alloc] init];
+    // session.sessionPreset = AVCaptureSessionPreset960x540;
+    // [session addInput:mCaptureDeviceInput];
+
+    // // Output
+    // AVCaptureVideoDataOutput* output = [[AVCaptureVideoDataOutput alloc] init];
+    // [session addOutput:output];
+    // output.videoSettings = @{(NSString*)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA)};
+
+    // // Preview Layer
+    // AVCaptureVideoPreviewLayer* previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:session];
+    // previewLayer.frame = viewForCamera.bounds;
+    // previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    // [viewForCamera.layer addSublayer:previewLayer];
+
+    [session startRunning];
 
     // if ([devices count] == 0) {
     // std::cout << "AV Foundation didn't find any attached Video Input Devices!" << std::endl;
@@ -395,8 +414,8 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
 }
 #endif
 
-void MetalFacerenderer::faceLandmarks(const LiveLinkFrame &frame) {
-    for(int i=0; i<61; ++i) {
+void MetalFacerenderer::faceLandmarks(const LiveLinkFrame& frame) {
+    for (int i = 0; i < 61; ++i) {
         auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i].data());
         if (x == delegate->faceRenderer->blendshapes.end()) {
             continue;
@@ -404,12 +423,7 @@ void MetalFacerenderer::faceLandmarks(const LiveLinkFrame &frame) {
         x->second.weight = frame.weights[i];
     }
 
-    static float transform[16] {
-        1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        1, 0.62, -45, 1
-    };
+    static float transform[16]{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0.62, -45, 1};
 
     memcpy(delegate->faceRenderer->facial_transformation_matrix, transform, 16 * sizeof(float));
 
