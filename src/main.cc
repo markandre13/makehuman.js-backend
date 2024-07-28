@@ -1,5 +1,3 @@
-#include <sys/time.h>
-
 #include <corba/corba.hh>
 #include <corba/net/ws.hh>
 #include <iostream>
@@ -9,20 +7,21 @@
 #include <span>
 #include <thread>
 
+#include "opencv/videocamera.hh"
+#include "opencv/videoreader.hh"
 #include "chordata/chordata.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
 #include "mediapipe/face.hh"
 #include "mediapipe/pose.hh"
+#include "util.hh"
 
 #ifdef HAVE_METAL
 #include "metal/metal.hh"
 #endif
 
 using namespace std;
-
-static uint64_t getMilliseconds();
 
 int main(void) {
     println("makehuman.js backend");
@@ -66,55 +65,16 @@ int main(void) {
         backend->poseLandmarks(result, timestamp_ms);
     });
 
-    //
-    // SETUP VIDEO CAMERA
-    //
-
-    // macOS native APIs
-    // Core Video / AVFoundation
-    // getVideoInputs();
-
-    cv::VideoCapture cap;
-#if 1
-    int deviceID = 0;         // 0 = open default camera
-    int apiID = cv::CAP_ANY;  // 0 = autodetect default API
-    cap.open(deviceID, apiID);
-#else
-    cap.open("video.avi");
-#endif
-    if (!cap.isOpened()) {
-        cerr << "failed to open video" << endl;
-        return 1;
-    }
-
-    double w = cap.get(cv::CAP_PROP_FRAME_WIDTH) / 2;
-    double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT) / 2;
-    auto backendName = cap.getBackendName();
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, w);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, h);
-    cap.set(cv::CAP_PROP_FPS, 60);
-
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    println("opened video capture device {}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
-
-    //
-    // STREAM MEDIAPIPE'S FACE LANDMARKS TO FRONTEND
-    //
-
-    // namedWindow() doesn't work, but cv::waitKey() will display the window
-    // cv::namedWindow("image");
-
-    // https://developer.apple.com/documentation/corefoundation/cffiledescriptor?language=objc
+    VideoReader cap("video.mp4");
+    // VideoCamera cap;
+    double fps = cap.fps();
 
     cv::Mat frame;
 
     while (true) {
         cap >> frame;
         if (frame.empty()) {
-            // in case it's a camera: close and reopen
-            // in case it's a file: rewind
-            // cout << "empty image" << std::endl;
-            cap.set(cv::CAP_PROP_POS_FRAMES, 0);
+            cap.reset();
             continue;
         }
         auto timestamp = getMilliseconds();
@@ -130,14 +90,9 @@ int main(void) {
             delay = 1;
         }
 
-        cv::waitKey(delay);  // wait 1ms (this also runs the cocoa eventloop)
+        cv::waitKey(cap.delay());  // wait 1ms (this also runs the cocoa eventloop)
     }
 
     return 0;
 }
 
-uint64_t getMilliseconds() {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
-}

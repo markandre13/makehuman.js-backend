@@ -1,7 +1,14 @@
 #include "util.hh"
 #include <print>
+#include <sys/time.h>
 
 using namespace std;
+
+uint64_t getMilliseconds() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint64_t)(tv.tv_sec) * 1000 + (uint64_t)(tv.tv_usec) / 1000;
+}
 
 vector<string_view> split(const string_view &data, char delimiter) {
     vector<string_view> result;
