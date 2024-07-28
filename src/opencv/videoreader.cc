@@ -4,8 +4,8 @@
 
 using namespace std;
 
-VideoReader::VideoReader(const string &filename) {
-    cap.open(filename);
+VideoReader::VideoReader(const string_view &filename) {
+    cap.open(string(filename));
     if (!cap.isOpened()) {
         throw runtime_error(format("failed to open video file \"{}\"", filename));
     }

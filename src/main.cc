@@ -7,14 +7,14 @@
 #include <span>
 #include <thread>
 
-#include "opencv/videocamera.hh"
-#include "opencv/videoreader.hh"
 #include "chordata/chordata.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
 #include "mediapipe/face.hh"
 #include "mediapipe/pose.hh"
+#include "opencv/videocamera.hh"
+#include "opencv/videoreader.hh"
 #include "util.hh"
 
 #ifdef HAVE_METAL
@@ -65,21 +65,33 @@ int main(void) {
         backend->poseLandmarks(result, timestamp_ms);
     });
 
-    VideoReader cap("video.mp4");
-    // VideoCamera cap;
+    // VideoReader cap("video.mp4");
+    VideoCamera cap;
     double fps = cap.fps();
 
     cv::Mat frame;
 
     while (true) {
-        cap >> frame;
-        if (frame.empty()) {
-            cap.reset();
-            continue;
+        bool frameFromFile = false;
+        if (!backend->readFrame(frame)) {
+            // println("get frame from camera");
+            cap >> frame;
+            if (frame.empty()) {
+                cap.reset();
+                continue;
+            }
+        } else {
+            // println("got frame from file");
+            if (frame.empty()) {
+                backend->reset();
+                continue;
+            }
+            frameFromFile = true;
         }
+
         auto timestamp = getMilliseconds();
 
-        backend->frame(frame, fps);
+        backend->saveFrame(frame, fps);
 
         cv::imshow("image", frame);
         landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
@@ -90,9 +102,8 @@ int main(void) {
             delay = 1;
         }
 
-        cv::waitKey(cap.delay());  // wait 1ms (this also runs the cocoa eventloop)
+        cv::waitKey(frameFromFile ? backend->delay() : cap.delay());  // wait 1ms (this also runs the cocoa eventloop)
     }
 
     return 0;
 }
-

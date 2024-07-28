@@ -10,7 +10,7 @@ class VideoReader : public VideoSource {
         double step = 0;
 
     public:
-        VideoReader(const std::string &filename);
+        VideoReader(const std::string_view &filename);
         void reset() override;
         VideoSource &operator>>(cv::Mat &image) override;
         int delay() const override;

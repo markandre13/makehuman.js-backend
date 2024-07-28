@@ -260,21 +260,55 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
  */
 
 CORBA::async<void> Backend_impl::record(const std::string_view & filename) {
+    _stop();
     println("start record \"{}\"", filename);
     videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
 CORBA::async<void> Backend_impl::play(const std::string_view & filename) {
+    _stop();
     println("start playing\"{}\"", filename);
-    // videoWriter = make_shared<VideoWriter>(filename);
+    videoReader = make_shared<VideoReader>(filename);
     co_return;
 }
 CORBA::async<void> Backend_impl::stop() {
-    println("stop recording/playing");
-    videoWriter = nullptr;
+    _stop();
     co_return;
 }
-void Backend_impl::frame(const cv::Mat &frame, double fps) {
+void Backend_impl::_stop() {
+    if (videoWriter) {
+        println("stop recording");
+        videoWriter = nullptr;
+    }
+    if (videoReader) {
+        println("stop playing");
+        videoReader = nullptr;
+    }
+}
+bool Backend_impl::readFrame(cv::Mat &frame) {
+    std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);
+    if (!in) {
+        return false;
+    }
+    *in >> frame;
+    return true;
+}
+int Backend_impl::delay() {
+    std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);
+    if (!in) {
+        return 0;
+    }
+    return in->delay();
+}
+void Backend_impl::reset() {
+    std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);
+    if (!in) {
+        return;
+    }
+    in->reset();
+}
+
+void Backend_impl::saveFrame(const cv::Mat &frame, double fps) {
     std::shared_ptr<VideoWriter> out = std::atomic_load(&this->videoWriter);
     if (!out) {
         return;

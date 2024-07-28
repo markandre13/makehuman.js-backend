@@ -2,6 +2,7 @@
 
 #include <ev.h>
 #include "opencv/videowriter.hh"
+#include "opencv/videoreader.hh"
 
 #include "makehuman_skel.hh"
 
@@ -23,6 +24,8 @@ class Backend_impl : public Backend_skel {
         bool blendshapeNamesHaveBeenSend = false;
 
         std::shared_ptr<VideoWriter> videoWriter;
+        std::shared_ptr<VideoReader> videoReader;
+        void _stop();
 
     public:
         Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop);
@@ -34,7 +37,10 @@ class Backend_impl : public Backend_skel {
         CORBA::async<void> record(const std::string_view & filename) override;
         CORBA::async<void> play(const std::string_view & filename) override;
         CORBA::async<void> stop() override;
-        void frame(const cv::Mat &frame, double fps);
+        bool readFrame(cv::Mat &frame);
+        int delay();
+        void reset();
+        void saveFrame(const cv::Mat &frame, double fps);
 
         void chordata(const char *buffer, size_t nbytes);
         void livelink(LiveLinkFrame &frame);
