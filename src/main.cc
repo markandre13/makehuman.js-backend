@@ -10,11 +10,11 @@
 #include <thread>
 
 #include "chordata/chordata.hh"
-#include "mediapipe/face.hh"
-#include "mediapipe/pose.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
+#include "mediapipe/face.hh"
+#include "mediapipe/pose.hh"
 
 #ifdef HAVE_METAL
 #include "metal/metal.hh"
@@ -23,6 +23,37 @@
 using namespace std;
 
 static uint64_t getMilliseconds();
+
+class VideoWriter {
+    public:
+        string filename;
+        double fps;
+
+        cv::VideoWriter writer;
+        bool isOpen = false;
+
+    public:
+        VideoWriter(const string_view &filename, double fps) : filename(filename), fps(fps) { println("VideoWriter::VideoWriter()"); }
+        virtual ~VideoWriter() {
+            println("VideoWriter::~VideoWriter()");
+            //     if (isOpen) {
+            //         writer.close();
+            //     }
+        }
+
+        void frame(const cv::Mat &frame) {
+            bool isColor = true;
+            if (!isOpen) {
+                int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+                writer.open(filename, codec, fps, frame.size(), isColor);
+                if (!writer.isOpened()) {
+                    throw runtime_error(format("failed to open {}", filename));
+                }
+                isOpen = true;
+            }
+            writer.write(frame);
+        }
+};
 
 int main(void) {
     println("makehuman.js backend");
@@ -93,13 +124,6 @@ int main(void) {
     double fps = cap.get(cv::CAP_PROP_FPS);
     println("opened video capture device {}: {}x{}, {} fps", backendName.c_str(), w, h, fps);
 
-    // result = cv2.VideoWriter('filename.avi',  
-    //                      cv2.VideoWriter_fourcc(*'MJPG'), 
-    //                      10, size);
-    // result.write(frame);
-    // result.release();
-
-
     //
     // STREAM MEDIAPIPE'S FACE LANDMARKS TO FRONTEND
     //
@@ -110,16 +134,32 @@ int main(void) {
     // https://developer.apple.com/documentation/corefoundation/cffiledescriptor?language=objc
 
     cv::Mat frame;
+
+    auto writer = make_unique<VideoWriter>("live.avi", fps);
+
+    double count = 1 * fps;
+
     while (true) {
         cap >> frame;
         if (frame.empty()) {
-            std::cout << "empty image" << std::endl;
+            cout << "empty image" << std::endl;
             continue;
         }
+
         auto timestamp = getMilliseconds();
 
+        if (count > 0) {
+            writer->frame(frame);
+            count -= 1.0;
+        } else {
+            if (writer) {
+                println("release writer");
+                writer = nullptr;
+            }
+        }
+
         cv::imshow("image", frame);
-        landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
+        // landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
         cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
     }
 
