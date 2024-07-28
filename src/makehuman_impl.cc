@@ -264,8 +264,13 @@ CORBA::async<void> Backend_impl::record(const std::string_view & filename) {
     videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
+CORBA::async<void> Backend_impl::play(const std::string_view & filename) {
+    println("start playing\"{}\"", filename);
+    // videoWriter = make_shared<VideoWriter>(filename);
+    co_return;
+}
 CORBA::async<void> Backend_impl::stop() {
-    println("stop recording");
+    println("stop recording/playing");
     videoWriter = nullptr;
     co_return;
 }

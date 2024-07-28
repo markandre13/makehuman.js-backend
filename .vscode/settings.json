@@ -118,7 +118,10 @@
         "future": "cpp",
         "scoped_allocator": "cpp",
         "strstream": "cpp",
-        "stdfloat": "cpp"
+        "stdfloat": "cpp",
+        "*.expression": "cpp",
+        "alignedvector3": "cpp",
+        "fft": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",

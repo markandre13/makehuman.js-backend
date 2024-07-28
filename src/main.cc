@@ -75,9 +75,13 @@ int main(void) {
     // getVideoInputs();
 
     cv::VideoCapture cap;
+#if 1
     int deviceID = 0;         // 0 = open default camera
     int apiID = cv::CAP_ANY;  // 0 = autodetect default API
     cap.open(deviceID, apiID);
+#else
+    cap.open("video.avi");
+#endif
     if (!cap.isOpened()) {
         cerr << "failed to open video" << endl;
         return 1;
@@ -107,17 +111,26 @@ int main(void) {
     while (true) {
         cap >> frame;
         if (frame.empty()) {
-            cout << "empty image" << std::endl;
+            // in case it's a camera: close and reopen
+            // in case it's a file: rewind
+            // cout << "empty image" << std::endl;
+            cap.set(cv::CAP_PROP_POS_FRAMES, 0);
             continue;
         }
-
         auto timestamp = getMilliseconds();
 
         backend->frame(frame, fps);
 
         cv::imshow("image", frame);
-        // landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
-        cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
+        landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
+
+        auto now = getMilliseconds();
+        auto delay = 1000.0 / fps - (now - timestamp);
+        if (delay < 1) {
+            delay = 1;
+        }
+
+        cv::waitKey(delay);  // wait 1ms (this also runs the cocoa eventloop)
     }
 
     return 0;

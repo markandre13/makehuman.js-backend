@@ -32,6 +32,7 @@ class Backend_impl : public Backend_skel {
         CORBA::async<std::string> load(const std::string_view &filename) override;
         
         CORBA::async<void> record(const std::string_view & filename) override;
+        CORBA::async<void> play(const std::string_view & filename) override;
         CORBA::async<void> stop() override;
         void frame(const cv::Mat &frame, double fps);
 
