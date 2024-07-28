@@ -3,6 +3,7 @@
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 
+
 #include <glm/mat4x4.hpp> // glm::mat4
 #include <glm/vec4.hpp> // glm::vec4
 #include <glm/ext/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale
@@ -259,8 +260,19 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
  */
 
 CORBA::async<void> Backend_impl::record(const std::string_view & filename) {
+    println("start record \"{}\"", filename);
+    videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
 CORBA::async<void> Backend_impl::stop() {
+    println("stop recording");
+    videoWriter = nullptr;
     co_return;
+}
+void Backend_impl::frame(const cv::Mat &frame, double fps) {
+    std::shared_ptr<VideoWriter> out = std::atomic_load(&this->videoWriter);
+    if (!out) {
+        return;
+    }
+    out->frame(frame, fps);
 }

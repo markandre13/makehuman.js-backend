@@ -101,12 +101,13 @@ main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
 main.o: ../upstream/corba.cc/src/corba/net/ws.hh
 main.o: ../upstream/corba.cc/src/corba/protocol.hh chordata/chordata.hh
-main.o: ev/udpserver.hh mediapipe/face.hh captureengine.hh mediapipe/pose.hh
-main.o: livelink/livelink.hh livelink/livelinkframe.hh makehuman_impl.hh
+main.o: ev/udpserver.hh livelink/livelink.hh captureengine.hh
+main.o: livelink/livelinkframe.hh makehuman_impl.hh opencv/videowriter.hh
 main.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
-makehuman_impl.o: makehuman_impl.hh makehuman_skel.hh
+main.o: mediapipe/face.hh mediapipe/pose.hh
+makehuman_impl.o: makehuman_impl.hh opencv/videowriter.hh makehuman_skel.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh

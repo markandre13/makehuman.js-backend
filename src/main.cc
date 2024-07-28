@@ -24,37 +24,6 @@ using namespace std;
 
 static uint64_t getMilliseconds();
 
-class VideoWriter {
-    public:
-        string filename;
-        double fps;
-
-        cv::VideoWriter writer;
-        bool isOpen = false;
-
-    public:
-        VideoWriter(const string_view &filename, double fps) : filename(filename), fps(fps) { println("VideoWriter::VideoWriter()"); }
-        virtual ~VideoWriter() {
-            println("VideoWriter::~VideoWriter()");
-            //     if (isOpen) {
-            //         writer.close();
-            //     }
-        }
-
-        void frame(const cv::Mat &frame) {
-            bool isColor = true;
-            if (!isOpen) {
-                int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-                writer.open(filename, codec, fps, frame.size(), isColor);
-                if (!writer.isOpened()) {
-                    throw runtime_error(format("failed to open {}", filename));
-                }
-                isOpen = true;
-            }
-            writer.write(frame);
-        }
-};
-
 int main(void) {
     println("makehuman.js backend");
 
@@ -135,10 +104,6 @@ int main(void) {
 
     cv::Mat frame;
 
-    auto writer = make_unique<VideoWriter>("live.avi", fps);
-
-    double count = 1 * fps;
-
     while (true) {
         cap >> frame;
         if (frame.empty()) {
@@ -148,15 +113,7 @@ int main(void) {
 
         auto timestamp = getMilliseconds();
 
-        if (count > 0) {
-            writer->frame(frame);
-            count -= 1.0;
-        } else {
-            if (writer) {
-                println("release writer");
-                writer = nullptr;
-            }
-        }
+        backend->frame(frame, fps);
 
         cv::imshow("image", frame);
         // landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ev.h>
+#include "opencv/videowriter.hh"
 
 #include "makehuman_skel.hh"
 
@@ -21,6 +22,8 @@ class Backend_impl : public Backend_skel {
 
         bool blendshapeNamesHaveBeenSend = false;
 
+        std::shared_ptr<VideoWriter> videoWriter;
+
     public:
         Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
@@ -30,6 +33,7 @@ class Backend_impl : public Backend_skel {
         
         CORBA::async<void> record(const std::string_view & filename) override;
         CORBA::async<void> stop() override;
+        void frame(const cv::Mat &frame, double fps);
 
         void chordata(const char *buffer, size_t nbytes);
         void livelink(LiveLinkFrame &frame);
