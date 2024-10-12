@@ -1,4 +1,5 @@
 #include "wavefront.hh"
+#include "../util.hh"
 
 #include <string>
 #include <sstream>
@@ -9,35 +10,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define HAVE_FAST_FLOAT 1
-
-#ifdef HAVE_FAST_FLOAT
-#include "../../upstream/fast_float/fast_float.h"
-#endif
-
-#include "../util.hh"
-
 using namespace std;
-
-inline float stof(const std::string_view &s) {
-#ifdef HAVE_FAST_FLOAT
-    float value;
-    fast_float::from_chars(s.data(), s.data() + s.size(), value);
-    return value;
-#else
-    return strtof(s.data(), nullptr);
-#endif
-}
-
-inline unsigned stou(const std::string_view &s) {
-#ifdef HAVE_FAST_FLOAT
-    unsigned value;
-    fast_float::from_chars(s.data(), s.data() + s.size(), value);
-    return value;
-#else
-    return strtoul(s.data(), nullptr, 10);
-#endif
-}
 
 WavefrontObj::WavefrontObj(const std::string &filename) {
     this->filename = filename;
