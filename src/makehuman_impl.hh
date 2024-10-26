@@ -5,6 +5,7 @@
 #include "opencv/videoreader.hh"
 
 #include "makehuman_skel.hh"
+#include "mediapipe/blazepose.hh"
 
 #ifdef HAVE_MEDIAPIPE
 #include <cc_lib/mediapipe.hh>
@@ -49,6 +50,7 @@ class Backend_impl : public Backend_skel {
         void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
         void poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_landmarker::PoseLandmarkerResult> result, int64_t timestamp_ms);
 #endif
+        void poseLandmarks(const BlazePose &pose, int64_t timestamp_ms);
 };
 
 // this would only be needed for testing

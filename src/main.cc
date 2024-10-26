@@ -8,6 +8,8 @@
 #include <thread>
 
 #include "chordata/chordata.hh"
+#include "ev/timer.hh"
+#include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "makehuman_impl.hh"
@@ -56,20 +58,34 @@ int main(void) {
     // #endif
     // #endif
 
-    std::thread libevthread(ev_run, loop, 0);
-
     // auto landmarker = make_unique<MediapipeFace>([&](auto result, int64_t timestamp_ms) {
     //     backend->faceLandmarks(result, timestamp_ms);
     // });
+
     auto landmarker = make_unique<MediapipePose>([&](auto result, int64_t timestamp_ms) {
-        backend->poseLandmarks(result, timestamp_ms);
+        // backend->poseLandmarks(result, timestamp_ms);
     });
+
+    auto filename =
+        "/Users/mark/freemocap_data/recording_sessions/session_2024-10-06_13_24_28/recording_13_29_02_gmt+2__drei/"
+        "output_data/mediapipe_body_3d_xyz.csv";
+    FreeMoCap freemocap(filename);
+
+    BlazePose pose;
+    Timer timer(loop, 0.0, 1.0 / 30.0, [&] {
+        freemocap.getPose(&pose);
+        auto timestamp_ms = getMilliseconds();
+        backend->poseLandmarks(pose, timestamp_ms);
+    });
+
+    std::thread libevthread(ev_run, loop, 0);
 
     // VideoReader cap("video.mp4");
     VideoCamera cap;
     double fps = cap.fps();
 
     cv::Mat frame;
+    unsigned frameCounter = 0;
 
     while (true) {
         bool frameFromFile = false;
@@ -81,9 +97,11 @@ int main(void) {
                 continue;
             }
         } else {
+            // ++frameCounter;
             // println("got frame from file");
-            if (frame.empty()) {
+            if (frameCounter == 30 * 5 + 12 || frame.empty()) {
                 backend->reset();
+                frameCounter = 0;
                 continue;
             }
             frameFromFile = true;

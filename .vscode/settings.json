@@ -121,7 +121,9 @@
         "stdfloat": "cpp",
         "*.expression": "cpp",
         "alignedvector3": "cpp",
-        "fft": "cpp"
+        "fft": "cpp",
+        "barrier": "cpp",
+        "latch": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",

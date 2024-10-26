@@ -181,6 +181,9 @@ void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_l
         return;
     }
 
+    // pose_landmarks      : relative to image
+    // pose_world_landmarks: hip at 0,0,0 
+
     auto &lm = result->pose_world_landmarks[0].landmarks;
     float lm_array[lm.size() * 3];
     float *ptr = lm_array;
@@ -190,11 +193,23 @@ void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_l
         *(ptr++) = lm[i].z;
     }
     std::span landmarks{lm_array, lm.size() * 3zu};
-
     fe->poseLandmarks(landmarks, timestamp_ms);
 }
-
 #endif
+
+void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
+    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+    if (!fe) {
+        return;
+    }
+
+    BlazePose a(pose); // WTF???
+    // float &lm_array[33 * 3] {pose.landmarks};
+    // std::span<float> landmarks{span(*pose.landmarks, sizeof(pose.landmarks)};
+
+    std::span<float> landmarks(a.landmarks, 99);
+    fe->poseLandmarks(landmarks, timestamp_ms);
+}
 
 /*
  *
@@ -217,11 +232,12 @@ static void checkFilename(const std::string_view &filename) {
 CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
     println("save {}", filename);
     checkFilename(filename);
-    std::ofstream file(filename);
+    std::ofstream file(string(filename).c_str());
     if (!file) {
         println("failed to write");
     }
-    file << data;
+    file.write(data.data(), data.size());
+    // file << string(data);
     println("ok");
     co_return;
 }

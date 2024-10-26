@@ -1,4 +1,4 @@
-#include "../src/facecap/livelinkframe.hh"
+#include "../src/livelink/livelinkframe.hh"
 #include "kaffeeklatsch.hh"
 
 #include <string>
