@@ -36,8 +36,11 @@ class Backend_impl : public Backend_skel {
         CORBA::async<std::string> load(const std::string_view &filename) override;
         
         CORBA::async<void> record(const std::string_view & filename) override;
-        CORBA::async<void> play(const std::string_view & filename) override;
+        CORBA::async<Range> play(const std::string_view & filename) override;
         CORBA::async<void> stop() override;
+        CORBA::async<void> pause() override;
+        CORBA::async<void> seek(uint64_t timestamp_ms) override;
+
         bool readFrame(cv::Mat &frame);
         int delay();
         void reset();

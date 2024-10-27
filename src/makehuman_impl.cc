@@ -281,11 +281,11 @@ CORBA::async<void> Backend_impl::record(const std::string_view & filename) {
     videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
-CORBA::async<void> Backend_impl::play(const std::string_view & filename) {
+CORBA::async<Range> Backend_impl::play(const std::string_view & filename) {
     _stop();
     println("start playing\"{}\"", filename);
     videoReader = make_shared<VideoReader>(filename);
-    co_return;
+    co_return Range { .start_ms = 0, .end_ms = 25};;
 }
 CORBA::async<void> Backend_impl::stop() {
     _stop();
@@ -301,6 +301,13 @@ void Backend_impl::_stop() {
         videoReader = nullptr;
     }
 }
+CORBA::async<void> Backend_impl::pause() {
+    co_return;
+};
+CORBA::async<void> Backend_impl::seek(uint64_t timestamp_ms) {
+    co_return;
+};
+
 bool Backend_impl::readFrame(cv::Mat &frame) {
     std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);
     if (!in) {

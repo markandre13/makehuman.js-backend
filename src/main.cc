@@ -72,7 +72,7 @@ int main(void) {
     FreeMoCap freemocap(filename);
 
     BlazePose pose;
-    Timer timer(loop, 0.0, 1.0 / 30.0, [&] {
+    Timer timer(loop, 0.0, 1.0 / 15.0, [&] {
         freemocap.getPose(&pose);
         auto timestamp_ms = getMilliseconds();
         backend->poseLandmarks(pose, timestamp_ms);
