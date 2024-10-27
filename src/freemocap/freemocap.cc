@@ -28,3 +28,11 @@ void FreeMoCap::getPose(BlazePose *blazepose) {
         bow = eow + 1;
     }
 }
+
+MoCap::MoCap(FreeMoCap &&mocap) {
+    while(!mocap.isEof()) {
+        store.resize(store.size()+1);
+        mocap.getPose(&store.back());
+    }
+    store.resize(store.size()-1);
+}

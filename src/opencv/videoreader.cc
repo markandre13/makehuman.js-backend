@@ -17,6 +17,10 @@ VideoReader::VideoReader(const string_view &filename) {
     println("opened video file \"{}\": {}x{}, {} fps", filename, w, h, fps);
 }
 
+double VideoReader::fps() {
+    return cap.get(cv::CAP_PROP_FPS);
+}
+
 void VideoReader::reset() {
     cap.set(cv::CAP_PROP_POS_FRAMES, 0);
     startTime = 0;

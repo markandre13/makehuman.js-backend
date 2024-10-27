@@ -130,8 +130,10 @@ makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+makehuman_impl.o: mediapipe/blazepose.hh ev/timer.hh freemocap/freemocap.hh
 makehuman_impl.o: mediapipe/blazepose.hh livelink/livelink.hh ev/udpserver.hh
-makehuman_impl.o: captureengine.hh livelink/livelinkframe.hh
+makehuman_impl.o: captureengine.hh livelink/livelinkframe.hh util.hh
+makehuman_impl.o: ../upstream/fast_float/fast_float.h
 makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh

@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <string>
+#include <vector>
 #include <stdexcept>
 #include <print>
 
@@ -28,7 +29,7 @@ class FreeMoCap {
         /**
          * 'true' when the last frame has been read.
          */
-        inline bool isEof() {
+        inline bool isEof() const {
             return eof;
         }
 
@@ -36,4 +37,12 @@ class FreeMoCap {
          * read the next pose.
          */
         void getPose(BlazePose *blazepose);
+};
+
+class MoCap {
+        std::vector<BlazePose> store;
+    public:
+        MoCap(FreeMoCap &&mocap);
+        size_t size() const { return store.size(); }
+        const BlazePose & operator[] (size_t pos) { return store[pos]; }
 };

@@ -5,12 +5,9 @@
 #include <opencv2/opencv.hpp>
 
 class VideoSource {
-    protected:
-        cv::VideoCapture cap;
-
     public:
-        inline double fps() { return cap.get(cv::CAP_PROP_FPS); }
-        virtual VideoSource &operator>>(cv::Mat &image);
+        virtual double fps() = 0;
+        virtual VideoSource &operator>>(cv::Mat &image) = 0;
         // to be called when frame is empty
         virtual void reset() = 0;
         // delay in milliseconds till next frame

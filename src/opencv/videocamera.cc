@@ -3,12 +3,22 @@
 
 using namespace std;
 
+VideoSource &VideoCamera::operator>>(cv::Mat &image) {
+    cap >> image;
+    return *this;
+}
+
+double VideoCamera::fps() {
+    return cap.get(cv::CAP_PROP_FPS);
+}
+
 void VideoCamera::reset() {
     cap.release();
     open();
 }
+
 int VideoCamera::delay() const {
-    // wait as little as possible
+    // wait as little as possible, this object syncs via opencv
     return 1;
 }
 

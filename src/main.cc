@@ -43,6 +43,7 @@ int main(void) {
     auto backend = make_shared<Backend_impl>(orb, loop);
     orb->bind("Backend", backend);
 
+#if 0
     auto chordata = new Chordata(loop, 6565, [&](const char *buffer, size_t nbytes) {
         // println("got chordata packet of {} bytes", nbytes);
         backend->chordata(buffer, nbytes);
@@ -65,21 +66,26 @@ int main(void) {
     auto landmarker = make_unique<MediapipePose>([&](auto result, int64_t timestamp_ms) {
         // backend->poseLandmarks(result, timestamp_ms);
     });
+#endif
 
+#if 0
     auto filename =
         "/Users/mark/freemocap_data/recording_sessions/session_2024-10-06_13_24_28/recording_13_29_02_gmt+2__drei/"
         "output_data/mediapipe_body_3d_xyz.csv";
     FreeMoCap freemocap(filename);
-
     BlazePose pose;
     Timer timer(loop, 0.0, 1.0 / 15.0, [&] {
+        println("timer");
         freemocap.getPose(&pose);
         auto timestamp_ms = getMilliseconds();
         backend->poseLandmarks(pose, timestamp_ms);
     });
+#endif
 
     std::thread libevthread(ev_run, loop, 0);
-
+#if 1
+    libevthread.join();
+#else
     // VideoReader cap("video.mp4");
     VideoCamera cap;
     double fps = cap.fps();
@@ -122,6 +128,6 @@ int main(void) {
 
         cv::waitKey(frameFromFile ? backend->delay() : cap.delay());  // wait 1ms (this also runs the cocoa eventloop)
     }
-
+#endif
     return 0;
 }
