@@ -295,9 +295,13 @@ class MoCapPlayer {
         MoCap mocap;
         Backend_impl *backend;
         size_t pos = 0;
+        bool paused = false;
 
     public:
-        MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl * backend);
+        MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl *backend);
+        void play();
+        void pause();
+        void seek(uint64_t timestamp_ms);
 
     private:
         void tick();
@@ -305,34 +309,48 @@ class MoCapPlayer {
 
 // TODO: can we improve the timer api
 
-MoCapPlayer::MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl * backend)
+MoCapPlayer::MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl *backend)
     : timer(loop, 0.0, 1.0 / 30.0,
             [this] {
                 this->tick();
             }),
       mocap(FreeMoCap(string(filename))),
-      backend(backend) {
-}
+      backend(backend) {}
 
 void MoCapPlayer::tick() {
-    ++pos;
-    if (pos >= mocap.size()) {
-        pos = 0;
+    if (!paused) {
+        ++pos;
+        if (pos >= mocap.size()) {
+            pos = 0;
+        }
     }
-    return backend->poseLandmarks(mocap[pos], getMilliseconds());
+    return backend->poseLandmarks(mocap[pos], pos);
+}
+void MoCapPlayer::play() { paused = false; }
+void MoCapPlayer::pause() { paused = true; }
+void MoCapPlayer::seek(uint64_t timestamp_ms) {
+    pause();
+    if (timestamp_ms > mocap.size()) {
+        timestamp_ms = mocap.size() - 1;
+    }
+    this->pos = timestamp_ms;
+    tick();
 }
 
 CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
-    _stop();
-    println("start playing\"{}\"", filename);
-    if (filename.ends_with(".csv")) {
-        new MoCapPlayer(loop, filename, this);
-    }
-    if (filename.ends_with(".mp4")) {
-        videoReader = make_shared<VideoReader>(filename);
+    if (mocapPlayer) {
+        mocapPlayer->play();
+    } else {
+        _stop();
+        println("start playing\"{}\"", filename);
+        if (filename.ends_with(".csv")) {
+            mocapPlayer = make_shared<MoCapPlayer>(loop, filename, this);
+        }
+        if (filename.ends_with(".mp4")) {
+            videoReader = make_shared<VideoReader>(filename);
+        }
     }
     co_return Range{.start_ms = 0, .end_ms = 25};
-    ;
 }
 CORBA::async<void> Backend_impl::stop() {
     _stop();
@@ -347,9 +365,22 @@ void Backend_impl::_stop() {
         println("stop playing");
         videoReader = nullptr;
     }
+    if (mocapPlayer) {
+        mocapPlayer = nullptr;
+    }
 }
-CORBA::async<void> Backend_impl::pause() { co_return; };
-CORBA::async<void> Backend_impl::seek(uint64_t timestamp_ms) { co_return; };
+CORBA::async<void> Backend_impl::pause() {
+    if (mocapPlayer) {
+        mocapPlayer->pause();
+    }
+    co_return;
+};
+CORBA::async<void> Backend_impl::seek(uint64_t timestamp_ms) {
+    if (mocapPlayer) {
+        mocapPlayer->seek(timestamp_ms);
+    }
+    co_return;
+};
 
 bool Backend_impl::readFrame(cv::Mat &frame) {
     std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);

@@ -13,6 +13,7 @@
 
 class CaptureEngine;
 class LiveLinkFrame;
+class MoCapPlayer;
 
 class Backend_impl : public Backend_skel {
         struct ev_loop *loop;
@@ -26,6 +27,7 @@ class Backend_impl : public Backend_skel {
 
         std::shared_ptr<VideoWriter> videoWriter;
         std::shared_ptr<VideoReader> videoReader;
+        std::shared_ptr<MoCapPlayer> mocapPlayer;
         void _stop();
 
     public:
