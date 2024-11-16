@@ -20,13 +20,16 @@
 #include "util.hh"
 
 #ifdef HAVE_METAL
-#include "metal/metal.hh"
+#include "macos/metal/metal.hh"
+#include "macos/video/video.hh"
 #endif
 
 using namespace std;
 
 int main(void) {
     println("makehuman.js backend");
+    getVideoInputs();
+    return 0;
 
     //
     // SETUP ORB

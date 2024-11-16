@@ -16,7 +16,7 @@ IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 # bt all
 
 HAVE_MEDIAPIPE=1
-# HAVE_METAL=1
+HAVE_METAL=1
 MEMCHECK=-fsanitize=address -fsanitize=leak
 
 CORBA_PATH=../upstream/corba.cc/src
@@ -40,24 +40,24 @@ MEDIAPIPE_LFLAGS=-L$(MEDIAPIPE_CC_LIB_DIR) -lmediapipe
 endif
 
 ifeq ($(HAVE_METAL), 1)
-METAL_SRC=metal/metal.cc metal/target.cc metal/renderer.cc metal/renderapp.cc metal/algorithms.cc
-METAL_CFLAGS=-ObjC++ -fno-objc-arc -DHAVE_METAL=1
-METAL_LFLAGS=-framework Metal -framework Foundation -framework Cocoa -framework CoreGraphics -framework MetalKit -framework AVFoundation -framework CoreMedia
+METAL_SRC=metal.cc target.cc renderer.cc renderapp.cc algorithms.cc
+VIDEO_SRC=video.cc
+MACOS_SRC=$(patsubst %.cc,macos/metal/%.cc,$(METAL_SRC)) $(patsubst %.cc,macos/video/%.cc,$(VIDEO_SRC))
+MACOS_CFLAGS=-ObjC++ -fno-objc-arc -DHAVE_METAL=1
+MACOS_LFLAGS=-framework Metal -framework Foundation -framework Cocoa -framework CoreGraphics -framework MetalKit -framework AVFoundation -framework CoreMedia
 endif
 
-# CFLAGS=-std=c++23 -fmodules
 CFLAGS=-std=c++23 $(MEMCHECK) \
 	-Wall -Wextra -Werror=return-type -Werror=shadow \
 	-Wno-deprecated-anon-enum-enum-conversion -Wno-module-import-in-extern-c -Wno-unused-parameter \
 	-Wno-vla-cxx-extension \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
-	-I$(CORBA_PATH) $(GLM_FLAGS) $(MEDIAPIPE_CFLAGS) $(METAL_CFLAGS)
-LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(METAL_LFLAGS) -fno-objc-arc \
+	-I$(CORBA_PATH) $(GLM_FLAGS) $(MEDIAPIPE_CFLAGS) $(MACOS_CFLAGS)
+LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(MACOS_LFLAGS) -fno-objc-arc \
 	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
-# SRC=metal/metal.cc metal/renderer.cc metal/renderapp.cc metal/algorithms.cc util.cc mesh/wavefront.cc
-SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC)) $(METAL_SRC)
+SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC)) $(MACOS_SRC)
 OBJ = $(SRC:.cc=.o)
 
 all: $(APP)
@@ -259,3 +259,12 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
 ../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
 ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
+macos/metal/metal.o: macos/metal/metal.hh macos/metal/renderer.hh
+macos/metal/metal.o: livelink/livelinkframe.hh mesh/wavefront.hh
+macos/metal/metal.o: macos/metal/algorithms.hh macos/metal/renderapp.hh
+macos/metal/metal.o: macos/metal/target.hh macos/metal/shadertypes.hh
+macos/metal/target.o: macos/metal/target.hh macos/metal/shadertypes.hh
+macos/metal/target.o: macos/metal/algorithms.hh
+macos/metal/renderer.o: macos/metal/renderer.hh
+macos/metal/renderapp.o: macos/metal/renderapp.hh macos/metal/renderer.hh
+macos/metal/algorithms.o: macos/metal/algorithms.hh

@@ -330,7 +330,7 @@ void MoCapPlayer::play() { paused = false; }
 void MoCapPlayer::pause() { paused = true; }
 void MoCapPlayer::seek(uint64_t timestamp_ms) {
     pause();
-    if (timestamp_ms > mocap.size()) {
+    if (timestamp_ms >= mocap.size()) {
         timestamp_ms = mocap.size() - 1;
     }
     this->pos = timestamp_ms;
