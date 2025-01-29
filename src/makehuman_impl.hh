@@ -36,6 +36,7 @@ class Backend_impl : public Backend_skel {
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
         CORBA::async<std::string> load(const std::string_view &filename) override;
+        CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() override;
         
         CORBA::async<void> record(const std::string_view & filename) override;
         CORBA::async<Range> play(const std::string_view & filename) override;

@@ -267,6 +267,11 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
     co_return result;
 }
 
+CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() {
+    vector<shared_ptr<VideoCamera2>> a;
+    co_return a;
+}
+
 /*
  *
  * record video

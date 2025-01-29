@@ -29,19 +29,19 @@ void getVideoInputs() {
         }
     ];
 
-    int deviceId = -1;
+    AVCaptureDevice *device = nullptr;
 
     int cameraNum = 0;
-    for (AVCaptureDevice * device in devices) {
-        string_view id(device.uniqueID.UTF8String);
-        string_view name(device.localizedName.UTF8String);
+    for (AVCaptureDevice * d in devices) {
+        string_view id(d.uniqueID.UTF8String);
+        string_view name(d.localizedName.UTF8String);
         println("device '{}' '{}' cameraNum={}", id, name, cameraNum);
         // if (name == "Brio 500") {
         // if (name == "MX Brio") {
         if (name == "Logitech BRIO") {
         // if (name == "Logi Capture") {
             println("  GOT IT");
-            deviceId = cameraNum;
+            device = d;
         }
         ++cameraNum;
     }
@@ -50,13 +50,13 @@ void getVideoInputs() {
     // DEVICE FEATURES (DIMENSIONS, FRAMES PER SECOND)
     //
 
-    AVCaptureDevice *device = [AVCaptureDevice deviceWithUniqueID: [NSString stringWithUTF8String: useId.c_str()]];
+    // AVCaptureDevice *device = [AVCaptureDevice deviceWithUniqueID: [NSString stringWithUTF8String: useId.c_str()]];
     println("USE DEVICE '{}'", device != nullptr);
 
     for (AVCaptureDeviceFormat *format in device.formats) {
         FourCharCode formatSubType = CMFormatDescriptionGetMediaSubType(format.formatDescription);
-        auto formatDescription = stringFromSubType(formatSubType);
-        auto isFullRange = isFullRangeFormat(formatSubType);
+        // auto formatDescription = stringFromSubType(formatSubType);
+        // auto isFullRange = isFullRangeFormat(formatSubType);
 
         CMVideoDimensions formatDimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
 
