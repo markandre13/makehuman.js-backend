@@ -31,7 +31,7 @@ class Backend_impl : public Backend_skel {
         void _stop();
 
     public:
-        Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop);
+        Backend_impl(struct ev_loop *loop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;

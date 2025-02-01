@@ -2,7 +2,7 @@
 
 #include <sys/socket.h>
 
-#include <corba/hexdump.hh>
+#include <corba/util/hexdump.hh>
 #include <print>
 #include <string>
 

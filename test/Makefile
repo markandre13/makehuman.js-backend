@@ -29,12 +29,11 @@ LIB=-lev -lwslay -lnettle
 
     #   corba/net/ws.spec.cc \
 
-SRC = mesh/wavefront.spec.cc mesh/rendermesh.spec.cc \
+SRC = mesh/wavefront.spec.cc mesh/rendermesh.spec.cc ../src/mesh/wavefront.cc \
 	  livelink/livelink.spec.cc ../src/livelink/livelinkframe.cc \
-	  freemocap/freemocap.spec.cc \
-	  ../src/util.cc ../src/mesh/wavefront.cc \
-	  ../src/freemocap/freemocap.cc \
-	  main.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc
+	  freemocap/freemocap.spec.cc ../src/freemocap/freemocap.cc \
+	  ev/timer.spec.cc ../src/ev/timer.cc \
+	  main.cc ../src/util.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc
 
 WSLAY=../upstream/wslay/lib/wslay_event.c \
   ../upstream/wslay/lib/wslay_frame.c \
@@ -83,13 +82,16 @@ makehuman.hh: makehuman.idl
 
 mesh/wavefront.spec.o: ../src/mesh/wavefront.hh
 mesh/rendermesh.spec.o: ../src/mesh/wavefront.hh
+../src/mesh/wavefront.o: ../src/mesh/wavefront.hh ../src/util.hh
+../src/mesh/wavefront.o: ../upstream/fast_float/fast_float.h
 livelink/livelink.spec.o: ../src/livelink/livelinkframe.hh
 ../src/livelink/livelinkframe.o: ../src/livelink/livelinkframe.hh
 freemocap/freemocap.spec.o: ../src/freemocap/freemocap.hh
 freemocap/freemocap.spec.o: ../src/mediapipe/blazepose.hh
-../src/util.o: ../src/util.hh ../upstream/fast_float/fast_float.h
-../src/mesh/wavefront.o: ../src/mesh/wavefront.hh ../src/util.hh
-../src/mesh/wavefront.o: ../upstream/fast_float/fast_float.h
 ../src/freemocap/freemocap.o: ../src/freemocap/freemocap.hh
-../src/freemocap/freemocap.o: ../src/mediapipe/blazepose.hh
+../src/freemocap/freemocap.o: ../src/mediapipe/blazepose.hh ../src/util.hh
+../src/freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
+ev/timer.spec.o: ../src/ev/timer.hh
+../src/ev/timer.o: ../src/ev/timer.hh
+../src/util.o: ../src/util.hh ../upstream/fast_float/fast_float.h
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh

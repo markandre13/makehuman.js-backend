@@ -6,7 +6,8 @@ APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
 		mediapipe/face.cc mediapipe/pose.cc \
 	    livelink/livelink.cc livelink/livelinkframe.cc \
 		chordata/chordata.cc \
-		ev/udpserver.cc
+		ev/timer.cc ev/udpserver.cc
+
 IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
 
 # how to get core dumps on macos
@@ -21,8 +22,12 @@ MEMCHECK=-fsanitize=address -fsanitize=leak
 
 CORBA_PATH=../upstream/corba.cc/src
 CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
-	naming.cc hexdump.cc \
-	net/ws.cc net/ws/socket.cc net/ws/createAcceptKey.cc
+	naming.cc \
+	util/hexdump.cc util/logger.cc \
+	net/connection.cc net/stream2packet.cc \
+	net/tcp/protocol.cc net/tcp/connection.cc \
+	net/ws/protocol.cc net/ws/connection.cc \
+	net/util/socket.cc net/util/createAcceptKey.cc
 
 GLM_FLAGS=-I../upstream/glm
 
@@ -68,6 +73,13 @@ depend:
 run:
 	cd .. && DYLD_LIBRARY_PATH=upstream/mediapipe_cc_lib/bazel-bin/cc_lib ./src/$(APP)
 
+lldb:
+	@echo "cd .."
+	@echo "lldb src/backend"
+	@echo "b <file>:<line>"
+	@echo "process launch --environment DYLD_LIBRARY_PATH=upstream/mediapipe_cc_lib/bazel-bin/cc_lib"
+	# cd .. && DYLD_LIBRARY_PATH=upstream/mediapipe_cc_lib/bazel-bin/cc_lib lldb ./src/$(APP)
+
 valgrind:
 	/usr/local/Cellar/valgrind/HEAD-93191c1/bin/valgrind --track-origins=yes ./$(APP)
 
@@ -97,13 +109,19 @@ main.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/cdr.hh
 main.o: ../upstream/corba.cc/src/corba/blob.hh
+main.o: ../upstream/corba.cc/src/corba/net/connection.hh
+main.o: ../upstream/corba.cc/src/corba/blob.hh
+main.o: ../upstream/corba.cc/src/corba/coroutine.hh
+main.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 main.o: ../upstream/corba.cc/src/corba/skeleton.hh
 main.o: ../upstream/corba.cc/src/corba/object.hh
 main.o: ../upstream/corba.cc/src/corba/stub.hh
 main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
-main.o: ../upstream/corba.cc/src/corba/net/ws.hh
-main.o: ../upstream/corba.cc/src/corba/protocol.hh chordata/chordata.hh
+main.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/connection.hh chordata/chordata.hh
 main.o: ev/udpserver.hh ev/timer.hh freemocap/freemocap.hh
 main.o: mediapipe/blazepose.hh livelink/livelink.hh captureengine.hh
 main.o: livelink/livelinkframe.hh makehuman_impl.hh opencv/videowriter.hh
@@ -122,6 +140,10 @@ makehuman_impl.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/cdr.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/net/connection.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+makehuman_impl.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/skeleton.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/object.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/stub.hh
@@ -141,6 +163,10 @@ makehuman.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 makehuman.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman.o: ../upstream/corba.cc/src/corba/cdr.hh
 makehuman.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman.o: ../upstream/corba.cc/src/corba/net/connection.hh
+makehuman.o: ../upstream/corba.cc/src/corba/blob.hh
+makehuman.o: ../upstream/corba.cc/src/corba/coroutine.hh
+makehuman.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 makehuman.o: ../upstream/corba.cc/src/corba/skeleton.hh
 makehuman.o: ../upstream/corba.cc/src/corba/object.hh
 makehuman.o: ../upstream/corba.cc/src/corba/stub.hh
@@ -162,11 +188,10 @@ freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
 mediapipe/face.o: mediapipe/face.hh captureengine.hh
 mediapipe/pose.o: mediapipe/pose.hh captureengine.hh
 livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
-livelink/livelink.o: ../upstream/corba.cc/src/corba/hexdump.hh
-livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh
 livelink/livelink.o: livelink/livelinkframe.hh
 livelink/livelinkframe.o: livelink/livelinkframe.hh
 chordata/chordata.o: chordata/chordata.hh ev/udpserver.hh
+ev/timer.o: ev/timer.hh
 ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
@@ -174,16 +199,22 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/corba.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/skeleton.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/stub.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/ior.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/exception.hh
-../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/hexdump.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/naming.hh
-../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/protocol.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/url.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
+../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/util/logger.hh
 ../upstream/corba.cc/src/corba/ior.o: ../upstream/corba.cc/src/corba/ior.hh
 ../upstream/corba.cc/src/corba/ior.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/ior.o: ../upstream/corba.cc/src/corba/blob.hh
@@ -197,6 +228,10 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/skeleton.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/stub.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/blob.hh
@@ -205,7 +240,12 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/cdr.hh
-../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/protocol.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/stub.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/blob.hh
@@ -213,13 +253,18 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/skeleton.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/stub.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/ior.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/exception.hh
-../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/hexdump.hh
-../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/protocol.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/cdr.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/cdr.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/url.hh
@@ -230,6 +275,10 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/skeleton.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/url.o: ../upstream/corba.cc/src/corba/stub.hh
@@ -245,20 +294,75 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/cdr.hh
-../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/hexdump.hh
+../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
 ../upstream/corba.cc/src/corba/naming.o: ../upstream/corba.cc/src/corba/ior.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/protocol.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/blob.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/coroutine.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/orb.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/giop.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/cdr.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/exception.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
-../upstream/corba.cc/src/corba/net/ws.o: ../upstream/corba.cc/src/corba/net/ws/socket.hh
-../upstream/corba.cc/src/corba/net/ws/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/ws/createAcceptKey.hh
+../upstream/corba.cc/src/corba/util/logger.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/stub.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/object.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/connection.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
+../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/giop.hh
+../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/orb.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/giop.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/orb.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/giop.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/orb.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/giop.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/cdr.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/util/createAcceptKey.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/util/socket.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/util/createAcceptKey.o: ../upstream/corba.cc/src/corba/net/util/createAcceptKey.hh
 macos/metal/metal.o: macos/metal/metal.hh macos/metal/renderer.hh
 macos/metal/metal.o: livelink/livelinkframe.hh mesh/wavefront.hh
 macos/metal/metal.o: macos/metal/algorithms.hh macos/metal/renderapp.hh

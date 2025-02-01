@@ -1,5 +1,5 @@
 #include <corba/corba.hh>
-#include <corba/net/ws.hh>
+#include <corba/net/ws/protocol.hh>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <print>
@@ -28,8 +28,8 @@ using namespace std;
 
 int main(void) {
     println("makehuman.js backend");
-    getVideoInputs();
-    return 0;
+    // getVideoInputs();
+    // return 0;
 
     //
     // SETUP ORB
@@ -40,10 +40,11 @@ int main(void) {
     struct ev_loop *loop = EV_DEFAULT;
     println("the audience is listening...");
 
-    auto protocol = new CORBA::net::WsProtocol();
-    protocol->listen(orb.get(), loop, "localhost", 9001);
+    auto protocol = new CORBA::detail::WsProtocol(loop);
+    orb->registerProtocol(protocol);
+    protocol->listen("localhost", 9001);
 
-    auto backend = make_shared<Backend_impl>(orb, loop);
+    auto backend = make_shared<Backend_impl>(loop);
     orb->bind("Backend", backend);
 
 #if 0
@@ -85,9 +86,16 @@ int main(void) {
     });
 #endif
 
+    println("enter libev thread");
+
+    // auto pulseTimer = make_unique<Timer>(loop, 0, 1, [] {
+    //     println("tick");
+    // });
+
     std::thread libevthread(ev_run, loop, 0);
 #if 1
     libevthread.join();
+    println("left libev thread");
 #else
     // VideoReader cap("video.mp4");
     VideoCamera cap;

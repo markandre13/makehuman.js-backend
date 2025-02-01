@@ -21,7 +21,7 @@
 
 using namespace std;
 
-Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop) : Backend_skel(orb), loop(loop) {}
+Backend_impl::Backend_impl(struct ev_loop *loop) : loop(loop) {}
 
 template <typename E>
 auto as_int(E const value) -> typename std::underlying_type<E>::type {
@@ -29,7 +29,7 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
 }
 
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
-    println("set frontend: enter");
+    println("Backend_impl::setFrontend(...)");
     atomic_store(&frontend, aFrontend);
     // frontend = aFrontend;
     CORBA::installSystemExceptionHandler(aFrontend, [this] {
@@ -39,11 +39,11 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
         println("frontend reference dropped");
     });
     blendshapeNamesHaveBeenSend = false;
-    println("set frontend: leave");
     co_return;
 }
 
 CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
+    println("Backend_impl::setEngine(...)");
     switch (type) {
         case MotionCaptureType::FACE:
             blendshapeNamesHaveBeenSend = false;
@@ -228,7 +228,7 @@ static void checkFilename(const std::string_view &filename) {
 }
 
 CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
-    println("save {}", filename);
+    println("Backend_impl::save(\"{}\", ...)", filename);
     checkFilename(filename);
     std::ofstream file(string(filename).c_str());
     if (!file) {
@@ -267,9 +267,9 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
     co_return result;
 }
 
-CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() {
-    vector<shared_ptr<VideoCamera2>> a;
-    co_return a;
+CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() {
+    vector<shared_ptr<VideoCamera2>> dummy;
+    co_return dummy;
 }
 
 /*
@@ -279,8 +279,8 @@ CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() {
  */
 
 CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
+    println("Backend_impl::record(\"{}\")", filename);
     _stop();
-    println("start record \"{}\"", filename);
     videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
@@ -304,6 +304,7 @@ class MoCapPlayer {
 
     public:
         MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl *backend);
+        ~MoCapPlayer();
         void play();
         void pause();
         void seek(uint64_t timestamp_ms);
@@ -314,22 +315,29 @@ class MoCapPlayer {
 
 // TODO: can we improve the timer api
 
+// FIXME: the time does not start => write a unit test for the timer and fix it
+// TODO : is there an API to show all libev watcher's? no.
 MoCapPlayer::MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl *backend)
     : timer(loop, 0.0, 1.0 / 30.0,
             [this] {
                 this->tick();
             }),
       mocap(FreeMoCap(string(filename))),
-      backend(backend) {}
+      backend(backend) {
+    println("MoCapPlayer::MoCapPlayer()");
+}
+
+MoCapPlayer::~MoCapPlayer() { println("MoCapPlayer::~MoCapPlayer()"); }
 
 void MoCapPlayer::tick() {
+    // println("MoCapPlayer::tick(): paused={}", paused);
     if (!paused) {
         ++pos;
         if (pos >= mocap.size()) {
             pos = 0;
         }
+        backend->poseLandmarks(mocap[pos], pos);
     }
-    return backend->poseLandmarks(mocap[pos], pos);
 }
 void MoCapPlayer::play() { paused = false; }
 void MoCapPlayer::pause() { paused = true; }
@@ -343,12 +351,13 @@ void MoCapPlayer::seek(uint64_t timestamp_ms) {
 }
 
 CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
+    println("Backend_impl::play(\"{}\")", filename);
     if (mocapPlayer) {
         mocapPlayer->play();
     } else {
         _stop();
-        println("start playing\"{}\"", filename);
         if (filename.ends_with(".csv")) {
+            println("Backend_impl::play(\"{}\"): create MoCapPlayer", filename);
             mocapPlayer = make_shared<MoCapPlayer>(loop, filename, this);
         }
         if (filename.ends_with(".mp4")) {
@@ -363,24 +372,28 @@ CORBA::async<void> Backend_impl::stop() {
 }
 void Backend_impl::_stop() {
     if (videoWriter) {
-        println("stop recording");
+        println("Backend_impl::_stop(): stop VideoWriter");
         videoWriter = nullptr;
     }
     if (videoReader) {
-        println("stop playing");
+        println("Backend_impl::_stop(): stop VideoReader");
         videoReader = nullptr;
     }
     if (mocapPlayer) {
+        println("Backend_impl::_stop(): stop MoCapPlayer");
         mocapPlayer = nullptr;
     }
 }
 CORBA::async<void> Backend_impl::pause() {
+    println("Backend_impl::pause()");
     if (mocapPlayer) {
         mocapPlayer->pause();
     }
     co_return;
 };
 CORBA::async<void> Backend_impl::seek(uint64_t timestamp_ms) {
+    println("Backend_impl::seek({})", timestamp_ms);
+
     if (mocapPlayer) {
         mocapPlayer->seek(timestamp_ms);
     }
