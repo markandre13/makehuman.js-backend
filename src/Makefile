@@ -4,7 +4,7 @@ APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
 		opencv/videosource.cc opencv/videocamera.cc opencv/videoreader.cc \
 		freemocap/freemocap.cc \
 		mediapipe/face.cc mediapipe/pose.cc \
-	    livelink/livelink.cc livelink/livelinkframe.cc \
+		livelink/livelink.cc livelink/livelinkframe.cc \
 		chordata/chordata.cc \
 		ev/timer.cc ev/udpserver.cc
 
@@ -34,8 +34,9 @@ GLM_FLAGS=-I../upstream/glm
 CXX=/usr/local/opt/llvm/bin/clang++
 LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
 
-OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
-WSLAG_FLAGS=-I/usr/local/include
+OPENCV_FLAGS=-I/usr/local/include/opencv4
+OPENCV_LFLAGS=-L/usr/local/lib/opencv4
+WSLAY_FLAGS=-I/usr/local/include
 
 ifeq ($(HAVE_MEDIAPIPE), 1)
 MEDIAPIPE_CC_LIB=../upstream/mediapipe_cc_lib
@@ -58,8 +59,8 @@ CFLAGS=-std=c++23 $(MEMCHECK) \
 	-Wno-vla-cxx-extension \
 	-O0 -g -I/usr/local/opt/llvm/include/c++ \
 	-I$(CORBA_PATH) $(GLM_FLAGS) $(MEDIAPIPE_CFLAGS) $(MACOS_CFLAGS)
-LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(MACOS_LFLAGS) -fno-objc-arc \
-	-L/usr/local/opt/opencv@3/lib -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
+LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(OPENCV_LFLAGS) $(MACOS_LFLAGS) -fno-objc-arc \
+	 -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
 SRC=$(APP_SRC) $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC)) $(MACOS_SRC)
@@ -97,7 +98,7 @@ $(APP): $(OBJ)
 
 .cc.o:
 	@echo compiling $*.cc ...
-	$(CXX) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
+	$(CXX) $(CFLAGS) $(WSLAY_FLAGS) $(OPENCV_FLAGS) \
 	-c -o $*.o $*.cc
 
 # DO NOT DELETE
