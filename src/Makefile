@@ -189,6 +189,8 @@ freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
 mediapipe/face.o: mediapipe/face.hh captureengine.hh
 mediapipe/pose.o: mediapipe/pose.hh captureengine.hh
 livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
+livelink/livelink.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
+livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh
 livelink/livelink.o: livelink/livelinkframe.hh
 livelink/livelinkframe.o: livelink/livelinkframe.hh
 chordata/chordata.o: chordata/chordata.hh ev/udpserver.hh

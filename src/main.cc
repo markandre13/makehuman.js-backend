@@ -28,7 +28,7 @@ using namespace std;
 
 int main(void) {
     println("makehuman.js backend");
-    // getVideoInputs();
+    getVideoInputs();
     // return 0;
 
     //
