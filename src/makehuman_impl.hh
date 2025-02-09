@@ -15,15 +15,23 @@ class CaptureEngine;
 class LiveLinkFrame;
 class MoCapPlayer;
 
+/**
+ * big ball of mud representing the backend
+ * 
+ * todo: split up
+ */
 class Backend_impl : public Backend_skel {
         struct ev_loop *loop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
+
         std::unique_ptr<CaptureEngine> body;
         std::unique_ptr<CaptureEngine> face;
         std::unique_ptr<CaptureEngine> hand;
 
         bool blendshapeNamesHaveBeenSend = false;
+
+        std::vector<std::shared_ptr<VideoCamera2>> cameras;
 
         std::shared_ptr<VideoWriter> videoWriter;
         std::shared_ptr<VideoReader> videoReader;
@@ -31,11 +39,12 @@ class Backend_impl : public Backend_skel {
         void _stop();
 
     public:
-        Backend_impl(struct ev_loop *loop);
+        Backend_impl(std::shared_ptr<CORBA::ORB>, struct ev_loop *loop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
         CORBA::async<std::string> load(const std::string_view &filename) override;
+
         CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() override;
         
         CORBA::async<void> record(const std::string_view & filename) override;

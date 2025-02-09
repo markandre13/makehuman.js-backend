@@ -1,4 +1,5 @@
 #include "makehuman_impl.hh"
+#include "macos/video/video.hh"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -21,7 +22,7 @@
 
 using namespace std;
 
-Backend_impl::Backend_impl(struct ev_loop *loop) : loop(loop) {}
+Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop) : loop(loop), cameras(::getVideoCameras(orb)) { }
 
 template <typename E>
 auto as_int(E const value) -> typename std::underlying_type<E>::type {
@@ -268,8 +269,7 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
 }
 
 CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() {
-    vector<shared_ptr<VideoCamera2>> dummy;
-    co_return dummy;
+    co_return cameras;
 }
 
 /*

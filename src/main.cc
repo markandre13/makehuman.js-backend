@@ -21,16 +21,13 @@
 
 #ifdef HAVE_METAL
 #include "macos/metal/metal.hh"
-#include "macos/video/video.hh"
 #endif
 
 using namespace std;
 
 int main(void) {
     println("makehuman.js backend");
-    getVideoInputs();
-    // return 0;
-
+   
     //
     // SETUP ORB
     //
@@ -44,7 +41,7 @@ int main(void) {
     orb->registerProtocol(protocol);
     protocol->listen("localhost", 9001);
 
-    auto backend = make_shared<Backend_impl>(loop);
+    auto backend = make_shared<Backend_impl>(orb, loop);
     orb->bind("Backend", backend);
 
 #if 0

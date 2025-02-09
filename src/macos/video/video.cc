@@ -1,5 +1,6 @@
-#include <opencv2/opencv.hpp>
+#include "../../makehuman_skel.hh"
 
+#include <opencv2/opencv.hpp>
 #import <AVFoundation/AVFoundation.h>
 
 #include <print>
@@ -12,10 +13,40 @@ struct DimensionFPS {
     int32_t width, height;
 };
 
+class VideoCamera_impl : public VideoCamera2_skel {
+        int openCvIndex;
+        std::string _id;
+        std::string _name;
+        std::string _features;
+    public:
+        VideoCamera_impl(int openCvIndex, std::string_view &id, std::string_view name, const std::string &features): _id(id), _name(name), _features(features) {}
+        CORBA::async<std::string> id();
+        CORBA::async<std::string> name();
+        CORBA::async<void> name(const std::string_view &);
+        CORBA::async<std::string> features();
+};
+
+CORBA::async<std::string> VideoCamera_impl::id() {
+    co_return _id;
+}
+CORBA::async<std::string> VideoCamera_impl::name() {
+    co_return _name;
+}
+CORBA::async<void> VideoCamera_impl::name(const std::string_view &name) {
+    _name = name;
+    co_return;
+}
+CORBA::async<std::string> VideoCamera_impl::features() {
+    co_return _features;
+}
+
 /**
  * Create list of available video cameras
  */
-void getVideoInputs() {
+std::vector<std::shared_ptr<VideoCamera2>>
+getVideoCameras(std::shared_ptr<CORBA::ORB> orb) {
+    std::vector<std::shared_ptr<VideoCamera2>> cameras;
+
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
     // create a device list similar to the one used internally by opencv 3/4 on macos.
@@ -83,22 +114,29 @@ void getVideoInputs() {
                 }
             }
         }
+        string features;
         if (fabs(maxFPS.fps - maxDimension.fps)<0.01 
             && maxFPS.width == maxDimension.width
             && maxFPS.height == maxDimension.height)
         {
-            println("id '{}', name '{}', {}x{}@{:.2f}",
-                id, name, maxFPS.width, maxFPS.height, maxFPS.fps
-            );
+            features = format("{}x{}@{:.2f}", maxFPS.width, maxFPS.height, maxFPS.fps);
+
         } else {
-            println("id '{}', name '{}', {}x{}@{:.2f} to {}x{}@{:.2f}",
-                id, name,
+            features = format("{}x{}@{:.2f} to {}x{}@{:.2f}",
                 maxDimension.width, maxDimension.height, maxDimension.fps,
                 maxFPS.width, maxFPS.height, maxFPS.fps
             );
         }
+
+        println("{} {}", name, features);
+        auto camera = make_shared<VideoCamera_impl>(openCVDeviceID, id, name, features);
+        orb->activate_object(camera);
+        cameras.push_back(camera);
+
         ++openCVDeviceID;
     }
 
     [pool drain];
+
+    return cameras;
 }
