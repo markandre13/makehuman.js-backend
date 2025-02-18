@@ -272,6 +272,15 @@ CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoC
     co_return cameras;
 }
 
+CORBA::async<> Backend_impl::setCamera(std::shared_ptr<VideoCamera2> camera) {
+    if (camera) {
+        println("Backend_impl::setCamera('{} ({})')", co_await camera->name(), co_await camera->features());
+    } else {
+        println("Backend_impl::setCamera(nullptr)");
+    }
+    co_return;
+}
+
 /*
  *
  * record video

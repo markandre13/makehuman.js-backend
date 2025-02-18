@@ -153,9 +153,10 @@ makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
-makehuman_impl.o: mediapipe/blazepose.hh ev/timer.hh freemocap/freemocap.hh
-makehuman_impl.o: mediapipe/blazepose.hh livelink/livelink.hh ev/udpserver.hh
-makehuman_impl.o: captureengine.hh livelink/livelinkframe.hh util.hh
+makehuman_impl.o: mediapipe/blazepose.hh macos/video/video.hh makehuman.hh
+makehuman_impl.o: ev/timer.hh freemocap/freemocap.hh mediapipe/blazepose.hh
+makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
+makehuman_impl.o: livelink/livelinkframe.hh util.hh
 makehuman_impl.o: ../upstream/fast_float/fast_float.h
 makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -252,7 +253,6 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/blob.hh
-../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/corba.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
@@ -260,11 +260,13 @@ ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/corba.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/skeleton.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/object.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/stub.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/ior.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/util/logger.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/giop.o: ../upstream/corba.cc/src/corba/net/connection.hh
@@ -375,3 +377,23 @@ macos/metal/target.o: macos/metal/algorithms.hh
 macos/metal/renderer.o: macos/metal/renderer.hh
 macos/metal/renderapp.o: macos/metal/renderapp.hh macos/metal/renderer.hh
 macos/metal/algorithms.o: macos/metal/algorithms.hh
+macos/video/video.o: makehuman_skel.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/corba.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/orb.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh
+macos/video/video.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/giop.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/cdr.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/blob.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/net/connection.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/blob.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/skeleton.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/object.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/stub.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/ior.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/exception.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/orb.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/giop.hh
+macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
