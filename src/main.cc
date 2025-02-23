@@ -44,7 +44,6 @@ int main(void) {
     protocol->listen("localhost", 9001);
 
     OpenCVLoop openCVLoop;
-
     auto backend = make_shared<Backend_impl>(orb, loop, &openCVLoop);
     orb->bind("Backend", backend);
 
@@ -183,9 +182,14 @@ void OpenCVLoop::run() {
             continue;
         }
 
+        
         if (_capture.grab()) {
+            auto timestamp_ms = getMilliseconds();
             if (_capture.retrieve(frame)) {
                 cv::imshow(windowName, frame);
+                if (frameHandler) {
+                    frameHandler(frame, timestamp_ms);
+                }
             }
         }
 

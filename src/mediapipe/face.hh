@@ -1,15 +1,13 @@
 #pragma once
 
-#include "../captureengine.hh"
+#include "mediapipetask_impl.hh"
 #include <cc_lib/mediapipe.hh>
 
-class MediapipeFace : VideoCaptureEngine {
+class MediapipeFace : public MediaPipeTask_impl {
         std::unique_ptr<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker> mp;
+        bool blendshapeNamesHaveBeenSend = false;
     public:
-        MediapipeFace(std::function<void(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult>, int64_t timestamp_ms)>);
-        virtual ~MediapipeFace();
-
-        void frame(int channels, int width, int height, int width_step, uint8_t *pixel_data, int64_t timestamp_ms) override {
-            mp->DetectAsync(channels, width, height, width_step, pixel_data, timestamp_ms);
-        }
+        MediapipeFace(Backend_impl*);
+        CORBA::async<std::string> name() override;
+        void frame(const cv::Mat &frame, int64_t timestamp_ms) override;
 };

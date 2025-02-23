@@ -1,11 +1,11 @@
 APP=backend
 
 APP_SRC=main.cc makehuman_impl.cc makehuman.cc util.cc mesh/wavefront.cc \
-		opencv/videosource.cc opencv/videocamera.cc opencv/videoreader.cc \
-		freemocap/freemocap.cc \
-		mediapipe/face.cc mediapipe/pose.cc \
+		opencv/videocamera.cc opencv/videosource.cc opencv/videoreader.cc \
+		mediapipe/mediapipetask_impl.cc mediapipe/face.cc mediapipe/pose.cc \
 		livelink/livelink.cc livelink/livelinkframe.cc \
 		chordata/chordata.cc \
+		freemocap/freemocap.cc \
 		ev/timer.cc ev/udpserver.cc
 
 IDL_GEN=makehuman.hh makehuman.cc makehuman_skel.hh makehuman_stub.hh
@@ -135,8 +135,9 @@ main.o: opencv/videoreader.hh opencv/videosource.hh makehuman_skel.hh
 main.o: ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
-main.o: mediapipe/blazepose.hh mediapipe/face.hh mediapipe/pose.hh
-main.o: opencv/videocamera.hh makehuman_skel.hh util.hh
+main.o: mediapipe/blazepose.hh mediapipe/mediapipetask_impl.hh
+main.o: makehuman_skel.hh mediapipe/face.hh mediapipe/mediapipetask_impl.hh
+main.o: mediapipe/pose.hh opencv/videocamera.hh util.hh
 main.o: ../upstream/fast_float/fast_float.h macos/video/video.hh
 main.o: opencv/videocamera.hh
 makehuman_impl.o: makehuman_impl.hh opencv/videowriter.hh
@@ -160,11 +161,12 @@ makehuman_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
-makehuman_impl.o: mediapipe/blazepose.hh ev/timer.hh freemocap/freemocap.hh
+makehuman_impl.o: mediapipe/blazepose.hh mediapipe/mediapipetask_impl.hh
+makehuman_impl.o: makehuman_skel.hh ev/timer.hh freemocap/freemocap.hh
 makehuman_impl.o: mediapipe/blazepose.hh livelink/livelink.hh ev/udpserver.hh
 makehuman_impl.o: captureengine.hh livelink/livelinkframe.hh
 makehuman_impl.o: macos/video/video.hh opencv/videocamera.hh
-makehuman_impl.o: makehuman_skel.hh opencv/videocamera.hh util.hh
+makehuman_impl.o: opencv/videocamera.hh util.hh
 makehuman_impl.o: ../upstream/fast_float/fast_float.h
 makehuman.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -189,7 +191,6 @@ makehuman.o: makehuman_skel.hh makehuman_stub.hh
 util.o: util.hh ../upstream/fast_float/fast_float.h
 mesh/wavefront.o: mesh/wavefront.hh util.hh
 mesh/wavefront.o: ../upstream/fast_float/fast_float.h
-opencv/videosource.o: opencv/videosource.hh
 opencv/videocamera.o: opencv/videocamera.hh makehuman_skel.hh
 opencv/videocamera.o: ../upstream/corba.cc/src/corba/corba.hh
 opencv/videocamera.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -211,18 +212,88 @@ opencv/videocamera.o: ../upstream/corba.cc/src/corba/orb.hh
 opencv/videocamera.o: ../upstream/corba.cc/src/corba/giop.hh
 opencv/videocamera.o: ../upstream/corba.cc/src/corba/coroutine.hh
 opencv/videocamera.o: makehuman.hh opencv/videosource.hh
+opencv/videosource.o: opencv/videosource.hh
 opencv/videoreader.o: opencv/videoreader.hh opencv/videosource.hh util.hh
 opencv/videoreader.o: ../upstream/fast_float/fast_float.h
-freemocap/freemocap.o: freemocap/freemocap.hh mediapipe/blazepose.hh util.hh
-freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
-mediapipe/face.o: mediapipe/face.hh captureengine.hh
-mediapipe/pose.o: mediapipe/pose.hh captureengine.hh
+mediapipe/mediapipetask_impl.o: mediapipe/mediapipetask_impl.hh
+mediapipe/mediapipetask_impl.o: makehuman_skel.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/corba.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/cdr.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/net/connection.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/skeleton.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/object.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/stub.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/ior.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/exception.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/mediapipetask_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/mediapipetask_impl.o: makehuman.hh mediapipe/pose.hh
+mediapipe/mediapipetask_impl.o: mediapipe/face.hh
+mediapipe/face.o: mediapipe/face.hh mediapipe/mediapipetask_impl.hh
+mediapipe/face.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/corba.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/face.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/cdr.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/net/connection.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/skeleton.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/object.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/stub.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/ior.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/exception.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/face.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+mediapipe/face.o: makehuman_impl.hh opencv/videowriter.hh
+mediapipe/face.o: opencv/videoreader.hh opencv/videosource.hh
+mediapipe/face.o: makehuman_skel.hh mediapipe/blazepose.hh
+mediapipe/face.o: mediapipe/mediapipetask_impl.hh
+mediapipe/pose.o: mediapipe/pose.hh mediapipe/mediapipetask_impl.hh
+mediapipe/pose.o: makehuman_skel.hh ../upstream/corba.cc/src/corba/corba.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/pose.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/cdr.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/net/connection.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/blob.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/coroutine.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/skeleton.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/object.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/stub.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/ior.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/exception.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/orb.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/giop.hh
+mediapipe/pose.o: ../upstream/corba.cc/src/corba/coroutine.hh makehuman.hh
+mediapipe/pose.o: makehuman_impl.hh opencv/videowriter.hh
+mediapipe/pose.o: opencv/videoreader.hh opencv/videosource.hh
+mediapipe/pose.o: makehuman_skel.hh mediapipe/blazepose.hh
+mediapipe/pose.o: mediapipe/mediapipetask_impl.hh
 livelink/livelink.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/util/hexdump.hh
 livelink/livelink.o: ../upstream/corba.cc/src/corba/blob.hh
 livelink/livelink.o: livelink/livelinkframe.hh
 livelink/livelinkframe.o: livelink/livelinkframe.hh
 chordata/chordata.o: chordata/chordata.hh ev/udpserver.hh
+freemocap/freemocap.o: freemocap/freemocap.hh mediapipe/blazepose.hh util.hh
+freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
 ev/timer.o: ev/timer.hh
 ev/udpserver.o: ev/udpserver.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh

@@ -7,6 +7,7 @@
 
 #include "makehuman_skel.hh"
 #include "mediapipe/blazepose.hh"
+#include "mediapipe/mediapipetask_impl.hh"
 
 #ifdef HAVE_MEDIAPIPE
 #include <cc_lib/mediapipe.hh>
@@ -24,6 +25,7 @@ class OpenCVLoop {
     std::shared_ptr<VideoCamera_impl> _camera;
     cv::VideoCapture _capture;
 public:
+    std::function<void(const cv::Mat &frame, int64_t timestamp_ms)> frameHandler;
     void run();
     void setCamera(std::shared_ptr<VideoCamera_impl>);
     inline void stop() { _running = false; }
@@ -47,6 +49,8 @@ class Backend_impl : public Backend_skel {
         bool blendshapeNamesHaveBeenSend = false;
 
         std::vector<std::shared_ptr<VideoCamera2>> cameras;
+        std::vector<std::shared_ptr<MediaPipeTask>> mediaPipeTasks;
+        std::shared_ptr<MediaPipeTask_impl> _mediaPipeTask;
 
         std::shared_ptr<VideoWriter> videoWriter;
         std::shared_ptr<VideoReader> videoReader;
@@ -55,6 +59,7 @@ class Backend_impl : public Backend_skel {
 
     public:
         Backend_impl(std::shared_ptr<CORBA::ORB>, struct ev_loop *loop, OpenCVLoop *openCVLoop);
+
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
@@ -74,6 +79,10 @@ class Backend_impl : public Backend_skel {
         CORBA::async<void> pause() override;
         CORBA::async<void> seek(uint64_t timestamp_ms) override;
 
+        inline std::shared_ptr<Frontend> getFrontend() {
+            return std::atomic_load(&frontend);
+        }
+
         bool readFrame(cv::Mat &frame);
         int delay();
         void reset();
@@ -82,17 +91,5 @@ class Backend_impl : public Backend_skel {
         void chordata(const char *buffer, size_t nbytes);
         void livelink(LiveLinkFrame &frame);
 
-#ifdef HAVE_MEDIAPIPE
-        void faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms);
-        void poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_landmarker::PoseLandmarkerResult> result, int64_t timestamp_ms);
-#endif
         void poseLandmarks(const BlazePose &pose, int64_t timestamp_ms);
 };
-
-// this would only be needed for testing
-
-// class Frontend_impl : public Frontend_skel {
-//     public:
-//         Frontend_impl(std::shared_ptr<CORBA::ORB> orb);
-//         CORBA::async<void> hello() override;
-// };

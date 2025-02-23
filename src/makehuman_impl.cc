@@ -18,13 +18,20 @@
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
 #include "macos/video/video.hh"
+#include "mediapipe/mediapipetask_impl.hh"
 #include "opencv/videocamera.hh"
 #include "util.hh"
 
 using namespace std;
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
-    : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)) {}
+    : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+    openCVLoop->frameHandler = [&](const cv::Mat &frame, int64_t timestamp_ms) {
+        if (_mediaPipeTask) {
+            _mediaPipeTask->frame(frame, timestamp_ms);
+        }
+    };
+}
 
 template <typename E>
 auto as_int(E const value) -> typename std::underlying_type<E>::type {
@@ -124,80 +131,6 @@ void Backend_impl::livelink(LiveLinkFrame &frame) {
     fe->faceLandmarks({}, frame.weights, transform, frame.frame);
 }
 
-#ifdef HAVE_MEDIAPIPE
-
-void Backend_impl::faceLandmarks(std::optional<mediapipe::cc_lib::vision::face_landmarker::FaceLandmarkerResult> result, int64_t timestamp_ms) {
-    if (face != nullptr) {
-        return;
-    }
-    if (!result.has_value() || result->face_landmarks.size() == 0 || !result->face_blendshapes.has_value() ||
-        !result->facial_transformation_matrixes.has_value()) {
-        return;
-    }
-
-    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
-    if (!fe) {
-        return;
-    }
-
-    auto &lm = result->face_landmarks[0].landmarks;
-    float lm_array[lm.size() * 3];
-    float *ptr = lm_array;
-    for (size_t i = 0; i < lm.size(); ++i) {
-        *(ptr++) = lm[i].x;
-        *(ptr++) = lm[i].y;
-        *(ptr++) = lm[i].z;
-    }
-    std::span landmarks{lm_array, lm.size() * 3zu};
-
-    auto &bs = result->face_blendshapes->at(0).categories;
-
-    if (!blendshapeNamesHaveBeenSend) {
-        std::vector<std::string_view> faceBlendshapeNames;
-        faceBlendshapeNames.reserve(bs.size());
-        for (auto &cat : bs) {
-            faceBlendshapeNames.emplace_back(*cat.category_name);
-        }
-        frontend->faceBlendshapeNames(faceBlendshapeNames);
-        blendshapeNamesHaveBeenSend = true;
-    }
-
-    float bs_array[bs.size()];
-    ptr = bs_array;
-    for (size_t i = 0; i < bs.size(); ++i) {
-        *(ptr++) = bs[i].score;
-    }
-    std::span blendshapes{bs_array, bs.size()};
-
-    fe->faceLandmarks(landmarks, blendshapes, result->facial_transformation_matrixes->at(0).data, timestamp_ms);
-}
-
-void Backend_impl::poseLandmarks(std::optional<mediapipe::cc_lib::vision::pose_landmarker::PoseLandmarkerResult> result, int64_t timestamp_ms) {
-    if (!result.has_value() || result->pose_landmarks.size() == 0) {
-        return;
-    }
-
-    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
-    if (!fe) {
-        return;
-    }
-
-    // pose_landmarks      : relative to image
-    // pose_world_landmarks: hip at 0,0,0
-
-    auto &lm = result->pose_world_landmarks[0].landmarks;
-    float lm_array[lm.size() * 3];
-    float *ptr = lm_array;
-    for (size_t i = 0; i < lm.size(); ++i) {
-        *(ptr++) = lm[i].x;
-        *(ptr++) = lm[i].y;
-        *(ptr++) = lm[i].z;
-    }
-    std::span landmarks{lm_array, lm.size() * 3zu};
-    fe->poseLandmarks(landmarks, timestamp_ms);
-}
-#endif
-
 void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
     if (!fe) {
@@ -273,7 +206,8 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
 CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
 
 CORBA::async<std::shared_ptr<VideoCamera2>> Backend_impl::camera() {
-    return {};
+    std::shared_ptr<VideoCamera2> result;
+    co_return result;
 }
 
 CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
@@ -285,15 +219,10 @@ CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
     co_return;
 }
 
-CORBA::async<vector<shared_ptr<MediaPipeTask>>> Backend_impl::getMediaPipeTasks() {
-    vector<shared_ptr<MediaPipeTask>> result;
-    co_return result;
-}
-CORBA::async<shared_ptr<MediaPipeTask>> Backend_impl::mediaPipeTask() {
-    shared_ptr<MediaPipeTask> result;
-    co_return result;
-}
-CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask>) {
+CORBA::async<vector<shared_ptr<MediaPipeTask>>> Backend_impl::getMediaPipeTasks() { co_return mediaPipeTasks; }
+CORBA::async<shared_ptr<MediaPipeTask>> Backend_impl::mediaPipeTask() { co_return _mediaPipeTask; }
+CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
+    _mediaPipeTask = dynamic_pointer_cast<MediaPipeTask_impl>(task);
     co_return;
 }
 
