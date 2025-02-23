@@ -272,17 +272,28 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
 
 CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
 
-CORBA::async<> Backend_impl::setCamera(std::shared_ptr<VideoCamera2> camera) {
-    // if (camera) {
-    //     println("Backend_impl::setCamera('{} ({})')", co_await camera->name(), co_await camera->features());
-    // } else {
-    //     println("Backend_impl::setCamera(nullptr)");
-    // }
+CORBA::async<std::shared_ptr<VideoCamera2>> Backend_impl::camera() {
+    return {};
+}
+
+CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
     auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
     if (camera && !impl) {
         println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
     }
     openCVLoop->setCamera(impl);
+    co_return;
+}
+
+CORBA::async<vector<shared_ptr<MediaPipeTask>>> Backend_impl::getMediaPipeTasks() {
+    vector<shared_ptr<MediaPipeTask>> result;
+    co_return result;
+}
+CORBA::async<shared_ptr<MediaPipeTask>> Backend_impl::mediaPipeTask() {
+    shared_ptr<MediaPipeTask> result;
+    co_return result;
+}
+CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask>) {
     co_return;
 }
 

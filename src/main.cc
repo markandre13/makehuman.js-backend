@@ -189,6 +189,7 @@ void OpenCVLoop::run() {
             }
         }
 
+        // TODO: delay until next frame
         cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
     }
 }

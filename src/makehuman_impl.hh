@@ -61,7 +61,12 @@ class Backend_impl : public Backend_skel {
         CORBA::async<std::string> load(const std::string_view &filename) override;
 
         CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() override;
-        CORBA::async<> setCamera(std::shared_ptr<VideoCamera2> camera) override;
+        CORBA::async<std::shared_ptr<VideoCamera2>> camera() override;
+        CORBA::async<> camera(std::shared_ptr<VideoCamera2>) override;
+
+        CORBA::async<std::vector<std::shared_ptr<MediaPipeTask>>> getMediaPipeTasks() override;
+        CORBA::async<std::shared_ptr<MediaPipeTask>> mediaPipeTask() override;
+        CORBA::async<void> mediaPipeTask(std::shared_ptr<MediaPipeTask>) override;
         
         CORBA::async<void> record(const std::string_view & filename) override;
         CORBA::async<Range> play(const std::string_view & filename) override;
