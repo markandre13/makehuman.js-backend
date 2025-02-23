@@ -1,5 +1,4 @@
 #include "makehuman_impl.hh"
-#include "macos/video/video.hh"
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -18,11 +17,14 @@
 #include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
+#include "macos/video/video.hh"
+#include "opencv/videocamera.hh"
 #include "util.hh"
 
 using namespace std;
 
-Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop) : loop(loop), cameras(::getVideoCameras(orb)) { }
+Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
+    : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)) {}
 
 template <typename E>
 auto as_int(E const value) -> typename std::underlying_type<E>::type {
@@ -268,16 +270,19 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
     co_return result;
 }
 
-CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() {
-    co_return cameras;
-}
+CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
 
 CORBA::async<> Backend_impl::setCamera(std::shared_ptr<VideoCamera2> camera) {
-    if (camera) {
-        println("Backend_impl::setCamera('{} ({})')", co_await camera->name(), co_await camera->features());
-    } else {
-        println("Backend_impl::setCamera(nullptr)");
+    // if (camera) {
+    //     println("Backend_impl::setCamera('{} ({})')", co_await camera->name(), co_await camera->features());
+    // } else {
+    //     println("Backend_impl::setCamera(nullptr)");
+    // }
+    auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
+    if (camera && !impl) {
+        println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
     }
+    openCVLoop->setCamera(impl);
     co_return;
 }
 

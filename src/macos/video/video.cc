@@ -1,5 +1,4 @@
-#include "../../makehuman_skel.hh"
-
+#include "video.hh"
 #include <opencv2/opencv.hpp>
 #import <AVFoundation/AVFoundation.h>
 
@@ -11,19 +10,6 @@ using namespace std;
 struct DimensionFPS {
     Float64 fps;
     int32_t width, height;
-};
-
-class VideoCamera_impl : public VideoCamera2_skel {
-        int openCvIndex;
-        std::string _id;
-        std::string _name;
-        std::string _features;
-    public:
-        VideoCamera_impl(int openCvIndex, std::string_view &id, std::string_view name, const std::string &features): _id(id), _name(name), _features(features) {}
-        CORBA::async<std::string> id();
-        CORBA::async<std::string> name();
-        CORBA::async<void> name(const std::string_view &);
-        CORBA::async<std::string> features();
 };
 
 CORBA::async<std::string> VideoCamera_impl::id() {

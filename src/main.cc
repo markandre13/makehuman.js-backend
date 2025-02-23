@@ -6,6 +6,7 @@
 #include <set>
 #include <span>
 #include <thread>
+#include <mutex>
 
 #include "chordata/chordata.hh"
 #include "ev/timer.hh"
@@ -18,6 +19,7 @@
 #include "opencv/videocamera.hh"
 #include "opencv/videoreader.hh"
 #include "util.hh"
+#include "macos/video/video.hh"
 
 #ifdef HAVE_METAL
 #include "macos/metal/metal.hh"
@@ -41,7 +43,9 @@ int main(void) {
     orb->registerProtocol(protocol);
     protocol->listen("localhost", 9001);
 
-    auto backend = make_shared<Backend_impl>(orb, loop);
+    OpenCVLoop openCVLoop;
+
+    auto backend = make_shared<Backend_impl>(orb, loop, &openCVLoop);
     orb->bind("Backend", backend);
 
 #if 0
@@ -91,11 +95,14 @@ int main(void) {
 
     std::thread libevthread(ev_run, loop, 0);
 #if 1
+    openCVLoop.run();
     libevthread.join();
     println("left libev thread");
 #else
+    // capture in a thread, render in main?
     // VideoReader cap("video.mp4");
-    VideoCamera cap;
+    int deviceID = 0;
+    VideoCamera cap(deviceID);
     double fps = cap.fps();
 
     cv::Mat frame;
@@ -126,7 +133,7 @@ int main(void) {
         backend->saveFrame(frame, fps);
 
         cv::imshow("image", frame);
-        landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
+        // landmarker->frame(frame.channels(), frame.cols, frame.rows, frame.step, frame.data, timestamp);
 
         auto now = getMilliseconds();
         auto delay = 1000.0 / fps - (now - timestamp);
@@ -138,4 +145,50 @@ int main(void) {
     }
 #endif
     return 0;
+}
+
+void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
+    atomic_store(&_next_camera, camera);
+    _mutex.unlock();
+}
+
+void OpenCVLoop::run() {
+    _running = true;
+
+    const char *windowName = "image";
+    cv::Mat frame;
+
+    while(_running) {
+        auto next_camera = std::atomic_load(&_next_camera);
+        if (_camera != next_camera) {
+            if (_camera) {
+                _capture.release();
+            }
+            if (!_camera && next_camera) {
+                cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+            }
+            if (_camera && !next_camera) {
+                cv::destroyWindow(windowName);
+                
+            }
+            _camera = next_camera;
+            if (_camera) {
+                _capture.open(next_camera->openCvIndex());
+            }
+        }
+
+        if (!_camera) {
+            cv::waitKey(1);
+            _mutex.lock();
+            continue;
+        }
+
+        if (_capture.grab()) {
+            if (_capture.retrieve(frame)) {
+                cv::imshow(windowName, frame);
+            }
+        }
+
+        cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
+    }
 }

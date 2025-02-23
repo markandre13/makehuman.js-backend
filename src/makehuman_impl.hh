@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ev.h>
+#include <mutex>
 #include "opencv/videowriter.hh"
 #include "opencv/videoreader.hh"
 
@@ -14,6 +15,19 @@
 class CaptureEngine;
 class LiveLinkFrame;
 class MoCapPlayer;
+class VideoCamera_impl;
+
+class OpenCVLoop {
+    std::mutex _mutex;
+    bool _running;
+    std::shared_ptr<VideoCamera_impl> _next_camera;
+    std::shared_ptr<VideoCamera_impl> _camera;
+    cv::VideoCapture _capture;
+public:
+    void run();
+    void setCamera(std::shared_ptr<VideoCamera_impl>);
+    inline void stop() { _running = false; }
+};
 
 /**
  * big ball of mud representing the backend
@@ -22,6 +36,7 @@ class MoCapPlayer;
  */
 class Backend_impl : public Backend_skel {
         struct ev_loop *loop;
+        OpenCVLoop *openCVLoop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
 
@@ -39,7 +54,7 @@ class Backend_impl : public Backend_skel {
         void _stop();
 
     public:
-        Backend_impl(std::shared_ptr<CORBA::ORB>, struct ev_loop *loop);
+        Backend_impl(std::shared_ptr<CORBA::ORB>, struct ev_loop *loop, OpenCVLoop *openCVLoop);
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
         CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
