@@ -1,0 +1,30 @@
+/*
+ *
+ * file system api
+ *
+ */
+
+// Milliseconds since UNIX epoch 1970-01-01 00:00 UTC
+// typedef unsigned long long TimeStamp;
+
+struct DirectoryEntry {
+    string name;
+    boolean directory;
+    unsigned long long size;
+    unsigned long long modified;
+};
+
+interface Directory {
+    string path();
+    sequence<DirectoryEntry> list();
+    Directory parent();
+    Directory opendir(in string name);
+    Directory mkdir(in string name);
+};
+
+interface FileSystem {
+    Directory opendir(in string path);
+    Directory rootdir();
+    Directory homedir();
+    Directory currentdir();
+};

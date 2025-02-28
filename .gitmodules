@@ -16,3 +16,6 @@
 [submodule "upstream/glm"]
 	path = upstream/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "upstream/libeio"]
+	path = upstream/libeio
+	url = https://github.com/kindy/libeio.git

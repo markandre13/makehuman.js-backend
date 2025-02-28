@@ -18,6 +18,7 @@ MediapipePose::MediapipePose(Backend_impl *backend): MediaPipeTask_impl(backend)
         if (!result.has_value() || result->pose_landmarks.size() == 0) {
             return;
         }
+
         auto frontend = _backend->getFrontend();
         if (!frontend) {
             return;
@@ -26,10 +27,11 @@ MediapipePose::MediapipePose(Backend_impl *backend): MediaPipeTask_impl(backend)
         auto &lm = result->pose_world_landmarks[0].landmarks;
         float lm_array[lm.size() * 3];
         float *ptr = lm_array;
+        float s = 10.0;
         for (size_t i = 0; i < lm.size(); ++i) {
-            *(ptr++) = lm[i].x;
-            *(ptr++) = lm[i].y;
-            *(ptr++) = lm[i].z;
+            *(ptr++) = lm[i].x * s;
+            *(ptr++) = lm[i].y * -s;
+            *(ptr++) = lm[i].z * s;
         }
         std::span landmarks{lm_array, lm.size() * 3zu};
         frontend->poseLandmarks(landmarks, timestamp_ms);

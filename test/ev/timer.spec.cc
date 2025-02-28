@@ -37,7 +37,7 @@ void MoCapPlayer2::tick() {
 
 kaffeeklatsch_spec([] {
     describe("class Timer", [] {
-        fit("Timer(loop, delay, interval, closure)", [] {
+        it("Timer(loop, delay, interval, closure)", [] {
             struct ev_loop *loop = EV_DEFAULT;
 
             auto endTimer = make_unique<Timer>(loop, 0.1, 0, [&] {
@@ -61,7 +61,7 @@ kaffeeklatsch_spec([] {
             expect(counter).to.be.lessThanOrEqual(11);
         });
 
-        fit("", [] {
+        xit("", [] {
             struct ev_loop *loop = EV_DEFAULT;
             auto player = make_shared<MoCapPlayer2>(loop);
             ev_run(loop, 0);

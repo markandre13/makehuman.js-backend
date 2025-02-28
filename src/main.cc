@@ -1,5 +1,6 @@
 #include <corba/corba.hh>
 #include <corba/net/ws/protocol.hh>
+#include <corba/util/logger.hh>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <print>
@@ -28,6 +29,8 @@
 using namespace std;
 
 int main(void) {
+    // Logger::setLevel(LOG_DEBUG);
+
     println("makehuman.js backend");
    
     //
