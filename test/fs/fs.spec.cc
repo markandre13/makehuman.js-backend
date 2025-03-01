@@ -44,60 +44,33 @@ static string getCurrentWorkingDirectory() {
     return string(buffer);
 }
 
-// TODO: why not get rid of FileSystem and do everything in Directory? this way the UI could get away
-//       with a single instance
-//       FileSystem could serve as a factory. Directory could get a remove() method similar to the CosLifeCycle spec
-//       FileSystem is available by name
 class FileSystem_impl: public FileSystem_skel {
-    public:
-        CORBA::async<std::shared_ptr<Directory>> opendir(const std::string_view & path) override;
-        CORBA::async<std::shared_ptr<Directory>> rootdir() override;
-        CORBA::async<std::shared_ptr<Directory>> homedir() override;
-        CORBA::async<std::shared_ptr<Directory>> currentdir() override;
-};
-
-class Directory_impl: public Directory_skel {
         std::string _path;
     public:
-        Directory_impl(std::string path);
+        FileSystem_impl();
         CORBA::async<std::string> path() override;
         CORBA::async<std::vector<DirectoryEntry>> list() override;
-        CORBA::async<std::shared_ptr<Directory>> parent() override;
-        CORBA::async<std::shared_ptr<Directory>> opendir(const std::string_view & name) override;
-        CORBA::async<std::shared_ptr<Directory>> mkdir(const std::string_view & name) override;
+        CORBA::async<> up() override;
+        CORBA::async<> down(const std::string_view & name) override;
+        CORBA::async<> rootdir() override;
+        CORBA::async<> homedir() override;
+        CORBA::async<> currentdir() override;
+        CORBA::async<> mkdir(const std::string_view & name) override;
+        CORBA::async<> rmdir(const std::string_view & name) override;
+        CORBA::async<CORBA::blob> read(const std::string_view & name) override;
+        CORBA::async<> write(const std::string_view & name, const CORBA::blob_view & data) override;
+        CORBA::async<> rm(const std::string_view & name) override;
 };
 
-CORBA::async<std::shared_ptr<Directory>> FileSystem_impl::opendir(const std::string_view & path) {
-    co_return make_shared<Directory_impl>(string(path));
-}
-CORBA::async<std::shared_ptr<Directory>> FileSystem_impl::rootdir() {
-    co_return make_shared<Directory_impl>("/");
-}
-CORBA::async<std::shared_ptr<Directory>> FileSystem_impl::homedir() {
-    co_return make_shared<Directory_impl>(getHomeDirectory());
-}
-CORBA::async<std::shared_ptr<Directory>> FileSystem_impl::currentdir() {
-    co_return make_shared<Directory_impl>(getCurrentWorkingDirectory());
+FileSystem_impl::FileSystem_impl() {
+    _path = getCurrentWorkingDirectory();
 }
 
-Directory_impl::Directory_impl(std::string path) {
-    char buffer[PATH_MAX];
-    if (realpath(path.c_str(), buffer) == nullptr) {
-        throw runtime_error(format("Directory::Directory_impl(\"{}\"): {}", _path, strerror(errno)));
-    }
-    _path = buffer;
-    auto dirp = ::opendir(_path.c_str());
-    if (!dirp) {
-        throw runtime_error(format("Directory::Directory_impl(\"{}\"): {}", _path, strerror(errno)));
-    }
-    closedir(dirp);
-}
-
-CORBA::async<std::string> Directory_impl::path() {
+CORBA::async<std::string> FileSystem_impl::path() {
     co_return _path;
 }
 
-CORBA::async<std::vector<DirectoryEntry>> Directory_impl::list() {
+CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list() {
     vector<DirectoryEntry> directoryEntries;
 
     auto directory = ::opendir(_path.c_str());
@@ -130,6 +103,7 @@ CORBA::async<std::vector<DirectoryEntry>> Directory_impl::list() {
             .name = filename,
             .directory = S_ISDIR(s.st_mode),
             .size = (unsigned long long)s.st_size,
+            .created = s.st_ctimespec.tv_sec * 1000ULL + s.st_ctimespec.tv_nsec,
             .modified = s.st_mtimespec.tv_sec * 1000ULL + s.st_mtimespec.tv_nsec
         });
     }
@@ -137,36 +111,65 @@ CORBA::async<std::vector<DirectoryEntry>> Directory_impl::list() {
     co_return directoryEntries;
 }
 
-CORBA::async<std::shared_ptr<Directory>> Directory_impl::parent() {
+CORBA::async<> FileSystem_impl::up() { 
     char buffer[PATH_MAX];
-    co_return make_shared<Directory_impl>(dirname_r(_path.c_str(), buffer));
+    _path = dirname_r(_path.c_str(), buffer);
+    co_return;
 }
-CORBA::async<std::shared_ptr<Directory>> Directory_impl::opendir(const std::string_view & name) {
-    co_return make_shared<Directory_impl>(format("{}/{}", _path, name));
+CORBA::async<> FileSystem_impl::down(const std::string_view & name) { 
+    string path = format("{}/{}", _path, name);
+    char buffer[PATH_MAX];
+    if (realpath(path.c_str(), buffer) == nullptr) {
+        throw runtime_error(format("Directory::down(\"{}\"): {}", name, strerror(errno)));
+    }   
+    auto directory = ::opendir(buffer);
+    if (!directory) {
+        throw runtime_error(format("Directory::down(\"{}\"): {}", name, strerror(errno)));
+    }
+    closedir(directory);
+    _path = buffer;
+    co_return;
 }
-CORBA::async<std::shared_ptr<Directory>> Directory_impl::mkdir(const std::string_view & name) {
+CORBA::async<> FileSystem_impl::rootdir() { 
+    _path = "";
+    co_return;
+}
+CORBA::async<> FileSystem_impl::homedir() { 
+    _path = getHomeDirectory();
+    co_return;
+}
+CORBA::async<> FileSystem_impl::currentdir() { 
+    _path = getCurrentWorkingDirectory();
+    co_return;
+}
+CORBA::async<> FileSystem_impl::mkdir(const std::string_view & name) { 
     string path = format("{}/{}", _path, name);
     if (::mkdir(path.c_str(), 0) != 0) {
         throw runtime_error(format("failed to create directory {}: {}", path, strerror(errno)));
     }
-    co_return make_shared<Directory_impl>(path);
+    co_return;
 }
-
-// TODO: there's a need to activate the object
-// TODO: the skeleton interface still has a variant with an ORB we could use to make the activation nicer again?
-// TODO: lifecycle management for Directory
-// TODO: reuse Directory
-// TODO: sanitize ".." in path -> realpath()
-// TODO: filter -> fnmatch
-// CORBA::release() ? CosLifeCycle object->release()
-// can the client release a stub so that the implementation get's also deleted?
-
-// basename(), realpath(), readlink(), glob(), fnmatch()...
+CORBA::async<> FileSystem_impl::rmdir(const std::string_view & name) { 
+    string path = format("{}/{}", _path, name);
+    if (::rmdir(path.c_str()) != 0) {
+        throw runtime_error(format("failed to remove directory {}: {}", path, strerror(errno)));
+    }
+    co_return;
+}
+// this would be the place for POSIX AIO
+CORBA::async<CORBA::blob> FileSystem_impl::read(const std::string_view & name) { 
+    CORBA::blob data;
+    co_return data;
+}
+CORBA::async<> FileSystem_impl::write(const std::string_view & name, const CORBA::blob_view & data) { 
+    co_return;
+}
+CORBA::async<> FileSystem_impl::rm(const std::string_view & name) { co_return; }
 
 kaffeeklatsch_spec([] {
     fdescribe("class FileSystem", [] {
          it("XX", [] {
-            auto directory = make_shared<Directory_impl>(getHomeDirectory());
+            auto directory = make_shared<FileSystem_impl>();
 
             directory->list().then([](std::vector<DirectoryEntry> list) {
                 for(auto &a: list) {
