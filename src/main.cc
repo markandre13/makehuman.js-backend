@@ -1,4 +1,6 @@
-#include <corba/corba.hh>
+#include "makehuman_impl.hh"
+#include "fs_impl.hh"
+
 #include <corba/net/ws/protocol.hh>
 #include <corba/util/logger.hh>
 #include <iostream>
@@ -14,7 +16,6 @@
 #include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
-#include "makehuman_impl.hh"
 #include "mediapipe/face.hh"
 #include "mediapipe/pose.hh"
 #include "opencv/videocamera.hh"
@@ -47,8 +48,12 @@ int main(void) {
     protocol->listen("localhost", 9001);
 
     OpenCVLoop openCVLoop;
+
     auto backend = make_shared<Backend_impl>(orb, loop, &openCVLoop);
     orb->bind("Backend", backend);
+
+    auto filesystem = make_shared<FileSystem_impl>();
+    orb->bind("FileSystem", filesystem);
 
 #if 0
     auto chordata = new Chordata(loop, 6565, [&](const char *buffer, size_t nbytes) {

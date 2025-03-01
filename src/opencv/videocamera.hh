@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../makehuman_skel.hh"
+#include "../generated/makehuman_skel.hh"
 #include "videosource.hh"
 
 class VideoCamera_impl : public VideoCamera2_skel {

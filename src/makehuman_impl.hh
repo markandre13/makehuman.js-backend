@@ -1,11 +1,12 @@
 #pragma once
 
+#include "generated/makehuman_skel.hh"
+
 #include <ev.h>
 #include <mutex>
 #include "opencv/videowriter.hh"
 #include "opencv/videoreader.hh"
 
-#include "makehuman_skel.hh"
 #include "mediapipe/blazepose.hh"
 #include "mediapipe/mediapipetask_impl.hh"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../makehuman_skel.hh"
+#include "../generated/makehuman_skel.hh"
 #include <opencv2/opencv.hpp>
 
 class Backend_impl;
