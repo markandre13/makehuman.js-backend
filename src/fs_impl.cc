@@ -48,6 +48,16 @@ CORBA::async<std::string> FileSystem_impl::path() {
     co_return _path;
 }
 
+CORBA::async<> FileSystem_impl::path(const std::string_view &path) {
+    auto directory = ::opendir(_path.c_str());
+    if (!directory) {
+        throw runtime_error(format("Directory_impl::path(\"{}\"): {}: {}", path, _path, strerror(errno)));
+    }
+    closedir(directory);
+    _path = path;
+    co_return;
+}
+
 CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list() {
     vector<DirectoryEntry> directoryEntries;
 
