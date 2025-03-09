@@ -1,4 +1,4 @@
-#include "video.hh"
+#include "videocamera_impl.hh"
 #include <opencv2/opencv.hpp>
 #import <AVFoundation/AVFoundation.h>
 

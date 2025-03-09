@@ -17,25 +17,30 @@
 #include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
-#include "macos/video/video.hh"
+#include "macos/video/videocamera_impl.hh"
 #include "mediapipe/mediapipetask_impl.hh"
 #include "opencv/videocamera.hh"
 #include "util.hh"
 
 using namespace std;
 
+template <typename E>
+auto as_int(E const value) -> typename std::underlying_type<E>::type {
+    return static_cast<typename std::underlying_type<E>::type>(value);
+}
+
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
     : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+    // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
     openCVLoop->frameHandler = [&](const cv::Mat &frame, int64_t timestamp_ms) {
         if (_mediaPipeTask) {
             _mediaPipeTask->frame(frame, timestamp_ms);
         }
+        // if (videoWriter) {
+        //     openCVLoop->_camera->
+        //     videoWriter->frame(frame, _c);
+        // }
     };
-}
-
-template <typename E>
-auto as_int(E const value) -> typename std::underlying_type<E>::type {
-    return static_cast<typename std::underlying_type<E>::type>(value);
 }
 
 CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
@@ -51,6 +56,49 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     blendshapeNamesHaveBeenSend = false;
     co_return;
 }
+
+/*
+ * Select Videocamera
+ */
+CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
+CORBA::async<std::shared_ptr<VideoCamera2>> Backend_impl::camera() {
+    std::shared_ptr<VideoCamera2> result;
+    co_return result;
+}
+CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
+    auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
+    if (camera && !impl) {
+        println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
+    }
+    openCVLoop->setCamera(impl);
+    co_return;
+}
+
+/*
+ * Select Mediapipe Task
+ */
+CORBA::async<vector<shared_ptr<MediaPipeTask>>> Backend_impl::getMediaPipeTasks() { co_return mediaPipeTasks; }
+CORBA::async<shared_ptr<MediaPipeTask>> Backend_impl::mediaPipeTask() { co_return _mediaPipeTask; }
+CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
+    _mediaPipeTask = dynamic_pointer_cast<MediaPipeTask_impl>(task);
+    co_return;
+}
+
+/*
+ * File
+ */
+CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
+    println("Backend_impl::record(\"{}\")", filename);
+    _stop();
+    videoWriter = make_shared<VideoWriter>(filename);
+    co_return;
+}
+
+/*
+ *
+ * OLD OBSOLETE API AND API'S TO BE REVIEWED
+ *
+ */
 
 CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
     println("Backend_impl::setEngine(...)");
@@ -203,41 +251,11 @@ CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
     co_return result;
 }
 
-CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
-
-CORBA::async<std::shared_ptr<VideoCamera2>> Backend_impl::camera() {
-    std::shared_ptr<VideoCamera2> result;
-    co_return result;
-}
-
-CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
-    auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
-    if (camera && !impl) {
-        println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
-    }
-    openCVLoop->setCamera(impl);
-    co_return;
-}
-
-CORBA::async<vector<shared_ptr<MediaPipeTask>>> Backend_impl::getMediaPipeTasks() { co_return mediaPipeTasks; }
-CORBA::async<shared_ptr<MediaPipeTask>> Backend_impl::mediaPipeTask() { co_return _mediaPipeTask; }
-CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
-    _mediaPipeTask = dynamic_pointer_cast<MediaPipeTask_impl>(task);
-    co_return;
-}
-
 /*
  *
  * record video
  *
  */
-
-CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
-    println("Backend_impl::record(\"{}\")", filename);
-    _stop();
-    videoWriter = make_shared<VideoWriter>(filename);
-    co_return;
-}
 
 /**
  * the goal of the MoCapPlayer is this:

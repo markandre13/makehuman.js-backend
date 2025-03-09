@@ -59,7 +59,8 @@ endif
 
 ifeq ($(HAVE_METAL), 1)
 METAL_SRC=metal.cc target.cc renderer.cc renderapp.cc algorithms.cc
-VIDEO_SRC=video.cc
+VIDEO_SRC=videocamera_impl.cc
+# prefix METAL_SRC and VIDEO_SRC with full path
 MACOS_SRC=$(patsubst %.cc,macos/metal/%.cc,$(METAL_SRC)) $(patsubst %.cc,macos/video/%.cc,$(VIDEO_SRC))
 MACOS_CFLAGS=-ObjC++ -fno-objc-arc -DHAVE_METAL=1
 MACOS_LFLAGS=-framework Metal -framework Foundation -framework Cocoa -framework CoreGraphics -framework MetalKit -framework AVFoundation -framework CoreMedia
@@ -156,7 +157,7 @@ main.o: mediapipe/blazepose.hh livelink/livelink.hh captureengine.hh
 main.o: livelink/livelinkframe.hh mediapipe/face.hh
 main.o: mediapipe/mediapipetask_impl.hh mediapipe/pose.hh
 main.o: opencv/videocamera.hh util.hh ../upstream/fast_float/fast_float.h
-main.o: macos/video/video.hh opencv/videocamera.hh
+main.o: macos/video/videocamera_impl.hh opencv/videocamera.hh
 makehuman_impl.o: makehuman_impl.hh generated/makehuman_skel.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -183,7 +184,7 @@ makehuman_impl.o: mediapipe/blazepose.hh mediapipe/mediapipetask_impl.hh
 makehuman_impl.o: generated/makehuman_skel.hh ev/timer.hh
 makehuman_impl.o: freemocap/freemocap.hh mediapipe/blazepose.hh
 makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
-makehuman_impl.o: livelink/livelinkframe.hh macos/video/video.hh
+makehuman_impl.o: livelink/livelinkframe.hh macos/video/videocamera_impl.hh
 makehuman_impl.o: opencv/videocamera.hh opencv/videocamera.hh util.hh
 makehuman_impl.o: ../upstream/fast_float/fast_float.h
 fs_impl.o: fs_impl.hh generated/fs_skel.hh
@@ -366,28 +367,29 @@ macos/metal/target.o: macos/metal/algorithms.hh
 macos/metal/renderer.o: macos/metal/renderer.hh
 macos/metal/renderapp.o: macos/metal/renderapp.hh macos/metal/renderer.hh
 macos/metal/algorithms.o: macos/metal/algorithms.hh
-macos/video/video.o: macos/video/video.hh opencv/videocamera.hh
-macos/video/video.o: generated/makehuman_skel.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/corba.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/orb.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh
-macos/video/video.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/giop.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/cdr.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/blob.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/net/connection.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/blob.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/skeleton.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/object.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/stub.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/ior.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/exception.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/orb.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/giop.hh
-macos/video/video.o: ../upstream/corba.cc/src/corba/coroutine.hh
-macos/video/video.o: generated/makehuman.hh opencv/videosource.hh
+macos/video/videocamera_impl.o: macos/video/videocamera_impl.hh
+macos/video/videocamera_impl.o: opencv/videocamera.hh
+macos/video/videocamera_impl.o: generated/makehuman_skel.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/corba.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/cdr.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/net/connection.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/skeleton.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/object.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/stub.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/ior.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/exception.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+macos/video/videocamera_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+macos/video/videocamera_impl.o: generated/makehuman.hh opencv/videosource.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh

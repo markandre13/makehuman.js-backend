@@ -21,7 +21,7 @@
 #include "opencv/videocamera.hh"
 #include "opencv/videoreader.hh"
 #include "util.hh"
-#include "macos/video/video.hh"
+#include "macos/video/videocamera_impl.hh"
 
 #ifdef HAVE_METAL
 #include "macos/metal/metal.hh"
