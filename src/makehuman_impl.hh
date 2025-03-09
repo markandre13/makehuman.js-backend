@@ -24,10 +24,15 @@ class OpenCVLoop {
     bool _running;
     std::shared_ptr<VideoCamera_impl> _next_camera;
     std::shared_ptr<VideoCamera_impl> _camera;
+
+    std::shared_ptr<VideoReader> _next_reader;
+    std::shared_ptr<VideoReader> _reader;
+
     cv::VideoCapture _capture;
 public:
     std::function<void(const cv::Mat &frame, int64_t timestamp_ms)> frameHandler;
     void run();
+    void setVideoReader(std::shared_ptr<VideoReader>);
     void setCamera(std::shared_ptr<VideoCamera_impl>);
     inline void stop() { _running = false; }
 };

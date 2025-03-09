@@ -1,27 +1,26 @@
-#include "makehuman_impl.hh"
-#include "fs_impl.hh"
-
 #include <corba/net/ws/protocol.hh>
 #include <corba/util/logger.hh>
 #include <iostream>
+#include <mutex>
 #include <opencv2/opencv.hpp>
 #include <print>
 #include <set>
 #include <span>
 #include <thread>
-#include <mutex>
 
 #include "chordata/chordata.hh"
 #include "ev/timer.hh"
 #include "freemocap/freemocap.hh"
+#include "fs_impl.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
+#include "macos/video/videocamera_impl.hh"
+#include "makehuman_impl.hh"
 #include "mediapipe/face.hh"
 #include "mediapipe/pose.hh"
 #include "opencv/videocamera.hh"
 #include "opencv/videoreader.hh"
 #include "util.hh"
-#include "macos/video/videocamera_impl.hh"
 
 #ifdef HAVE_METAL
 #include "macos/metal/metal.hh"
@@ -33,7 +32,7 @@ int main(void) {
     // Logger::setLevel(LOG_DEBUG);
 
     println("makehuman.js backend");
-   
+
     //
     // SETUP ORB
     //
@@ -159,6 +158,11 @@ void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
     _mutex.unlock();
 }
 
+void OpenCVLoop::setVideoReader(std::shared_ptr<VideoReader> reader) {
+    atomic_store(&_next_reader, reader);
+    _mutex.unlock();
+}
+
 // TODO: move the video camera code into the video camera class
 void OpenCVLoop::run() {
     _running = true;
@@ -166,19 +170,58 @@ void OpenCVLoop::run() {
     const char *windowName = "image";
     cv::Mat frame;
 
-    while(_running) {
+    uint64_t lastFrameRead;
+    uint64_t frameReaderStart;
+    uint64_t frameNumber;
+
+    cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+
+    while (_running) {
+        auto next_reader = std::atomic_load(&_next_reader);
+        if (_reader != next_reader) {
+            _reader = next_reader;
+            frameReaderStart = getMilliseconds();
+            frameNumber = 0;
+        }
+
+        if (_reader) {
+            *_reader >> frame;
+            if (frame.empty()) {
+                _reader->reset();
+                frameReaderStart = getMilliseconds();
+                frameNumber = 0;
+                *_reader >> frame;
+            }
+
+            if (frameHandler) {
+                frameHandler(frame, frameNumber * 1000.0 / _reader->fps());
+            }
+            cv::imshow(windowName, frame);
+            ++frameNumber;
+            auto now = getMilliseconds();
+            auto delay = frameNumber * 1000.0 / _reader->fps() - now;
+            if (delay < 1) {
+                delay = 1;
+            }
+            cv::waitKey(delay);
+            continue;
+        }
+
+        //
+        // CAMERA
+        //
+
         auto next_camera = std::atomic_load(&_next_camera);
         if (_camera != next_camera) {
             if (_camera) {
                 _capture.release();
             }
-            if (!_camera && next_camera) {
-                cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
-            }
-            if (_camera && !next_camera) {
-                cv::destroyWindow(windowName);
-                
-            }
+            // if (!_camera && next_camera) {
+            //     cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+            // }
+            // if (_camera && !next_camera) {
+            //     cv::destroyWindow(windowName);
+            // }
             _camera = next_camera;
             if (_camera) {
                 _capture.open(next_camera->openCvIndex());
@@ -188,30 +231,32 @@ void OpenCVLoop::run() {
                 _capture.set(cv::CAP_PROP_FRAME_WIDTH, w);
                 _capture.set(cv::CAP_PROP_FRAME_HEIGHT, h);
                 _capture.set(cv::CAP_PROP_FPS, 60);
-            
+
                 double fps = _capture.get(cv::CAP_PROP_FPS);
-                next_camera->fps(fps);
+                _camera->fps(fps);
             }
         }
 
-        if (!_camera) {
+        if (_camera) {
+            // on macos, grab() & retrieve() will block
+            if (_capture.grab()) {
+                auto timestamp_ms = getMilliseconds();
+                if (_capture.retrieve(frame)) {
+                    cv::imshow(windowName, frame);
+                    if (frameHandler) {
+                        frameHandler(frame, timestamp_ms);
+                    }
+                }
+            }
             cv::waitKey(1);
-            _mutex.lock();
             continue;
         }
 
-        
-        if (_capture.grab()) {
-            auto timestamp_ms = getMilliseconds();
-            if (_capture.retrieve(frame)) {
-                cv::imshow(windowName, frame);
-                if (frameHandler) {
-                    frameHandler(frame, timestamp_ms);
-                }
-            }
+        cv::waitKey(1);
+        // TODO: chance to race condition
+        if (std::atomic_load(&_next_reader) || std::atomic_load(&_next_camera)) {
+            continue;
         }
-
-        // TODO: delay until next frame
-        cv::waitKey(1);  // wait 1ms (this also runs the cocoa eventloop)
+        _mutex.lock();  // wait for a change
     }
 }

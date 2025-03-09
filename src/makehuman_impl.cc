@@ -94,6 +94,27 @@ CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
     co_return;
 }
 
+CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
+    println("Backend_impl::play(\"{}\")", filename);
+
+    videoReader = make_shared<VideoReader>(filename);
+    openCVLoop->setVideoReader(videoReader);
+
+    // if (mocapPlayer) {
+    //     mocapPlayer->play();
+    // } else {
+    //     _stop();
+    //     if (filename.ends_with(".csv")) {
+    //         println("Backend_impl::play(\"{}\"): create MoCapPlayer", filename);
+    //         mocapPlayer = make_shared<MoCapPlayer>(loop, filename, this);
+    //     }
+    //     if (filename.ends_with(".mp4")) {
+    //         videoReader = make_shared<VideoReader>(filename);
+    //     }
+    // }
+    co_return Range{.start_ms = 0, .end_ms = 25};
+}
+
 /*
  *
  * OLD OBSOLETE API AND API'S TO BE REVIEWED
@@ -322,22 +343,6 @@ void MoCapPlayer::seek(uint64_t timestamp_ms) {
     tick();
 }
 
-CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
-    println("Backend_impl::play(\"{}\")", filename);
-    if (mocapPlayer) {
-        mocapPlayer->play();
-    } else {
-        _stop();
-        if (filename.ends_with(".csv")) {
-            println("Backend_impl::play(\"{}\"): create MoCapPlayer", filename);
-            mocapPlayer = make_shared<MoCapPlayer>(loop, filename, this);
-        }
-        if (filename.ends_with(".mp4")) {
-            videoReader = make_shared<VideoReader>(filename);
-        }
-    }
-    co_return Range{.start_ms = 0, .end_ms = 25};
-}
 CORBA::async<void> Backend_impl::stop() {
     _stop();
     co_return;
@@ -349,6 +354,7 @@ void Backend_impl::_stop() {
     }
     if (videoReader) {
         println("Backend_impl::_stop(): stop VideoReader");
+        // openCVLoop->setVideoReader(nullptr);
         videoReader = nullptr;
     }
     if (mocapPlayer) {

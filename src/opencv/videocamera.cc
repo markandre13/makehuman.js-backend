@@ -32,7 +32,7 @@ void VideoCamera::open() {
     auto backendName = cap.getBackendName();
     cap.set(cv::CAP_PROP_FRAME_WIDTH, w);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, h);
-    cap.set(cv::CAP_PROP_FPS, 60);
+    cap.set(cv::CAP_PROP_FPS, 30);
 
     double fps = cap.get(cv::CAP_PROP_FPS);
     println("opened video capture device {}: {}x{}, {} fps", backendName.c_str(), w, h, fps);

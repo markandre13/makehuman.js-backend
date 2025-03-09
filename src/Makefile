@@ -124,18 +124,24 @@ $(APP): $(OBJ)
 
 # DO NOT DELETE
 
-main.o: makehuman_impl.hh generated/makehuman_skel.hh
+main.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/protocol.hh
+main.o: ../upstream/corba.cc/src/corba/net/connection.hh
+main.o: ../upstream/corba.cc/src/corba/blob.hh
+main.o: ../upstream/corba.cc/src/corba/coroutine.hh
+main.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+main.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+main.o: ../upstream/corba.cc/src/corba/util/logger.hh chordata/chordata.hh
+main.o: ev/udpserver.hh ev/timer.hh freemocap/freemocap.hh
+main.o: mediapipe/blazepose.hh fs_impl.hh generated/fs_skel.hh
 main.o: ../upstream/corba.cc/src/corba/corba.hh
 main.o: ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/coroutine.hh
-main.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
 main.o: ../upstream/corba.cc/src/corba/cdr.hh
 main.o: ../upstream/corba.cc/src/corba/blob.hh
 main.o: ../upstream/corba.cc/src/corba/net/connection.hh
-main.o: ../upstream/corba.cc/src/corba/blob.hh
-main.o: ../upstream/corba.cc/src/corba/coroutine.hh
-main.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
 main.o: ../upstream/corba.cc/src/corba/skeleton.hh
 main.o: ../upstream/corba.cc/src/corba/object.hh
 main.o: ../upstream/corba.cc/src/corba/stub.hh
@@ -143,21 +149,15 @@ main.o: ../upstream/corba.cc/src/corba/ior.hh
 main.o: ../upstream/corba.cc/src/corba/exception.hh
 main.o: ../upstream/corba.cc/src/corba/orb.hh
 main.o: ../upstream/corba.cc/src/corba/giop.hh
-main.o: ../upstream/corba.cc/src/corba/coroutine.hh generated/makehuman.hh
-main.o: opencv/videowriter.hh opencv/videoreader.hh opencv/videosource.hh
-main.o: mediapipe/blazepose.hh mediapipe/mediapipetask_impl.hh
-main.o: generated/makehuman_skel.hh fs_impl.hh generated/fs_skel.hh
-main.o: generated/fs.hh ../upstream/corba.cc/src/corba/net/ws/protocol.hh
-main.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
-main.o: ../upstream/corba.cc/src/corba/net/protocol.hh
-main.o: ../upstream/corba.cc/src/corba/net/connection.hh
-main.o: ../upstream/corba.cc/src/corba/util/logger.hh chordata/chordata.hh
-main.o: ev/udpserver.hh ev/timer.hh freemocap/freemocap.hh
-main.o: mediapipe/blazepose.hh livelink/livelink.hh captureengine.hh
-main.o: livelink/livelinkframe.hh mediapipe/face.hh
+main.o: ../upstream/corba.cc/src/corba/coroutine.hh generated/fs.hh
+main.o: livelink/livelink.hh captureengine.hh livelink/livelinkframe.hh
+main.o: macos/video/videocamera_impl.hh opencv/videocamera.hh
+main.o: generated/makehuman_skel.hh generated/makehuman.hh
+main.o: opencv/videosource.hh makehuman_impl.hh generated/makehuman_skel.hh
+main.o: opencv/videowriter.hh opencv/videoreader.hh mediapipe/blazepose.hh
+main.o: mediapipe/mediapipetask_impl.hh mediapipe/face.hh
 main.o: mediapipe/mediapipetask_impl.hh mediapipe/pose.hh
 main.o: opencv/videocamera.hh util.hh ../upstream/fast_float/fast_float.h
-main.o: macos/video/videocamera_impl.hh opencv/videocamera.hh
 makehuman_impl.o: makehuman_impl.hh generated/makehuman_skel.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 makehuman_impl.o: ../upstream/corba.cc/src/corba/orb.hh
