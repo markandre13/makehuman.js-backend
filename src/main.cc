@@ -159,6 +159,7 @@ void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
     _mutex.unlock();
 }
 
+// TODO: move the video camera code into the video camera class
 void OpenCVLoop::run() {
     _running = true;
 
@@ -181,6 +182,15 @@ void OpenCVLoop::run() {
             _camera = next_camera;
             if (_camera) {
                 _capture.open(next_camera->openCvIndex());
+
+                double w = _capture.get(cv::CAP_PROP_FRAME_WIDTH) / 2;
+                double h = _capture.get(cv::CAP_PROP_FRAME_HEIGHT) / 2;
+                _capture.set(cv::CAP_PROP_FRAME_WIDTH, w);
+                _capture.set(cv::CAP_PROP_FRAME_HEIGHT, h);
+                _capture.set(cv::CAP_PROP_FPS, 60);
+            
+                double fps = _capture.get(cv::CAP_PROP_FPS);
+                next_camera->fps(fps);
             }
         }
 

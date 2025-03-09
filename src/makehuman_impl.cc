@@ -36,10 +36,9 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
         if (_mediaPipeTask) {
             _mediaPipeTask->frame(frame, timestamp_ms);
         }
-        // if (videoWriter) {
-        //     openCVLoop->_camera->
-        //     videoWriter->frame(frame, _c);
-        // }
+        if (_videoWriter) {
+            _videoWriter->frame(frame, _camera->fps());
+        }
     };
 }
 
@@ -70,6 +69,7 @@ CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
     if (camera && !impl) {
         println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
     }
+    _camera = impl;
     openCVLoop->setCamera(impl);
     co_return;
 }
@@ -90,7 +90,7 @@ CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
 CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
     println("Backend_impl::record(\"{}\")", filename);
     _stop();
-    videoWriter = make_shared<VideoWriter>(filename);
+    _videoWriter = make_shared<VideoWriter>(filename);
     co_return;
 }
 
@@ -343,9 +343,9 @@ CORBA::async<void> Backend_impl::stop() {
     co_return;
 }
 void Backend_impl::_stop() {
-    if (videoWriter) {
+    if (_videoWriter) {
         println("Backend_impl::_stop(): stop VideoWriter");
-        videoWriter = nullptr;
+        _videoWriter = nullptr;
     }
     if (videoReader) {
         println("Backend_impl::_stop(): stop VideoReader");
@@ -396,7 +396,7 @@ void Backend_impl::reset() {
 }
 
 void Backend_impl::saveFrame(const cv::Mat &frame, double fps) {
-    std::shared_ptr<VideoWriter> out = std::atomic_load(&this->videoWriter);
+    std::shared_ptr<VideoWriter> out = std::atomic_load(&this->_videoWriter);
     if (!out) {
         return;
     }

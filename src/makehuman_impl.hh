@@ -43,17 +43,29 @@ class Backend_impl : public Backend_skel {
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
 
+        /**
+         * List of available cameras
+         */
+        std::vector<std::shared_ptr<VideoCamera2>> cameras;
+        /**
+         * Camera selected by the user
+         */
+        std::shared_ptr<VideoCamera_impl> _camera;
+
+        /**
+         * Set when recording to write video stream to file
+         */
+        std::shared_ptr<VideoWriter> _videoWriter;
+
+        std::vector<std::shared_ptr<MediaPipeTask>> mediaPipeTasks;
+        std::shared_ptr<MediaPipeTask_impl> _mediaPipeTask;
+
         std::unique_ptr<CaptureEngine> body;
         std::unique_ptr<CaptureEngine> face;
         std::unique_ptr<CaptureEngine> hand;
 
         bool blendshapeNamesHaveBeenSend = false;
 
-        std::vector<std::shared_ptr<VideoCamera2>> cameras;
-        std::vector<std::shared_ptr<MediaPipeTask>> mediaPipeTasks;
-        std::shared_ptr<MediaPipeTask_impl> _mediaPipeTask;
-
-        std::shared_ptr<VideoWriter> videoWriter;
         std::shared_ptr<VideoReader> videoReader;
         std::shared_ptr<MoCapPlayer> mocapPlayer;
         void _stop();
