@@ -8,7 +8,7 @@ public:
     FileSystem_impl();
     CORBA::async<std::string> path() override;
     CORBA::async<> path(const std::string_view &) override;
-    CORBA::async<std::vector<DirectoryEntry>> list() override;
+    CORBA::async<std::vector<DirectoryEntry>> list(const std::string_view &) override;
     CORBA::async<> up() override;
     CORBA::async<> down(const std::string_view & name) override;
     CORBA::async<> rootdir() override;

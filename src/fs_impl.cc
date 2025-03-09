@@ -1,18 +1,19 @@
 #include "fs_impl.hh"
 
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <stdexcept>
-#include <sys/param.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <libgen.h>
+#include <pwd.h>
+#include <fnmatch.h>
+#include <sys/param.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <algorithm>
 #include <print>
+#include <stdexcept>
 #include <string>
 
 using namespace std;
@@ -40,13 +41,9 @@ static string getCurrentWorkingDirectory() {
     return string(buffer);
 }
 
-FileSystem_impl::FileSystem_impl() {
-    _path = getCurrentWorkingDirectory();
-}
+FileSystem_impl::FileSystem_impl() { _path = getCurrentWorkingDirectory(); }
 
-CORBA::async<std::string> FileSystem_impl::path() {
-    co_return _path;
-}
+CORBA::async<std::string> FileSystem_impl::path() { co_return _path; }
 
 CORBA::async<> FileSystem_impl::path(const std::string_view &path) {
     auto directory = ::opendir(_path.c_str());
@@ -58,8 +55,9 @@ CORBA::async<> FileSystem_impl::path(const std::string_view &path) {
     co_return;
 }
 
-CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list() {
+CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list(const std::string_view &filter) {
     vector<DirectoryEntry> directoryEntries;
+    println("Directory_impl::list(\"{}\")", filter);
 
     auto directory = ::opendir(_path.c_str());
     if (!directory) {
@@ -72,13 +70,15 @@ CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list() {
         if (entry->d_name[0] == '.') {
             continue;
         }
-        filenames.push_back(string(entry->d_name, entry->d_namlen));
+        filenames.push_back(string(entry->d_name, entry->d_namlen));        
     }
     closedir(directory);
 
-    sort(filenames.begin(), filenames.end());
+    sort(filenames.begin(), filenames.end(), [](const std::string &a, const std::string &b) -> bool {
+        return strcasecmp(a.c_str(), b.c_str()) < 0;
+    });
 
-    for(auto &filename: filenames) {
+    for (auto &filename : filenames) {
         struct stat s;
         if (stat(format("{}/{}", _path, filename).c_str(), &s) != 0) {
             println("WARN: stat(\"{}/{}\") failed: {}", _path, filename, strerror(errno));
@@ -87,29 +87,30 @@ CORBA::async<std::vector<DirectoryEntry>> FileSystem_impl::list() {
         if (!S_ISDIR(s.st_mode) && !S_ISREG(s.st_mode)) {
             continue;
         }
-        directoryEntries.push_back({
-            .name = filename,
-            .directory = S_ISDIR(s.st_mode),
-            .size = (unsigned long long)s.st_size,
-            .created = s.st_ctimespec.tv_sec * 1000ULL + s.st_ctimespec.tv_nsec,
-            .modified = s.st_mtimespec.tv_sec * 1000ULL + s.st_mtimespec.tv_nsec
-        });
+        if (!S_ISDIR(s.st_mode) && fnmatch(filter.data(), filename.c_str(), FNM_CASEFOLD) != 0) {
+            continue;
+        }
+        directoryEntries.push_back({.name = filename,
+                                    .directory = S_ISDIR(s.st_mode),
+                                    .size = (unsigned long long)s.st_size,
+                                    .created = s.st_ctimespec.tv_sec * 1000ULL + s.st_ctimespec.tv_nsec,
+                                    .modified = s.st_mtimespec.tv_sec * 1000ULL + s.st_mtimespec.tv_nsec});
     }
 
     co_return directoryEntries;
 }
 
-CORBA::async<> FileSystem_impl::up() { 
+CORBA::async<> FileSystem_impl::up() {
     char buffer[PATH_MAX];
     _path = dirname_r(_path.c_str(), buffer);
     co_return;
 }
-CORBA::async<> FileSystem_impl::down(const std::string_view & name) { 
+CORBA::async<> FileSystem_impl::down(const std::string_view &name) {
     string path = format("{}/{}", _path, name);
     char buffer[PATH_MAX];
     if (realpath(path.c_str(), buffer) == nullptr) {
         throw runtime_error(format("Directory::down(\"{}\"): {}", name, strerror(errno)));
-    }   
+    }
     auto directory = ::opendir(buffer);
     if (!directory) {
         throw runtime_error(format("Directory::down(\"{}\"): {}", name, strerror(errno)));
@@ -118,26 +119,26 @@ CORBA::async<> FileSystem_impl::down(const std::string_view & name) {
     _path = buffer;
     co_return;
 }
-CORBA::async<> FileSystem_impl::rootdir() { 
+CORBA::async<> FileSystem_impl::rootdir() {
     _path = "";
     co_return;
 }
-CORBA::async<> FileSystem_impl::homedir() { 
+CORBA::async<> FileSystem_impl::homedir() {
     _path = getHomeDirectory();
     co_return;
 }
-CORBA::async<> FileSystem_impl::currentdir() { 
+CORBA::async<> FileSystem_impl::currentdir() {
     _path = getCurrentWorkingDirectory();
     co_return;
 }
-CORBA::async<> FileSystem_impl::mkdir(const std::string_view & name) { 
+CORBA::async<> FileSystem_impl::mkdir(const std::string_view &name) {
     string path = format("{}/{}", _path, name);
     if (::mkdir(path.c_str(), 0) != 0) {
         throw runtime_error(format("failed to create directory {}: {}", path, strerror(errno)));
     }
     co_return;
 }
-CORBA::async<> FileSystem_impl::rmdir(const std::string_view & name) { 
+CORBA::async<> FileSystem_impl::rmdir(const std::string_view &name) {
     string path = format("{}/{}", _path, name);
     if (::rmdir(path.c_str()) != 0) {
         throw runtime_error(format("failed to remove directory {}: {}", path, strerror(errno)));
@@ -145,16 +146,16 @@ CORBA::async<> FileSystem_impl::rmdir(const std::string_view & name) {
     co_return;
 }
 // this would be the place for POSIX AIO
-CORBA::async<CORBA::blob> FileSystem_impl::read(const std::string_view & name) { 
+CORBA::async<CORBA::blob> FileSystem_impl::read(const std::string_view &name) {
     throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
     CORBA::blob data;
     co_return data;
 }
-CORBA::async<> FileSystem_impl::write(const std::string_view & name, const CORBA::blob_view & data) { 
+CORBA::async<> FileSystem_impl::write(const std::string_view &name, const CORBA::blob_view &data) {
     throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
     co_return;
 }
-CORBA::async<> FileSystem_impl::rm(const std::string_view & name) {
+CORBA::async<> FileSystem_impl::rm(const std::string_view &name) {
     throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
     co_return;
 }
