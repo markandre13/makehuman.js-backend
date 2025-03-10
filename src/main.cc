@@ -170,17 +170,17 @@ void OpenCVLoop::run() {
     const char *windowName = "image";
     cv::Mat frame;
 
-    uint64_t lastFrameRead;
-    uint64_t frameReaderStart;
+    // uint64_t lastFrameRead;
+    // uint64_t frameReaderStart;
     uint64_t frameNumber;
 
-    cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+    bool haveWindow = false;
 
     while (_running) {
         auto next_reader = std::atomic_load(&_next_reader);
         if (_reader != next_reader) {
             _reader = next_reader;
-            frameReaderStart = getMilliseconds();
+            // frameReaderStart = getMilliseconds();
             frameNumber = 0;
         }
 
@@ -188,22 +188,29 @@ void OpenCVLoop::run() {
             *_reader >> frame;
             if (frame.empty()) {
                 _reader->reset();
-                frameReaderStart = getMilliseconds();
-                frameNumber = 0;
+                // frameReaderStart = getMilliseconds();
+                // frameNumber = 0;
                 *_reader >> frame;
             }
 
             if (frameHandler) {
-                frameHandler(frame, frameNumber * 1000.0 / _reader->fps());
+                // frameHandler(frame, frameNumber * 1000.0 / _reader->fps());
+                frameHandler(frame, getMilliseconds());
+            }
+            ++frameNumber;
+            if (!haveWindow) {
+                cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+                haveWindow = true;
             }
             cv::imshow(windowName, frame);
-            ++frameNumber;
-            auto now = getMilliseconds();
-            auto delay = frameNumber * 1000.0 / _reader->fps() - now;
-            if (delay < 1) {
-                delay = 1;
-            }
-            cv::waitKey(delay);
+            // ++frameNumber;
+            // auto now = getMilliseconds();
+            // auto delay = frameNumber * 1000.0 / _reader->fps() - now;
+            // if (delay < 1) {
+            //     delay = 1;
+            // }
+            // cv::waitKey(delay);
+            cv::waitKey(_reader->delay());
             continue;
         }
 
@@ -216,12 +223,14 @@ void OpenCVLoop::run() {
             if (_camera) {
                 _capture.release();
             }
-            // if (!_camera && next_camera) {
-            //     cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
-            // }
-            // if (_camera && !next_camera) {
-            //     cv::destroyWindow(windowName);
-            // }
+            if (!haveWindow && !_camera && next_camera) {
+                cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
+                haveWindow = true;
+            }
+            if (haveWindow && _camera && !next_camera) {
+                cv::destroyWindow(windowName);
+                haveWindow = false;
+            }
             _camera = next_camera;
             if (_camera) {
                 _capture.open(next_camera->openCvIndex());
@@ -250,6 +259,11 @@ void OpenCVLoop::run() {
             }
             cv::waitKey(1);
             continue;
+        }
+
+        if (haveWindow) {
+            cv::destroyWindow(windowName);
+            haveWindow = false;
         }
 
         cv::waitKey(1);

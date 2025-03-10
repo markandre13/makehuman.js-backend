@@ -354,7 +354,7 @@ void Backend_impl::_stop() {
     }
     if (videoReader) {
         println("Backend_impl::_stop(): stop VideoReader");
-        // openCVLoop->setVideoReader(nullptr);
+        openCVLoop->setVideoReader(nullptr);
         videoReader = nullptr;
     }
     if (mocapPlayer) {

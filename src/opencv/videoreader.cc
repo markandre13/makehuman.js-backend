@@ -12,9 +12,10 @@ VideoReader::VideoReader(const string_view &filename) {
     double w = cap.get(cv::CAP_PROP_FRAME_WIDTH);
     double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
     double fps = cap.get(cv::CAP_PROP_FPS);
+    double frameCount = cap.get(cv::CAP_PROP_FRAME_COUNT); //!< Number of frames in the video file.
     step = 1000.0 / fps;
 
-    println("opened video file \"{}\": {}x{}, {} fps", filename, w, h, fps);
+    println("opened video file \"{}\": {}x{}, {} fps, {} frames", filename, w, h, fps, frameCount);
 }
 
 double VideoReader::fps() {
