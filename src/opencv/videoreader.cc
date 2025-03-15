@@ -18,8 +18,12 @@ VideoReader::VideoReader(const string_view &filename) {
     println("opened video file \"{}\": {}x{}, {} fps, {} frames", filename, w, h, fps, frameCount);
 }
 
-double VideoReader::fps() {
+double VideoReader::fps() const {
     return cap.get(cv::CAP_PROP_FPS);
+}
+
+double VideoReader::frameCount() const {
+    return cap.get(cv::CAP_PROP_FRAME_COUNT);
 }
 
 void VideoReader::reset() {
@@ -27,7 +31,7 @@ void VideoReader::reset() {
     startTime = 0;
 }
 
-VideoSource &VideoReader::operator>>(cv::Mat &image) {
+VideoReader &VideoReader::operator>>(cv::Mat &image) {
     cap >> image;
     if (startTime == 0) {
         startTime = getMilliseconds();

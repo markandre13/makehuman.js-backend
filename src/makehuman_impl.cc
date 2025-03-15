@@ -19,7 +19,6 @@
 #include "livelink/livelinkframe.hh"
 #include "macos/video/videocamera_impl.hh"
 #include "mediapipe/mediapipetask_impl.hh"
-#include "opencv/videocamera.hh"
 #include "util.hh"
 
 using namespace std;
@@ -59,12 +58,12 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
 /*
  * Select Videocamera
  */
-CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> Backend_impl::getVideoCameras() { co_return cameras; }
-CORBA::async<std::shared_ptr<VideoCamera2>> Backend_impl::camera() {
-    std::shared_ptr<VideoCamera2> result;
+CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> Backend_impl::getVideoCameras() { co_return cameras; }
+CORBA::async<std::shared_ptr<VideoCamera>> Backend_impl::camera() {
+    std::shared_ptr<VideoCamera> result;
     co_return result;
 }
-CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera2> camera) {
+CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera> camera) {
     auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
     if (camera && !impl) {
         println("ERROR: Backend_impl::setCamera(camera): provided camera is not an instance of VideoCamera_impl");
@@ -94,7 +93,7 @@ CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
     co_return;
 }
 
-CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
+CORBA::async<VideoRange> Backend_impl::play(const std::string_view &filename) {
     println("Backend_impl::play(\"{}\")", filename);
 
     videoReader = make_shared<VideoReader>(filename);
@@ -112,7 +111,11 @@ CORBA::async<Range> Backend_impl::play(const std::string_view &filename) {
     //         videoReader = make_shared<VideoReader>(filename);
     //     }
     // }
-    co_return Range{.start_ms = 0, .end_ms = 25};
+    co_return VideoRange{
+        .fps = static_cast<uint16_t>(videoReader->fps()),
+        .firstFrame = 0,
+        .lastFrame = static_cast<uint32_t>(videoReader->frameCount())
+    };        
 }
 
 /*

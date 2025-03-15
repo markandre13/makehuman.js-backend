@@ -29,9 +29,9 @@ CORBA::async<std::string> VideoCamera_impl::features() {
 /**
  * Create list of available video cameras
  */
-std::vector<std::shared_ptr<VideoCamera2>>
+std::vector<std::shared_ptr<VideoCamera>>
 getVideoCameras(std::shared_ptr<CORBA::ORB> orb) {
-    std::vector<std::shared_ptr<VideoCamera2>> cameras;
+    std::vector<std::shared_ptr<VideoCamera>> cameras;
 
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 

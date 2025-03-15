@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../opencv/videocamera.hh"
+#include "../../generated/makehuman_skel.hh"
 
-class VideoCamera_impl : public VideoCamera2_skel {
+class VideoCamera_impl : public VideoCamera_skel {
     int _openCvIndex;
     std::string _id;
     std::string _name;
@@ -30,4 +30,4 @@ public:
     CORBA::async<std::string> features() override;
 };
 
-std::vector<std::shared_ptr<VideoCamera2>> getVideoCameras(std::shared_ptr<CORBA::ORB> orb);
+std::vector<std::shared_ptr<VideoCamera>> getVideoCameras(std::shared_ptr<CORBA::ORB> orb);

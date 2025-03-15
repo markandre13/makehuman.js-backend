@@ -1,10 +1,10 @@
 #pragma once
 
-#include "videosource.hh"
+#include <opencv2/opencv.hpp>
 #include <string>
 #include <cstdint>
 
-class VideoReader : public VideoSource {
+class VideoReader {
     private:
         cv::VideoCapture cap;
         uint64_t startTime = 0;
@@ -13,8 +13,9 @@ class VideoReader : public VideoSource {
 
     public:
         VideoReader(const std::string_view &filename);
-        double fps() override;
-        void reset() override;
-        VideoSource &operator>>(cv::Mat &image) override;
-        int delay() const override;
+        double fps() const;
+        double frameCount() const;
+        void reset();
+        VideoReader &operator>>(cv::Mat &image);
+        int delay() const;
 };

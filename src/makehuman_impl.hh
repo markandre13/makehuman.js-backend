@@ -51,7 +51,7 @@ class Backend_impl : public Backend_skel {
         /**
          * List of available cameras
          */
-        std::vector<std::shared_ptr<VideoCamera2>> cameras;
+        std::vector<std::shared_ptr<VideoCamera>> cameras;
         /**
          * Camera selected by the user
          */
@@ -83,16 +83,16 @@ class Backend_impl : public Backend_skel {
         CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
         CORBA::async<std::string> load(const std::string_view &filename) override;
 
-        CORBA::async<std::vector<std::shared_ptr<VideoCamera2>>> getVideoCameras() override;
-        CORBA::async<std::shared_ptr<VideoCamera2>> camera() override;
-        CORBA::async<> camera(std::shared_ptr<VideoCamera2>) override;
+        CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> getVideoCameras() override;
+        CORBA::async<std::shared_ptr<VideoCamera>> camera() override;
+        CORBA::async<> camera(std::shared_ptr<VideoCamera>) override;
 
         CORBA::async<std::vector<std::shared_ptr<MediaPipeTask>>> getMediaPipeTasks() override;
         CORBA::async<std::shared_ptr<MediaPipeTask>> mediaPipeTask() override;
         CORBA::async<void> mediaPipeTask(std::shared_ptr<MediaPipeTask>) override;
         
         CORBA::async<void> record(const std::string_view & filename) override;
-        CORBA::async<Range> play(const std::string_view & filename) override;
+        CORBA::async<VideoRange> play(const std::string_view & filename) override;
         CORBA::async<void> stop() override;
         CORBA::async<void> pause() override;
         CORBA::async<void> seek(uint64_t timestamp_ms) override;
