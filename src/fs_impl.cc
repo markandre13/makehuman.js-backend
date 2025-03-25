@@ -159,3 +159,42 @@ CORBA::async<> FileSystem_impl::rm(const std::string_view &name) {
     throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
     co_return;
 }
+// CORBA::async<> FileSystem_impl::save(const std::string_view &filename, const std::string_view &data) {
+//     println("Backend_impl::save(\"{}\", ...)", filename);
+//     checkFilename(filename);
+//     std::ofstream file(string(filename).c_str());
+//     if (!file) {
+//         println("failed to write");
+//     }
+//     file.write(data.data(), data.size());
+//     // file << string(data);
+//     println("ok");
+//     co_return;
+// }
+// CORBA::async<std::string> FileSystem_impl::load(const std::string_view &filename) {
+//     println("load {}", filename);
+
+//     checkFilename(filename);
+
+//     int fd = open(filename.data(), O_RDONLY);
+//     if (fd < 0) {
+//         throw runtime_error(format("failed to open file '{}': {}", filename, strerror(errno)));
+//     }
+//     off_t len = lseek(fd, 0, SEEK_END);
+//     if (len < 0) {
+//         throw runtime_error(format("failed to get size of file '{}': {}", filename, strerror(errno)));
+//     }
+//     const char *data = (const char *)mmap(nullptr, len, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
+//     if (data == MAP_FAILED) {
+//         throw runtime_error(format("failed to mmap file '{}': {}", filename, strerror(errno)));
+//     }
+
+//     string result(data, len);
+
+//     munmap((void *)data, len);
+//     close(fd);
+
+//     println("ok");
+
+//     co_return result;
+// }

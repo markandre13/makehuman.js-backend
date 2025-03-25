@@ -60,7 +60,7 @@ CORBA::async<void> Recorder_impl::pause() {
     co_return;
 };
 CORBA::async<void> Recorder_impl::seek(uint32_t frame) {
-    // println("Backend_impl::seek({})", timestamp_ms);
+    println("Recorder_impl::seek({})", frame);
 
     // if (mocapPlayer) {
     //     mocapPlayer->seek(timestamp_ms);
