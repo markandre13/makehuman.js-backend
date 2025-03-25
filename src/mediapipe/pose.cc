@@ -1,5 +1,5 @@
 #include "pose.hh"
-#include "../makehuman_impl.hh"
+#include "../backend_impl.hh"
 #include <iostream>
 
 using namespace std;

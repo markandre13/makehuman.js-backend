@@ -1,4 +1,4 @@
-#include "makehuman_impl.hh"
+#include "backend_impl.hh"
 
 #include "livelink/livelinkframe.hh"
 #include "macos/video/videocamera_impl.hh"
@@ -176,24 +176,6 @@ void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
 
     std::span<float> landmarks(a.landmarks, 99);
     fe->poseLandmarks(landmarks, timestamp_ms);
-}
-
-/*
- *
- * load/save files
- *
- */
-
-static void checkFilename(const std::string_view &filename) {
-    if (filename.size() == 0) {
-        throw runtime_error("Backend_impl::save(): filename must not be empty");
-    }
-    if (filename[0] == '.') {
-        throw runtime_error("Backend_impl::save(): filename must not start with a dot");
-    }
-    if (filename.find('/') != filename.npos) {
-        throw runtime_error("Backend_impl::save(): filename must not contain a '/'");
-    }
 }
 
 /*

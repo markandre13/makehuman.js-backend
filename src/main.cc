@@ -8,7 +8,7 @@
 #include <span>
 #include <thread>
 
-#include "makehuman_impl.hh"
+#include "backend_impl.hh"
 #include "fs_impl.hh"
 #include "macos/video/videocamera_impl.hh"
 

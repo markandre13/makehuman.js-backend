@@ -159,6 +159,19 @@ CORBA::async<> FileSystem_impl::rm(const std::string_view &name) {
     throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
     co_return;
 }
+
+//  static void checkFilename(const std::string_view &filename) {
+//     if (filename.size() == 0) {
+//         throw runtime_error("Backend_impl::save(): filename must not be empty");
+//     }
+//     if (filename[0] == '.') {
+//         throw runtime_error("Backend_impl::save(): filename must not start with a dot");
+//     }
+//     if (filename.find('/') != filename.npos) {
+//         throw runtime_error("Backend_impl::save(): filename must not contain a '/'");
+//     }
+// }
+
 // CORBA::async<> FileSystem_impl::save(const std::string_view &filename, const std::string_view &data) {
 //     println("Backend_impl::save(\"{}\", ...)", filename);
 //     checkFilename(filename);

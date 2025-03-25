@@ -1,5 +1,5 @@
 #include "face.hh"
-#include "../makehuman_impl.hh"
+#include "../backend_impl.hh"
 
 using mediapipe::cc_lib::vision::core::RunningMode;
 using mediapipe::cc_lib::vision::face_landmarker::FaceLandmarker;
