@@ -2,6 +2,7 @@ APP=backend
 
 APP_SRC=main.cc \
 		makehuman_impl.cc \
+		recorder_impl.cc \
 		fs_impl.cc \
 		util.cc mesh/wavefront.cc \
 		opencv/videoreader.cc \
@@ -183,8 +184,29 @@ makehuman_impl.o: mediapipe/mediapipetask_impl.hh generated/makehuman_skel.hh
 makehuman_impl.o: ev/timer.hh freemocap/freemocap.hh mediapipe/blazepose.hh
 makehuman_impl.o: livelink/livelink.hh ev/udpserver.hh captureengine.hh
 makehuman_impl.o: livelink/livelinkframe.hh macos/video/videocamera_impl.hh
-makehuman_impl.o: generated/makehuman_skel.hh util.hh
+makehuman_impl.o: generated/makehuman_skel.hh recorder_impl.hh util.hh
 makehuman_impl.o: ../upstream/fast_float/fast_float.h
+recorder_impl.o: recorder_impl.hh generated/makehuman_skel.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/corba.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+recorder_impl.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/cdr.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/net/connection.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/blob.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/skeleton.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/object.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/stub.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/ior.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/exception.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/orb.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/giop.hh
+recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
+recorder_impl.o: generated/makehuman.hh opencv/videoreader.hh
 fs_impl.o: fs_impl.hh generated/fs_skel.hh
 fs_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 fs_impl.o: ../upstream/corba.cc/src/corba/orb.hh

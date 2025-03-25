@@ -17,6 +17,7 @@
 class CaptureEngine;
 class LiveLinkFrame;
 class MoCapPlayer;
+class Recorder_impl;
 class VideoCamera_impl;
 
 class OpenCVLoop {
@@ -47,6 +48,8 @@ class Backend_impl : public Backend_skel {
         OpenCVLoop *openCVLoop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
+
+        std::shared_ptr<Recorder_impl> _recorder;
 
         /**
          * List of available cameras
@@ -79,9 +82,14 @@ class Backend_impl : public Backend_skel {
         Backend_impl(std::shared_ptr<CORBA::ORB>, struct ev_loop *loop, OpenCVLoop *openCVLoop);
 
         CORBA::async<> setFrontend(std::shared_ptr<Frontend> frontend) override;
-        CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
-        CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
-        CORBA::async<std::string> load(const std::string_view &filename) override;
+        inline std::shared_ptr<Frontend> getFrontend() {
+            return std::atomic_load(&frontend);
+        }
+        CORBA::async<std::shared_ptr<Recorder>> recorder() override;
+
+        // CORBA::async<> setEngine(MotionCaptureType type, MotionCaptureEngine engine) override;
+        // CORBA::async<> save(const std::string_view &filename, const std::string_view &data) override;
+        // CORBA::async<std::string> load(const std::string_view &filename) override;
 
         CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> getVideoCameras() override;
         CORBA::async<std::shared_ptr<VideoCamera>> camera() override;
@@ -90,16 +98,6 @@ class Backend_impl : public Backend_skel {
         CORBA::async<std::vector<std::shared_ptr<MediaPipeTask>>> getMediaPipeTasks() override;
         CORBA::async<std::shared_ptr<MediaPipeTask>> mediaPipeTask() override;
         CORBA::async<void> mediaPipeTask(std::shared_ptr<MediaPipeTask>) override;
-        
-        CORBA::async<void> record(const std::string_view & filename) override;
-        CORBA::async<VideoRange> play(const std::string_view & filename) override;
-        CORBA::async<void> stop() override;
-        CORBA::async<void> pause() override;
-        CORBA::async<void> seek(uint64_t timestamp_ms) override;
-
-        inline std::shared_ptr<Frontend> getFrontend() {
-            return std::atomic_load(&frontend);
-        }
 
         bool readFrame(cv::Mat &frame);
         int delay();

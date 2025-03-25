@@ -13,8 +13,8 @@ class VideoReader {
 
     public:
         VideoReader(const std::string_view &filename);
-        double fps() const;
-        double frameCount() const;
+        uint16_t fps() const;
+        uint32_t frameCount() const;
         void reset();
         VideoReader &operator>>(cv::Mat &image);
         int delay() const;

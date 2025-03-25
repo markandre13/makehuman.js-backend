@@ -19,6 +19,7 @@
 #include "livelink/livelinkframe.hh"
 #include "macos/video/videocamera_impl.hh"
 #include "mediapipe/mediapipetask_impl.hh"
+#include "recorder_impl.hh"
 #include "util.hh"
 
 using namespace std;
@@ -30,6 +31,10 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
     : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+
+    _recorder = make_shared<Recorder_impl>();
+    orb->activate_object(_recorder);
+
     // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
     openCVLoop->frameHandler = [&](const cv::Mat &frame, int64_t timestamp_ms) {
         if (_mediaPipeTask) {
@@ -54,6 +59,8 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     blendshapeNamesHaveBeenSend = false;
     co_return;
 }
+
+CORBA::async<std::shared_ptr<Recorder>> Backend_impl::recorder() { co_return _recorder; }
 
 /*
  * Select Videocamera
@@ -84,93 +91,58 @@ CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
 }
 
 /*
- * File
- */
-CORBA::async<void> Backend_impl::record(const std::string_view &filename) {
-    println("Backend_impl::record(\"{}\")", filename);
-    _stop();
-    _videoWriter = make_shared<VideoWriter>(filename);
-    co_return;
-}
-
-CORBA::async<VideoRange> Backend_impl::play(const std::string_view &filename) {
-    println("Backend_impl::play(\"{}\")", filename);
-
-    videoReader = make_shared<VideoReader>(filename);
-    openCVLoop->setVideoReader(videoReader);
-
-    // if (mocapPlayer) {
-    //     mocapPlayer->play();
-    // } else {
-    //     _stop();
-    //     if (filename.ends_with(".csv")) {
-    //         println("Backend_impl::play(\"{}\"): create MoCapPlayer", filename);
-    //         mocapPlayer = make_shared<MoCapPlayer>(loop, filename, this);
-    //     }
-    //     if (filename.ends_with(".mp4")) {
-    //         videoReader = make_shared<VideoReader>(filename);
-    //     }
-    // }
-    co_return VideoRange{
-        .fps = static_cast<uint16_t>(videoReader->fps()),
-        .firstFrame = 0,
-        .lastFrame = static_cast<uint32_t>(videoReader->frameCount())
-    };        
-}
-
-/*
  *
  * OLD OBSOLETE API AND API'S TO BE REVIEWED
  *
  */
 
-CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
-    println("Backend_impl::setEngine(...)");
-    switch (type) {
-        case MotionCaptureType::FACE:
-            blendshapeNamesHaveBeenSend = false;
-            switch (engine) {
-                case MotionCaptureEngine::NONE:
-                    // face = nullptr;
-                    face.reset();
-                    break;
-                case MotionCaptureEngine::MEDIAPIPE:
-                    // face = nullptr;
-                    face.reset();
-                    // TODO: this is currently always on...
-                    // captureEngine = new MediaPipe(...);
-                    break;
-                case MotionCaptureEngine::LIVELINK:
-                    // NOTE: loop runs in it's own thread... but CORBA is on the same thread
-                    //       so adding a udp listener here should work
-                    face = make_unique<LiveLink>(loop, 11111, [&](const LiveLinkFrame &frame) {
-                        // println("frame {}.{}", frame.frame, frame.subframe);
-                        this->livelink(const_cast<LiveLinkFrame &>(frame));
-                        // metalRenderer->faceLandmarks(frame);
-                    });
-                    break;
-                default:;
-            }
-            break;
-        case MotionCaptureType::BODY:
-            switch (engine) {
-                case MotionCaptureEngine::NONE:
-                    // face = nullptr;
-                    body.reset();
-                    break;
-                case MotionCaptureEngine::MEDIAPIPE:
-                    // face = nullptr;
-                    body.reset();
-                    // captureEngine = new MediaPipe(...);
-                    break;
-                default:;
-            }
-            break;
-        default:
-            println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
-    }
-    co_return;
-}
+// CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
+//     println("Backend_impl::setEngine(...)");
+//     switch (type) {
+//         case MotionCaptureType::FACE:
+//             blendshapeNamesHaveBeenSend = false;
+//             switch (engine) {
+//                 case MotionCaptureEngine::NONE:
+//                     // face = nullptr;
+//                     face.reset();
+//                     break;
+//                 case MotionCaptureEngine::MEDIAPIPE:
+//                     // face = nullptr;
+//                     face.reset();
+//                     // TODO: this is currently always on...
+//                     // captureEngine = new MediaPipe(...);
+//                     break;
+//                 case MotionCaptureEngine::LIVELINK:
+//                     // NOTE: loop runs in it's own thread... but CORBA is on the same thread
+//                     //       so adding a udp listener here should work
+//                     face = make_unique<LiveLink>(loop, 11111, [&](const LiveLinkFrame &frame) {
+//                         // println("frame {}.{}", frame.frame, frame.subframe);
+//                         this->livelink(const_cast<LiveLinkFrame &>(frame));
+//                         // metalRenderer->faceLandmarks(frame);
+//                     });
+//                     break;
+//                 default:;
+//             }
+//             break;
+//         case MotionCaptureType::BODY:
+//             switch (engine) {
+//                 case MotionCaptureEngine::NONE:
+//                     // face = nullptr;
+//                     body.reset();
+//                     break;
+//                 case MotionCaptureEngine::MEDIAPIPE:
+//                     // face = nullptr;
+//                     body.reset();
+//                     // captureEngine = new MediaPipe(...);
+//                     break;
+//                 default:;
+//             }
+//             break;
+//         default:
+//             println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
+//     }
+//     co_return;
+// }
 
 void Backend_impl::chordata(const char *buffer, size_t nbytes) {
     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
@@ -235,45 +207,45 @@ static void checkFilename(const std::string_view &filename) {
     }
 }
 
-CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
-    println("Backend_impl::save(\"{}\", ...)", filename);
-    checkFilename(filename);
-    std::ofstream file(string(filename).c_str());
-    if (!file) {
-        println("failed to write");
-    }
-    file.write(data.data(), data.size());
-    // file << string(data);
-    println("ok");
-    co_return;
-}
-CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
-    println("load {}", filename);
+// CORBA::async<> Backend_impl::save(const std::string_view &filename, const std::string_view &data) {
+//     println("Backend_impl::save(\"{}\", ...)", filename);
+//     checkFilename(filename);
+//     std::ofstream file(string(filename).c_str());
+//     if (!file) {
+//         println("failed to write");
+//     }
+//     file.write(data.data(), data.size());
+//     // file << string(data);
+//     println("ok");
+//     co_return;
+// }
+// CORBA::async<std::string> Backend_impl::load(const std::string_view &filename) {
+//     println("load {}", filename);
 
-    checkFilename(filename);
+//     checkFilename(filename);
 
-    int fd = open(filename.data(), O_RDONLY);
-    if (fd < 0) {
-        throw runtime_error(format("failed to open file '{}': {}", filename, strerror(errno)));
-    }
-    off_t len = lseek(fd, 0, SEEK_END);
-    if (len < 0) {
-        throw runtime_error(format("failed to get size of file '{}': {}", filename, strerror(errno)));
-    }
-    const char *data = (const char *)mmap(nullptr, len, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
-    if (data == MAP_FAILED) {
-        throw runtime_error(format("failed to mmap file '{}': {}", filename, strerror(errno)));
-    }
+//     int fd = open(filename.data(), O_RDONLY);
+//     if (fd < 0) {
+//         throw runtime_error(format("failed to open file '{}': {}", filename, strerror(errno)));
+//     }
+//     off_t len = lseek(fd, 0, SEEK_END);
+//     if (len < 0) {
+//         throw runtime_error(format("failed to get size of file '{}': {}", filename, strerror(errno)));
+//     }
+//     const char *data = (const char *)mmap(nullptr, len, PROT_READ, MAP_FILE | MAP_PRIVATE, fd, 0);
+//     if (data == MAP_FAILED) {
+//         throw runtime_error(format("failed to mmap file '{}': {}", filename, strerror(errno)));
+//     }
 
-    string result(data, len);
+//     string result(data, len);
 
-    munmap((void *)data, len);
-    close(fd);
+//     munmap((void *)data, len);
+//     close(fd);
 
-    println("ok");
+//     println("ok");
 
-    co_return result;
-}
+//     co_return result;
+// }
 
 /*
  *
@@ -346,10 +318,6 @@ void MoCapPlayer::seek(uint64_t timestamp_ms) {
     tick();
 }
 
-CORBA::async<void> Backend_impl::stop() {
-    _stop();
-    co_return;
-}
 void Backend_impl::_stop() {
     if (_videoWriter) {
         println("Backend_impl::_stop(): stop VideoWriter");
@@ -365,21 +333,6 @@ void Backend_impl::_stop() {
         mocapPlayer = nullptr;
     }
 }
-CORBA::async<void> Backend_impl::pause() {
-    println("Backend_impl::pause()");
-    if (mocapPlayer) {
-        mocapPlayer->pause();
-    }
-    co_return;
-};
-CORBA::async<void> Backend_impl::seek(uint64_t timestamp_ms) {
-    println("Backend_impl::seek({})", timestamp_ms);
-
-    if (mocapPlayer) {
-        mocapPlayer->seek(timestamp_ms);
-    }
-    co_return;
-};
 
 bool Backend_impl::readFrame(cv::Mat &frame) {
     std::shared_ptr<VideoReader> in = std::atomic_load(&this->videoReader);

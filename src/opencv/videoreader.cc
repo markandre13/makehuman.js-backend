@@ -9,21 +9,18 @@ VideoReader::VideoReader(const string_view &filename) {
     if (!cap.isOpened()) {
         throw runtime_error(format("failed to open video file \"{}\"", filename));
     }
-    double w = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-    double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-    double fps = cap.get(cv::CAP_PROP_FPS);
-    double frameCount = cap.get(cv::CAP_PROP_FRAME_COUNT); //!< Number of frames in the video file.
-    step = 1000.0 / fps;
-
-    println("opened video file \"{}\": {}x{}, {} fps, {} frames", filename, w, h, fps, frameCount);
+    // double w = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    // double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+    // double fps = cap.get(cv::CAP_PROP_FPS);
+    // double frameCount = cap.get(cv::CAP_PROP_FRAME_COUNT); //!< Number of frames in the video file.
 }
 
-double VideoReader::fps() const {
-    return cap.get(cv::CAP_PROP_FPS);
+uint16_t VideoReader::fps() const {
+    return static_cast<uint16_t>(cap.get(cv::CAP_PROP_FPS));
 }
 
-double VideoReader::frameCount() const {
-    return cap.get(cv::CAP_PROP_FRAME_COUNT);
+uint32_t VideoReader::frameCount() const {
+    return static_cast<uint32_t>(cap.get(cv::CAP_PROP_FRAME_COUNT));
 }
 
 void VideoReader::reset() {
