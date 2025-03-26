@@ -23,10 +23,13 @@ class OpenCVLoop {
     std::shared_ptr<VideoReader> _reader;
 
     cv::VideoCapture _capture;
+
+    void waitForChange();
 public:
-    std::function<void(const cv::Mat &frame, int64_t timestamp_ms)> frameHandler;
+    std::function<void(const cv::Mat &frameImage, int32_t frameNumber)> frameHandler;
     void run();
     void setVideoReader(std::shared_ptr<VideoReader>);
     void setCamera(std::shared_ptr<VideoCamera_impl>);
+    void resume();
     inline void stop() { _running = false; }
 };

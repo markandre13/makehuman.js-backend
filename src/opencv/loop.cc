@@ -3,6 +3,8 @@
 #include "../util.hh"
 #include "../macos/video/videocamera_impl.hh"
 
+using namespace std;
+
 void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
     atomic_store(&_next_camera, camera);
     _mutex.unlock();
@@ -13,6 +15,10 @@ void OpenCVLoop::setVideoReader(std::shared_ptr<VideoReader> reader) {
     _mutex.unlock();
 }
 
+void OpenCVLoop::resume() {
+    _mutex.unlock();
+}
+
 // TODO: move the video camera code into the video camera class
 void OpenCVLoop::run() {
     _running = true;
@@ -20,18 +26,13 @@ void OpenCVLoop::run() {
     const char *windowName = "image";
     cv::Mat frame;
 
-    // uint64_t lastFrameRead;
-    // uint64_t frameReaderStart;
-    uint64_t frameNumber;
-
     bool haveWindow = false;
 
     while (_running) {
+        // println("OpenCVLoop::run(): loop");
         auto next_reader = std::atomic_load(&_next_reader);
         if (_reader != next_reader) {
             _reader = next_reader;
-            // frameReaderStart = getMilliseconds();
-            frameNumber = 0;
         }
 
         if (_reader) {
@@ -45,23 +46,23 @@ void OpenCVLoop::run() {
 
             if (frameHandler) {
                 // frameHandler(frame, frameNumber * 1000.0 / _reader->fps());
-                frameHandler(frame, getMilliseconds());
+                frameHandler(frame, _reader->tell());
             }
-            ++frameNumber;
             if (!haveWindow) {
                 cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
                 haveWindow = true;
             }
             cv::imshow(windowName, frame);
-            // ++frameNumber;
-            // auto now = getMilliseconds();
-            // auto delay = frameNumber * 1000.0 / _reader->fps() - now;
-            // if (delay < 1) {
-            //     delay = 1;
-            // }
-            // cv::waitKey(delay);
-            cv::waitKey(_reader->delay());
+
+            auto delay = _reader->delay();
+            if (delay == 0) {
+                waitForChange();
+            } else {
+                cv::waitKey(delay);
+            }
             continue;
+        // } else {
+        //     println("OpenCVLoop::run(): no reader");
         }
 
         //
@@ -112,15 +113,21 @@ void OpenCVLoop::run() {
         }
 
         if (haveWindow) {
+            // println("destroy window");
             cv::destroyWindow(windowName);
             haveWindow = false;
         }
 
-        cv::waitKey(1);
-        // TODO: chance to race condition
-        if (std::atomic_load(&_next_reader) || std::atomic_load(&_next_camera)) {
-            continue;
-        }
-        _mutex.lock();  // wait for a change
+        waitForChange();
     }
+}
+
+void OpenCVLoop::waitForChange() {
+    // println("OpenCVLoop::waitForChange()");
+    cv::waitKey(1);
+    // TODO: chance to race condition
+    if (std::atomic_load(&_next_reader) != _reader || std::atomic_load(&_next_camera) != _camera) {
+        return;
+    }
+    _mutex.lock();  // wait for a change
 }

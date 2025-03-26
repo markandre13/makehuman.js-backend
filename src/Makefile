@@ -183,6 +183,7 @@ backend_impl.o: opencv/videoreader.hh mediapipe/blazepose.hh
 backend_impl.o: mediapipe/mediapipetask_impl.hh generated/makehuman_skel.hh
 backend_impl.o: livelink/livelinkframe.hh macos/video/videocamera_impl.hh
 backend_impl.o: generated/makehuman_skel.hh opencv/loop.hh recorder_impl.hh
+backend_impl.o: util.hh ../upstream/fast_float/fast_float.h
 recorder_impl.o: recorder_impl.hh generated/makehuman_skel.hh
 recorder_impl.o: ../upstream/corba.cc/src/corba/corba.hh
 recorder_impl.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -203,7 +204,7 @@ recorder_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 recorder_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 recorder_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
-recorder_impl.o: generated/makehuman.hh opencv/videoreader.hh
+recorder_impl.o: generated/makehuman.hh opencv/loop.hh opencv/videoreader.hh
 mesh/wavefront.o: mesh/wavefront.hh util.hh
 mesh/wavefront.o: ../upstream/fast_float/fast_float.h
 opencv/loop.o: opencv/loop.hh opencv/videoreader.hh util.hh

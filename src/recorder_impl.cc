@@ -1,14 +1,16 @@
 #include "recorder_impl.hh"
+#include "opencv/loop.hh"
 #include "opencv/videoreader.hh"
 
 using namespace std;
 
 CORBA::async<VideoSize> Recorder_impl::open(const std::string_view& filename) {
     println("Recorder_impl::open(\"{}\")", filename);
-    auto videoReader = make_shared<VideoReader>(filename);
+    _reader = make_shared<VideoReader>(filename);
+    _loop->setVideoReader(_reader);
     VideoSize size = {
-        .fps = videoReader->fps(),
-        .frames = videoReader->frameCount()
+        .fps = _reader->fps(),
+        .frames = _reader->frameCount()
     }; 
     co_return size;
 }
@@ -60,7 +62,9 @@ CORBA::async<void> Recorder_impl::pause() {
     co_return;
 };
 CORBA::async<void> Recorder_impl::seek(uint32_t frame) {
-    println("Recorder_impl::seek({})", frame);
+    // println("Recorder_impl::seek({})", frame);
+    _reader->seek(frame);
+    _loop->resume();
 
     // if (mocapPlayer) {
     //     mocapPlayer->seek(timestamp_ms);

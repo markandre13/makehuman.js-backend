@@ -3,8 +3,8 @@
 #include "livelink/livelinkframe.hh"
 #include "macos/video/videocamera_impl.hh"
 #include "opencv/loop.hh"
-
 #include "recorder_impl.hh"
+#include "util.hh"
 
 #include <glm/ext/matrix_transform.hpp>  // glm::translate, glm::rotate, glm::scale
 #include <glm/gtc/type_ptr.hpp>
@@ -21,16 +21,18 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
     : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
 
-    _recorder = make_shared<Recorder_impl>();
+    _recorder = make_shared<Recorder_impl>(openCVLoop);
     orb->activate_object(_recorder);
 
     // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
-    openCVLoop->frameHandler = [&](const cv::Mat &frame, int64_t timestamp_ms) {
+    openCVLoop->frameHandler = [&](const cv::Mat &frameImage, int32_t frameNumber) {
+        // println("frontend->frame({})", frameNumber);
+        frontend->frame(frameNumber);
         if (_mediaPipeTask) {
-            _mediaPipeTask->frame(frame, timestamp_ms);
+            _mediaPipeTask->frame(frameImage, getMilliseconds());
         }
         if (_videoWriter) {
-            _videoWriter->frame(frame, _camera->fps());
+            _videoWriter->frame(frameImage, _camera->fps());
         }
     };
 }

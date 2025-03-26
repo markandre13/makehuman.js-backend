@@ -23,6 +23,14 @@ uint32_t VideoReader::frameCount() const {
     return static_cast<uint32_t>(cap.get(cv::CAP_PROP_FRAME_COUNT));
 }
 
+void VideoReader::seek(uint32_t frame) {
+    cap.set(cv::CAP_PROP_POS_FRAMES, frame);
+}
+
+uint32_t VideoReader::tell() {
+    return cap.get(cv::CAP_PROP_POS_FRAMES);
+}
+
 void VideoReader::reset() {
     cap.set(cv::CAP_PROP_POS_FRAMES, 0);
     startTime = 0;
@@ -40,6 +48,10 @@ VideoReader &VideoReader::operator>>(cv::Mat &image) {
 }
 
 int VideoReader::delay() const {
+    if (_paused) {
+        return 0;
+    }
+
     auto nextFrame = frameNumber * step;
     auto now = getMilliseconds();
     auto delay = nextFrame + startTime - now;
