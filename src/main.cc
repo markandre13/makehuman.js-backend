@@ -47,7 +47,7 @@ int main(void) {
     orb->registerProtocol(protocol);
     protocol->listen("localhost", 9001);
 
-    OpenCVLoop openCVLoop;
+    OpenCVLoop openCVLoop(loop);
 
     auto backend = make_shared<Backend_impl>(orb, loop, &openCVLoop);
     orb->bind("Backend", backend);

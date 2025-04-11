@@ -13,7 +13,7 @@ class VideoReader {
         bool _paused = true;
 
     public:
-        VideoReader(const std::string_view &filename);
+        VideoReader(const std::string filename);
         uint16_t fps() const;
         uint32_t frameCount() const;
         void seek(uint32_t frame);

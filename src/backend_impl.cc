@@ -11,6 +11,8 @@
 #include <glm/mat4x4.hpp>  // glm::mat4
 #include <glm/vec4.hpp>    // glm::vec4
 
+#include <ev.h>
+
 using namespace std;
 
 template <typename E>
@@ -18,8 +20,23 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
     return static_cast<typename std::underlying_type<E>::type>(value);
 }
 
+// hack to send number of current frame to backend
+Backend_impl *Xbackend;
+ev_async Xwatcher;
+int32_t XframeNumber;
+static void Xcallback(struct ev_loop *loop, struct ev_async *watcher, int revents) {
+    auto frontend = Xbackend->getFrontend();
+    if (frontend) {
+        frontend->frame(XframeNumber);
+    }
+}
+
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
     : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+
+    ev_async_init(&Xwatcher, &Xcallback);
+    ev_async_start(loop, &Xwatcher);
+    Xbackend = this;
 
     _recorder = make_shared<Recorder_impl>(openCVLoop);
     orb->activate_object(_recorder);
@@ -27,13 +44,27 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
     openCVLoop->frameHandler = [&](const cv::Mat &frameImage, int32_t frameNumber) {
         // println("frontend->frame({})", frameNumber);
-        frontend->frame(frameNumber);
+
+        // FIXME: we might need to run this from the libev thread
         if (_mediaPipeTask) {
             _mediaPipeTask->frame(frameImage, getMilliseconds());
         }
         if (_videoWriter) {
             _videoWriter->frame(frameImage, _camera->fps());
         }
+
+        // hack to send number of current frame to backend
+        XframeNumber = frameNumber;
+        ev_async_send(loop, &Xwatcher);
+        // because: neither the mutex in corba.cc nor the approach below worked
+        //          without causing segfault nor adding extra bytes at the beginning
+        //          of packets send via wslay.
+        //          the following at least crashed at once
+        // openCVLoop->executeLibEV([=] {
+        //     if (frontend) {
+        //         frontend->frame(frameNumber);
+        //     }
+        // }).no_wait();
     };
 }
 

@@ -44,12 +44,14 @@ CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
 
 GLM_FLAGS=-I../upstream/glm
 
-CXX=/usr/local/opt/llvm/bin/clang++
-LDFLAGS=-L/usr/local/opt/llvm/lib/c++ -Wl,-rpath,/usr/local/opt/llvm/lib/c++ -L/usr/local/lib
+HOMEBREW := $(shell brew config | grep HOMEBREW_PREFIX | sed 's/.*: //')
 
-OPENCV_FLAGS=-I/usr/local/include/opencv4
-OPENCV_LFLAGS=-L/usr/local/lib/opencv4
-WSLAY_FLAGS=-I/usr/local/include
+CXX=$(HOMEBREW)/opt/llvm/bin/clang++
+LDFLAGS=-L$(HOMEBREW)/opt/llvm/lib/c++ -Wl,-rpath,$(HOMEBREW)/opt/llvm/lib/c++ -L$(HOMEBREW)/lib
+
+OPENCV_FLAGS=-I$(HOMEBREW)/include/opencv4
+OPENCV_LFLAGS=-L$(HOMEBREW)/lib/opencv4
+WSLAY_FLAGS=-I$(HOMEBREW)/include
 
 ifeq ($(HAVE_MEDIAPIPE), 1)
 MEDIAPIPE_CC_LIB=../upstream/mediapipe_cc_lib
@@ -76,10 +78,10 @@ CFLAGS=-std=c++23 $(MEMCHECK) \
 	-Wno-unused-parameter \
 	-Wno-vla-cxx-extension \
 	-Werror=suggest-override \
-	-O0 -g -I/usr/local/opt/llvm/include/c++ \
+	-O0 -g -I$(HOMEBREW)/opt/llvm/include/c++ \
 	-I$(CORBA_PATH) $(GLM_FLAGS) $(MEDIAPIPE_CFLAGS) $(MACOS_CFLAGS)
 LIB=$(MEMCHECK) $(MEDIAPIPE_LFLAGS) $(OPENCV_LFLAGS) $(MACOS_LFLAGS) -fno-objc-arc \
-	 -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
+	-lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs \
 	-lev -lwslay -lnettle
 
 SRC=$(APP_SRC) $(IDL_SRC) $(MACOS_SRC) \
@@ -207,13 +209,14 @@ recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
 recorder_impl.o: generated/makehuman.hh opencv/loop.hh opencv/videoreader.hh
 mesh/wavefront.o: mesh/wavefront.hh util.hh
 mesh/wavefront.o: ../upstream/fast_float/fast_float.h
-opencv/loop.o: opencv/loop.hh opencv/videoreader.hh util.hh
+opencv/loop.o: opencv/loop.hh ../upstream/corba.cc/src/corba/coroutine.hh
+opencv/loop.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
+opencv/loop.o: opencv/videoreader.hh util.hh
 opencv/loop.o: ../upstream/fast_float/fast_float.h
 opencv/loop.o: macos/video/videocamera_impl.hh generated/makehuman_skel.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/corba.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/orb.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/coroutine.hh
-opencv/loop.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/giop.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/cdr.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/blob.hh
@@ -227,9 +230,7 @@ opencv/loop.o: ../upstream/corba.cc/src/corba/stub.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/ior.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/exception.hh
 opencv/loop.o: ../upstream/corba.cc/src/corba/orb.hh
-opencv/loop.o: ../upstream/corba.cc/src/corba/giop.hh
-opencv/loop.o: ../upstream/corba.cc/src/corba/coroutine.hh
-opencv/loop.o: generated/makehuman.hh
+opencv/loop.o: ../upstream/corba.cc/src/corba/giop.hh generated/makehuman.hh
 opencv/videoreader.o: opencv/videoreader.hh util.hh
 opencv/videoreader.o: ../upstream/fast_float/fast_float.h
 mediapipe/mediapipetask_impl.o: mediapipe/mediapipetask_impl.hh
@@ -557,12 +558,16 @@ macos/video/videocamera_impl.o: generated/makehuman.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/giop.hh
@@ -570,11 +575,16 @@ macos/video/videocamera_impl.o: generated/makehuman.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/tcp/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/exception.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
@@ -583,17 +593,28 @@ macos/video/videocamera_impl.o: generated/makehuman.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/ws/connection.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/ws/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/exception.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh

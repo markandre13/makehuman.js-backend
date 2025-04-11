@@ -22,16 +22,16 @@ using namespace std;
 // NOTE: there's libeio: http://blog.schmorp.de/2015-07-12-how-to-scan-directories-fast-the-tricks-of-aio_scandir.html
 // NOTE: CORBA FTAM-FTP Interworking: CosFileTransfer Module
 
-kaffeeklatsch_spec([] {
-    fdescribe("class FileSystem", [] {
-         it("XX", [] {
-            auto directory = make_shared<FileSystem_impl>();
+// kaffeeklatsch_spec([] {
+//     fdescribe("class FileSystem", [] {
+//          it("XX", [] {
+//             auto directory = make_shared<FileSystem_impl>();
 
-            directory->list().then([](std::vector<DirectoryEntry> list) {
-                for(auto &a: list) {
-                    println("{} {}\t{}", a.directory ? 'D' : ' ', a.name, a.size);
-                }
-            });
-        });
-    });
-});
+//             directory->list().then([](std::vector<DirectoryEntry> list) {
+//                 for(auto &a: list) {
+//                     println("{} {}\t{}", a.directory ? 'D' : ' ', a.name, a.size);
+//                 }
+//             });
+//         });
+//     });
+// });
