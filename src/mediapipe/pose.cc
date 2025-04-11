@@ -27,11 +27,12 @@ MediapipePose::MediapipePose(Backend_impl *backend): MediaPipeTask_impl(backend)
         auto &lm = result->pose_world_landmarks[0].landmarks;
         float lm_array[lm.size() * 3];
         float *ptr = lm_array;
+        // copy and transform mediapipe pose landmarks into something closer to what we send during freemocap
         float s = 10.0;
         for (size_t i = 0; i < lm.size(); ++i) {
             *(ptr++) = lm[i].x * s;
             *(ptr++) = lm[i].y * -s;
-            *(ptr++) = lm[i].z * s;
+            *(ptr++) = lm[i].z * -s;
         }
         std::span landmarks{lm_array, lm.size() * 3zu};
         frontend->poseLandmarks(landmarks, timestamp_ms);

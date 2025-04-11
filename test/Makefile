@@ -2,13 +2,15 @@ APP=tests
 
 MEM=-fsanitize=address -fsanitize=leak
 
-CXX=/usr/local/opt/llvm/bin/clang++
+HOMEBREW := $(shell brew config | grep HOMEBREW_PREFIX | sed 's/.*: //')
+
+CXX=$(HOMEBREW)/opt/llvm/bin/clang++
 CFLAGS=-std=c++23 -fmodules $(MEM) -O0 -g \
 	-mmacosx-version-min=12.0 \
 	-Wall -Wextra -Wno-deprecated-anon-enum-enum-conversion \
 	-Werror=return-type -Werror=shadow \
 	-Wno-unused-parameter -Wno-module-import-in-extern-c \
-	-I/usr/local/opt/llvm/include/c++ \
+	-I$(HOMEBREW)/opt/llvm/include/c++ \
 	-I../upstream/kaffeeklatsch/src \
 	-I../upstream/libeio/src \
 	-I../src
@@ -23,38 +25,32 @@ CORBA_SRC=orb.cc ior.cc skeleton.cc stub.cc giop.cc cdr.cc url.cc \
 	net/ws/protocol.cc net/ws/connection.cc \
 	net/util/socket.cc net/util/createAcceptKey.cc
 
-LDFLAGS=-L/usr/local/opt/llvm/lib/c++ \
+LDFLAGS=-L$(HOMEBREW)/opt/llvm/lib/c++ \
 	-mmacosx-version-min=12.0 \
 	-Wl,-rpath,/usr/local/opt/llvm/lib/c++ \
-	-L/usr/local/lib $(MEM)
+	-L$(HOMEBREW)/lib $(MEM)
 
 CORBA_FLAGS=-I$(CORBA_PATH)
-PROTOBUF_FLAGS=-I/Users/mark/lib/include
-OPENCV_FLAGS=-I/usr/local/opt/opencv@3/include
-WSLAG_FLAGS=-I/usr/local/include
-PROTOBUF_LDFLAGS=-L$(HOME)/lib/lib
-MEDIAPIPE_CPP_DIR=$(HOME)/Sites/mediapipe_cpp_lib
-MEDIAPIPE_CPP_LDFLAGS=-L$(MEDIAPIPE_CPP_DIR)/library
-LIB=-lev -lwslay -lnettle
-# LIB=-lprotobuf -lgmod -lwslay -lnettle
+OPENCV_FLAGS=-I$(HOMEBREW)/include/opencv4
+OPENCV_LFLAGS=-L$(HOMEBREW)/lib/opencv4
+WSLAY_FLAGS=-I$(HOMEBREW)/include
 
-    #   corba/net/ws.spec.cc \
+LIB=-lev -lwslay -lnettle
+#  -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs
 
 SRC = mesh/wavefront.spec.cc mesh/rendermesh.spec.cc ../src/mesh/wavefront.cc \
 	  livelink/livelink.spec.cc ../src/livelink/livelinkframe.cc \
 	  freemocap/freemocap.spec.cc ../src/freemocap/freemocap.cc \
 	  ev/timer.spec.cc ../src/ev/timer.cc \
-	  fs/fs.spec.cc fs/fs.cc \
+	  ev/async.spec.cc ../src/ev/async.cc \
+	  opencv/opencv.spec.cc \
+	  fs/fs.spec.cc ../src/fs_impl.cc ../src/generated/fs.cc \
 	  main.cc ../src/util.cc ../upstream/kaffeeklatsch/src/kaffeeklatsch.cc \
 	  $(patsubst %.cc,$(CORBA_PATH)/corba/%.cc,$(CORBA_SRC))
 
-WSLAY=../upstream/wslay/lib/wslay_event.c \
-  ../upstream/wslay/lib/wslay_frame.c \
-  ../upstream/wslay/lib/wslay_net.c \
-  ../upstream/wslay/lib/wslay_queue.c
+# ../src/opencv/loop.cc ../src/opencv/videoreader.cc \
 
 OBJ = $(SRC:.cc=.o) 
-# $(WSLAY:.c=.o)
 
 .SUFFIXES: .idl .cc .c .h .hh .o
 
@@ -78,7 +74,7 @@ $(APP): $(OBJ)
 
 .cc.o:
 	@echo compiling $*.cc ...
-	$(CXX) $(CORBA_FLAGS) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAG_FLAGS) $(OPENCV_FLAGS) \
+	$(CXX) $(CORBA_FLAGS) $(PROTOBUF_FLAGS) $(CFLAGS) $(WSLAY_FLAGS) $(OPENCV_FLAGS) \
 	-c -o $*.o $*.cc
 
 .c.o:
@@ -109,8 +105,12 @@ freemocap/freemocap.spec.o: ../src/mediapipe/blazepose.hh
 ../src/freemocap/freemocap.o: ../upstream/fast_float/fast_float.h
 ev/timer.spec.o: ../src/ev/timer.hh
 ../src/ev/timer.o: ../src/ev/timer.hh
-fs/fs.spec.o: fs/fs.hh fs/fs_skel.hh
-fs/fs.o: fs/fs.hh fs/fs_skel.hh fs/fs_stub.hh
+ev/async.spec.o: ../src/ev/async.hh ../src/ev/timer.hh
+../src/ev/async.o: ../src/ev/async.hh
+../src/fs_impl.o: ../src/fs_impl.hh ../src/generated/fs_skel.hh
+../src/fs_impl.o: ../src/generated/fs.hh
+../src/generated/fs.o: ../src/generated/fs.hh ../src/generated/fs_skel.hh
+../src/generated/fs.o: ../src/generated/fs_stub.hh
 ../src/util.o: ../src/util.hh ../upstream/fast_float/fast_float.h
 ../upstream/kaffeeklatsch/src/kaffeeklatsch.o: ../upstream/kaffeeklatsch/src/kaffeeklatsch.hh
 ../upstream/corba.cc/src/corba/orb.o: ../upstream/corba.cc/src/corba/orb.hh
@@ -236,12 +236,16 @@ fs/fs.o: fs/fs.hh fs/fs_skel.hh fs/fs_stub.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/giop.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/cdr.hh
 ../upstream/corba.cc/src/corba/net/stream2packet.o: ../upstream/corba.cc/src/corba/blob.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/giop.hh
@@ -249,11 +253,16 @@ fs/fs.o: fs/fs.hh fs/fs_skel.hh fs/fs_stub.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/protocol.o: ../upstream/corba.cc/src/corba/exception.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/tcp/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/exception.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
@@ -262,17 +271,28 @@ fs/fs.o: fs/fs.hh fs/fs_skel.hh fs/fs_stub.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/tcp/connection.o: ../upstream/corba.cc/src/corba/util/logger.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/ws/connection.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/protocol.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/ws/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/ws/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/tcp/protocol.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/protocol.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/blob.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/upstream/async.cc/src/async.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/util/socket.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/connection.hh
+../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/net/stream2packet.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/exception.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/orb.hh
 ../upstream/corba.cc/src/corba/net/ws/connection.o: ../upstream/corba.cc/src/corba/coroutine.hh

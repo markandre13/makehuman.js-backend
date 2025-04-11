@@ -4,14 +4,16 @@
 
 using namespace std;
 
-VideoReader::VideoReader(const string_view &filename) {
-    cap.open(string(filename));
+VideoReader::VideoReader(const string filename) {
+    println("VideoReader::VideoReader(\"{}\")", filename);
+    cap.open(filename);
     if (!cap.isOpened()) {
         throw runtime_error(format("failed to open video file \"{}\"", filename));
     }
     // double w = cap.get(cv::CAP_PROP_FRAME_WIDTH);
     // double h = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-    // double fps = cap.get(cv::CAP_PROP_FPS);
+    double fps = cap.get(cv::CAP_PROP_FPS);
+    step = 1000.0 / fps;
     // double frameCount = cap.get(cv::CAP_PROP_FRAME_COUNT); //!< Number of frames in the video file.
 }
 
@@ -48,9 +50,9 @@ VideoReader &VideoReader::operator>>(cv::Mat &image) {
 }
 
 int VideoReader::delay() const {
-    if (_paused) {
-        return 0;
-    }
+    // if (_paused) {
+    //     return 0;
+    // }
 
     auto nextFrame = frameNumber * step;
     auto now = getMilliseconds();

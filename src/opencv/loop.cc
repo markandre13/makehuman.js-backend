@@ -3,7 +3,31 @@
 #include "../util.hh"
 #include "../macos/video/videocamera_impl.hh"
 
+#include <queue>
+
 using namespace std;
+
+OpenCVLoop::OpenCVLoop(struct ev_loop *loop): 
+    _loop(loop),
+    _syncOpenCV([this] {resume();}),
+    _syncLibEV([this]{
+        ev_async_send(_loop, &asyncWatcher.watcher);
+        resume();
+    })
+{
+    asyncWatcher.loop = this;
+}
+
+void OpenCVLoop::initAsync() {
+    ev_async_init(&asyncWatcher.watcher, libev_async_cb);
+    ev_async_start(_loop, &asyncWatcher.watcher);
+}
+
+void OpenCVLoop::libev_async_cb(struct ev_loop *loop, struct ev_async *watcher, int revents) {
+    // println("OpenCVLoop::libev_async_cb()");
+    auto w = reinterpret_cast<AsyncWatcher*>(watcher);
+    w->loop->_syncLibEV.resume();
+}
 
 void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
     atomic_store(&_next_camera, camera);
@@ -29,6 +53,10 @@ void OpenCVLoop::run() {
     bool haveWindow = false;
 
     while (_running) {
+
+        // println("OpenCVLoop::run(): opencv resume");
+        _syncOpenCV.resume();
+
         // println("OpenCVLoop::run(): loop");
         auto next_reader = std::atomic_load(&_next_reader);
         if (_reader != next_reader) {
@@ -46,7 +74,8 @@ void OpenCVLoop::run() {
 
             if (frameHandler) {
                 // frameHandler(frame, frameNumber * 1000.0 / _reader->fps());
-                frameHandler(frame, _reader->tell());
+                auto frameNumber = _reader->tell();
+                frameHandler(frame, frameNumber);
             }
             if (!haveWindow) {
                 cv::namedWindow(windowName, cv::WINDOW_AUTOSIZE);
@@ -123,11 +152,13 @@ void OpenCVLoop::run() {
 }
 
 void OpenCVLoop::waitForChange() {
-    // println("OpenCVLoop::waitForChange()");
+    // println("OpenCVLoop::waitForChange(): waitKey()");
     cv::waitKey(1);
     // TODO: chance to race condition
     if (std::atomic_load(&_next_reader) != _reader || std::atomic_load(&_next_camera) != _camera) {
         return;
     }
+    // println("OpenCVLoop::waitForChange(): _mutex.lock()");
     _mutex.lock();  // wait for a change
+    // println("OpenCVLoop::waitForChange(): _mutex unlocked");
 }

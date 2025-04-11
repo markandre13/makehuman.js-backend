@@ -4,6 +4,9 @@
 
 #include <functional>
 
+/**
+ * Periodically call a user provided callback.
+ */
 class Timer {
         ev_timer watcher;
         struct ev_loop *loop;

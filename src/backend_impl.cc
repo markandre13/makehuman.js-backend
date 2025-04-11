@@ -11,6 +11,8 @@
 #include <glm/mat4x4.hpp>  // glm::mat4
 #include <glm/vec4.hpp>    // glm::vec4
 
+#include <ev.h>
+
 using namespace std;
 
 template <typename E>
@@ -18,22 +20,56 @@ auto as_int(E const value) -> typename std::underlying_type<E>::type {
     return static_cast<typename std::underlying_type<E>::type>(value);
 }
 
+// hack to send number of current frame to backend
+Backend_impl *Xbackend;
+ev_async Xwatcher;
+int32_t XframeNumber;
+struct ev_loop *Xloop;
+static void Xcallback(struct ev_loop *loop, struct ev_async *watcher, int revents) {
+    // println("Xcallback {} {}", XframeNumber, revents);
+    auto frontend = Xbackend->getFrontend();
+    if (frontend) {
+        frontend->frame(XframeNumber);
+    }
+}
+
+void XinitAsync() {
+    ev_async_init(&Xwatcher, &Xcallback);
+    ev_async_start(Xloop, &Xwatcher);
+}
+
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
-    : loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+    : _loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
+
+    Xloop = loop;
+    Xbackend = this;
 
     _recorder = make_shared<Recorder_impl>(openCVLoop);
     orb->activate_object(_recorder);
 
     // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
     openCVLoop->frameHandler = [&](const cv::Mat &frameImage, int32_t frameNumber) {
-        // println("frontend->frame({})", frameNumber);
-        frontend->frame(frameNumber);
+        // mediapipe is threaded by itself and doesn't seem to mind from which thread it's called
         if (_mediaPipeTask) {
             _mediaPipeTask->frame(frameImage, getMilliseconds());
         }
+        // this run from within the opencv thread, no problem here
         if (_videoWriter) {
             _videoWriter->frame(frameImage, _camera->fps());
         }
+
+        // hack to send number of current frame to backend
+        XframeNumber = frameNumber;
+        ev_async_send(_loop, &Xwatcher);
+        // because: neither the mutex in corba.cc nor the approach below worked
+        //          without causing segfault nor adding extra bytes at the beginning
+        //          of packets send via wslay.
+        //          the following at least crashed at once
+        // openCVLoop->executeLibEV([=] {
+        //     if (frontend) {
+        //         frontend->frame(frameNumber);
+        //     }
+        // }).no_wait();
     };
 }
 
@@ -58,8 +94,7 @@ CORBA::async<std::shared_ptr<Recorder>> Backend_impl::recorder() { co_return _re
  */
 CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> Backend_impl::getVideoCameras() { co_return cameras; }
 CORBA::async<std::shared_ptr<VideoCamera>> Backend_impl::camera() {
-    std::shared_ptr<VideoCamera> result;
-    co_return result;
+    co_return _camera;
 }
 CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera> camera) {
     auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);

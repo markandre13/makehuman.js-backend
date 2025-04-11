@@ -29,6 +29,14 @@
 
 using namespace std;
 
+void XinitAsync();
+
+void run(OpenCVLoop *openCvLoop, struct ev_loop *libEvLoop) {
+    openCvLoop->initAsync();
+    XinitAsync();
+    ev_run(libEvLoop, 0);
+}
+
 int main(void) {
     // Logger::setLevel(LOG_DEBUG);
 
@@ -47,7 +55,7 @@ int main(void) {
     orb->registerProtocol(protocol);
     protocol->listen("localhost", 9001);
 
-    OpenCVLoop openCVLoop;
+    OpenCVLoop openCVLoop(loop);
 
     auto backend = make_shared<Backend_impl>(orb, loop, &openCVLoop);
     orb->bind("Backend", backend);
@@ -98,7 +106,7 @@ int main(void) {
     //     println("tick");
     // });
 
-    std::thread libevthread(ev_run, loop, 0);
+    std::thread libevthread(run, &openCVLoop, loop);
     openCVLoop.run();
     libevthread.join();
 

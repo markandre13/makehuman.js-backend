@@ -26,7 +26,7 @@ class OpenCVLoop;
  * todo: split up
  */
 class Backend_impl : public Backend_skel {
-        struct ev_loop *loop;
+        struct ev_loop *_loop;
         OpenCVLoop *openCVLoop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;

@@ -10,10 +10,10 @@ class VideoReader {
         uint64_t startTime = 0;
         uint64_t frameNumber = 0;
         double step = 0;
-        bool _paused = true;
+        bool _paused = false;
 
     public:
-        VideoReader(const std::string_view &filename);
+        VideoReader(const std::string filename);
         uint16_t fps() const;
         uint32_t frameCount() const;
         void seek(uint32_t frame);
