@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <libgen.h>
@@ -152,7 +153,20 @@ CORBA::async<CORBA::blob> FileSystem_impl::read(const std::string_view &name) {
     co_return data;
 }
 CORBA::async<> FileSystem_impl::write(const std::string_view &name, const CORBA::blob_view &data) {
-    throw runtime_error(format("{}:{}: not implemented yet", __FILE__, __LINE__));
+    string path = format("{}/{}", _path, name);
+    int fd = ::open(path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0664);
+    if (fd < 0) {
+        throw runtime_error(format("failed to open {}: {}", path, strerror(errno)));
+    }
+    ssize_t n = ::write(fd, data.data(), data.size());
+    if (n < 0) {
+        close(fd);
+        throw runtime_error(format("failed to write {}: {}", path, strerror(errno)));
+    }
+    int m = close(fd);
+    if (m < 0) {
+        throw runtime_error(format("failed to close {}: {}", path, strerror(errno)));
+    }
     co_return;
 }
 CORBA::async<> FileSystem_impl::rm(const std::string_view &name) {
