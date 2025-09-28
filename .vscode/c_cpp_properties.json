@@ -4,9 +4,9 @@
             "name": "Mac",
             "includePath": [
                 "${default}",
-                "/usr/local/opt/llvm/include/c++",
-                "/usr/local/opt/opencv@3/include",
-                "/usr/local/include",
+                "/opt/homebrew/include/c++",
+                "/opt/homebrew/opt/opencv@4/include",
+                "/opt/homebrew/include",
                 "${workspaceFolder}/src",
                 "${workspaceFolder}/upstream/kaffeeklatsch/src",
                 "${workspaceFolder}/upstream/corba.cc/src",
@@ -15,16 +15,16 @@
             ],
             "defines": [],
             "macFrameworkPath": [
-                "/Library/Developer/CommandLineTools/SDKs/MacOSX12.sdk/System/Library/Frameworks"
+                "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/System/Library/Frameworks"
             ],
             "cStandard": "c17",
             "intelliSenseMode": "macos-clang-x64",
-            "compilerPath": "/usr/local/opt/llvm/bin/clang++",
+            "compilerPath": "/opt/homebrew/Cellar/llvm/21.1.1/bin/clang++",
             "compilerArgs": [
-                "-std=c++23",
+                "-std=c++26",
                 "-ObjC++",
             ],
-            "cppStandard": "c++23"
+            "cppStandard": "c++26"
         }
     ],
     "version": 4
