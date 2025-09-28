@@ -190,7 +190,7 @@ kaffeeklatsch_spec([] {
             // T result = cmd();
             // // wait for this function to be executed from within the libev thread
             // std::println("OpenCVLoop::execute(): SUSPEND LIBEV");
-            // _syncLibEV.suspend([&]{ev_async_send(_loop, &asyncWatcher.watcher);});
+            // _waitForLibEVLoop.suspend([&]{ev_async_send(_loop, &asyncWatcher.watcher);});
             // std::println("OpenCVLoop::execute(): RESUME LIBEV");
             // co_return result;
         });

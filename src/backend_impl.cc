@@ -1,17 +1,19 @@
 #include "backend_impl.hh"
 
-#include "livelink/livelinkframe.hh"
-#include "macos/video/videocamera_impl.hh"
-#include "opencv/loop.hh"
-#include "recorder_impl.hh"
-#include "util.hh"
+#include <ev.h>
+#include <sys/socket.h>
 
 #include <glm/ext/matrix_transform.hpp>  // glm::translate, glm::rotate, glm::scale
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>  // glm::mat4
 #include <glm/vec4.hpp>    // glm::vec4
 
-#include <ev.h>
+#include "ev/udpserver.hh"
+#include "livelink/livelinkframe.hh"
+#include "macos/video/videocamera_impl.hh"
+#include "opencv/loop.hh"
+#include "recorder_impl.hh"
+#include "util.hh"
 
 using namespace std;
 
@@ -40,7 +42,6 @@ void XinitAsync() {
 
 Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop, OpenCVLoop *openCVLoop)
     : _loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
-
     Xloop = loop;
     Xbackend = this;
 
@@ -64,7 +65,8 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
         // because: neither the mutex in corba.cc nor the approach below worked
         //          without causing segfault nor adding extra bytes at the beginning
         //          of packets send via wslay.
-        //          the following at least crashed at once
+        //          the following at least crashed once
+        //          maybe using std::atomic_load(&frontend); does the trick???
         // openCVLoop->executeLibEV([=] {
         //     if (frontend) {
         //         frontend->frame(frameNumber);
@@ -87,15 +89,95 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     co_return;
 }
 
+class ARKitFaceDevice_impl : public virtual ARKitFaceDevice_skel {
+    protected:
+        std::shared_ptr<ARKitFaceReceiver> _receiver;
+
+    public:
+        CORBA::async<std::shared_ptr<ARKitFaceReceiver>> receiver() override;
+        CORBA::async<void> receiver(std::shared_ptr<ARKitFaceReceiver>) override;
+};
+
+CORBA::async<std::shared_ptr<ARKitFaceReceiver>> ARKitFaceDevice_impl::receiver() { co_return _receiver; }
+CORBA::async<void> ARKitFaceDevice_impl::receiver(std::shared_ptr<ARKitFaceReceiver> receiver) {
+    _receiver = receiver;
+    co_return;
+}
+
+class LiveLinkFaceDevice : public virtual ARKitFaceDevice_impl, private UDPServer {
+    public:
+        LiveLinkFaceDevice(struct ev_loop *loop, unsigned port);
+        CORBA::async<void> receiver(std::shared_ptr<ARKitFaceReceiver>) override;
+        virtual CORBA::async<CaptureDeviceType> type() override;
+        virtual CORBA::async<std::string> name() override;
+
+    private:
+        bool _blendshapeNamesHaveBeenSend;
+        void read() override;
+};
+
+LiveLinkFaceDevice::LiveLinkFaceDevice(struct ev_loop *loop, unsigned port) : UDPServer(loop, port), _blendshapeNamesHaveBeenSend(false) {}
+
+CORBA::async<void> LiveLinkFaceDevice::receiver(std::shared_ptr<ARKitFaceReceiver> receiver) {
+    co_await ARKitFaceDevice_impl::receiver(receiver);
+    _blendshapeNamesHaveBeenSend = false;
+    co_return;
+}
+CORBA::async<CaptureDeviceType> LiveLinkFaceDevice::type() { co_return CaptureDeviceType::FACE; }
+CORBA::async<std::string> LiveLinkFaceDevice::name() { co_return "Live Link Face"; }
+
+void LiveLinkFaceDevice::read() {
+    unsigned char buffer[8192];
+    ssize_t nbytes = ::recv(fd, buffer, sizeof(buffer), 0);
+    if (nbytes > 0) {
+        // println("livelink: received {} bytes", nbytes);
+        // hexdump(buffer, nbytes);
+        try {
+            LiveLinkFrame frame(buffer, nbytes);
+            // callback(frame);
+            if (_receiver) {
+                if (!_blendshapeNamesHaveBeenSend) {
+                    _receiver->faceBlendshapeNames(LiveLinkFrame::blendshapeNames);
+                    _blendshapeNamesHaveBeenSend = true;
+                }
+                const size_t headYaw = 52;    // Y
+                const size_t headPitch = 53;  // X
+                const size_t headRoll = 54;   // Z
+
+                auto m = glm::identity<glm::mat4x4>();
+                m = glm::rotate(m, frame.weights[headRoll], glm::vec3(0.0f, 0.0f, 1.0f));
+                m = glm::rotate(m, frame.weights[headPitch], glm::vec3(-1.0f, 0.0f, 0.0f));
+                m = glm::rotate(m, frame.weights[headYaw], glm::vec3(0.0f, 1.0f, 0.0f));
+                // m = glm::translate(m, glm::vec3(0.0f, 0.0f, -20));
+                auto transform = span(const_cast<float *>(glm::value_ptr(m)), 16);
+                _receiver->faceLandmarks({}, frame.weights, transform, frame.frame);
+            }
+        } catch (exception &ex) {
+            println("LiveLink::read(): {}", ex.what());
+        }
+    } else {
+        // println("recv -> {}", nbytes);
+        if (nbytes < 0) {
+            perror("recv");
+        }
+    }
+}
+
+CORBA::async<std::vector<std::shared_ptr<CaptureDevice>>> Backend_impl::captureDevices() {
+    if (_captureDevices.size() == 0) {
+        auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
+        _captureDevices.push_back(std::static_pointer_cast<CaptureDevice>(ll));
+    }
+    co_return _captureDevices;
+}
+
 CORBA::async<std::shared_ptr<Recorder>> Backend_impl::recorder() { co_return _recorder; }
 
 /*
  * Select Videocamera
  */
 CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> Backend_impl::getVideoCameras() { co_return cameras; }
-CORBA::async<std::shared_ptr<VideoCamera>> Backend_impl::camera() {
-    co_return _camera;
-}
+CORBA::async<std::shared_ptr<VideoCamera>> Backend_impl::camera() { co_return _camera; }
 CORBA::async<> Backend_impl::camera(std::shared_ptr<VideoCamera> camera) {
     auto impl = dynamic_pointer_cast<VideoCamera_impl>(camera);
     if (camera && !impl) {
@@ -176,29 +258,6 @@ void Backend_impl::chordata(const char *buffer, size_t nbytes) {
         return;
     }
     fe->chordata(CORBA::blob_view(buffer, nbytes));
-}
-
-void Backend_impl::livelink(LiveLinkFrame &frame) {
-    if (!blendshapeNamesHaveBeenSend) {
-        frontend->faceBlendshapeNames(LiveLinkFrame::blendshapeNames);
-        blendshapeNamesHaveBeenSend = true;
-    }
-    const size_t headYaw = 52;    // Y
-    const size_t headPitch = 53;  // X
-    const size_t headRoll = 54;   // Z
-
-    auto m = glm::identity<glm::mat4x4>();
-    m = glm::rotate(m, frame.weights[headRoll], glm::vec3(0.0f, 0.0f, 1.0f));
-    m = glm::rotate(m, frame.weights[headPitch], glm::vec3(-1.0f, 0.0f, 0.0f));
-    m = glm::rotate(m, frame.weights[headYaw], glm::vec3(0.0f, 1.0f, 0.0f));
-    // m = glm::translate(m, glm::vec3(0.0f, 0.0f, -20));
-    auto transform = span(const_cast<float *>(glm::value_ptr(m)), 16);
-
-    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
-    if (!fe) {
-        return;
-    }
-    fe->faceLandmarks({}, frame.weights, transform, frame.frame);
 }
 
 void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {

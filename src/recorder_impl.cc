@@ -71,7 +71,7 @@ CORBA::async<void> Recorder_impl::pause() {
 };
 CORBA::async<void> Recorder_impl::seek(uint32_t frame) {
     // println("Recorder_impl::seek({})", frame);
-    co_await _loop->execute<int>([=] {
+    co_await _loop->execute<int>([=, this] {
         // println("Recorder_impl::seek({}): in opencv", frame);
         if (_reader && _reader->tell() != frame) {
             println("Recorder_impl::seek({}): actually seek", frame);

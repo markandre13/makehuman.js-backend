@@ -17,8 +17,12 @@
 #include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
+
+#if HAVE_MEDIAPIPE
 #include "mediapipe/face.hh"
 #include "mediapipe/pose.hh"
+#endif
+
 #include "opencv/loop.hh"
 #include "opencv/videoreader.hh"
 #include "util.hh"

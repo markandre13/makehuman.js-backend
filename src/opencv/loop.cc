@@ -9,8 +9,8 @@ using namespace std;
 
 OpenCVLoop::OpenCVLoop(struct ev_loop *loop): 
     _loop(loop),
-    _syncOpenCV([this] {resume();}),
-    _syncLibEV([this]{
+    _waitForOpenCVLoop([this] {resume();}),
+    _waitForLibEVLoop([this]{
         ev_async_send(_loop, &asyncWatcher.watcher);
         resume();
     })
@@ -26,17 +26,17 @@ void OpenCVLoop::initAsync() {
 void OpenCVLoop::libev_async_cb(struct ev_loop *loop, struct ev_async *watcher, int revents) {
     // println("OpenCVLoop::libev_async_cb()");
     auto w = reinterpret_cast<AsyncWatcher*>(watcher);
-    w->loop->_syncLibEV.resume();
+    w->loop->_waitForLibEVLoop.resume();
 }
 
 void OpenCVLoop::setCamera(std::shared_ptr<VideoCamera_impl> camera) {
     atomic_store(&_next_camera, camera);
-    _mutex.unlock();
+    resume();
 }
 
 void OpenCVLoop::setVideoReader(std::shared_ptr<VideoReader> reader) {
     atomic_store(&_next_reader, reader);
-    _mutex.unlock();
+    resume();
 }
 
 void OpenCVLoop::resume() {
@@ -55,7 +55,7 @@ void OpenCVLoop::run() {
     while (_running) {
 
         // println("OpenCVLoop::run(): opencv resume");
-        _syncOpenCV.resume();
+        _waitForOpenCVLoop.resume();
 
         // println("OpenCVLoop::run(): loop");
         auto next_reader = std::atomic_load(&_next_reader);

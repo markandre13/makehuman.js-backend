@@ -30,6 +30,7 @@ class Backend_impl : public Backend_skel {
         OpenCVLoop *openCVLoop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
+        std::vector<std::shared_ptr<CaptureDevice>> _captureDevices;
 
         std::shared_ptr<Recorder_impl> _recorder;
 
@@ -63,6 +64,7 @@ class Backend_impl : public Backend_skel {
         inline std::shared_ptr<Frontend> getFrontend() {
             return std::atomic_load(&frontend);
         }
+        CORBA::async<std::vector<std::shared_ptr<CaptureDevice>>> captureDevices() override;
         CORBA::async<std::shared_ptr<Recorder>> recorder() override;
 
         CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> getVideoCameras() override;
@@ -79,7 +81,6 @@ class Backend_impl : public Backend_skel {
         void saveFrame(const cv::Mat &frame, double fps);
 
         void chordata(const char *buffer, size_t nbytes);
-        void livelink(LiveLinkFrame &frame);
 
         void poseLandmarks(const BlazePose &pose, int64_t timestamp_ms);
 };
