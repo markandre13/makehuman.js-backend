@@ -1,19 +1,19 @@
 #pragma once
 
-#include <functional>
+#include "../capturedevice.hh"
 #include "../ev/udpserver.hh"
-#include "../captureengine.hh"
-
-class LiveLinkFrame;
 
 /**
  * Epic Games / Unreal Engine Live Link Face
  */
-class LiveLink: UDPServer, public CaptureEngine {
-        std::function<void(const LiveLinkFrame&)> callback;
-    public: 
-        LiveLink(struct ev_loop *loop, unsigned port, std::function<void(const LiveLinkFrame&)>);
-        virtual ~LiveLink();
-    protected:
+class LiveLinkFaceDevice : public virtual ARKitFaceDevice_impl, private UDPServer {
+    public:
+        LiveLinkFaceDevice(struct ev_loop *loop, unsigned port);
+        CORBA::async<void> receiver(std::shared_ptr<ARKitFaceReceiver>) override;
+        virtual CORBA::async<CaptureDeviceType> type() override;
+        virtual CORBA::async<std::string> name() override;
+
+    private:
+        bool _blendshapeNamesHaveBeenSend;
         void read() override;
 };
