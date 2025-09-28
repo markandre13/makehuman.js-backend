@@ -14,7 +14,9 @@
 
 using namespace std;
 
-LiveLinkFaceDevice::LiveLinkFaceDevice(struct ev_loop *loop, unsigned port) : UDPServer(loop, port), _blendshapeNamesHaveBeenSend(false) {}
+LiveLinkFaceDevice::LiveLinkFaceDevice(struct ev_loop *loop, unsigned port) : UDPServer(loop, port), _blendshapeNamesHaveBeenSend(false) {
+    println("LiveLinkFaceDevice listening on udp port {}", port);
+}
 
 CORBA::async<void> LiveLinkFaceDevice::receiver(std::shared_ptr<ARKitFaceReceiver> receiver) {
     co_await ARKitFaceDevice_impl::receiver(receiver);

@@ -39,6 +39,10 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     Xloop = loop;
     Xbackend = this;
 
+    auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
+    orb->activate_object(ll);
+    _captureDevices.push_back(std::static_pointer_cast<CaptureDevice>(ll));
+
     _recorder = make_shared<Recorder_impl>(openCVLoop);
     orb->activate_object(_recorder);
 
@@ -83,13 +87,7 @@ CORBA::async<> Backend_impl::setFrontend(std::shared_ptr<Frontend> aFrontend) {
     co_return;
 }
 
-CORBA::async<std::vector<std::shared_ptr<CaptureDevice>>> Backend_impl::captureDevices() {
-    if (_captureDevices.size() == 0) {
-        auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
-        _captureDevices.push_back(std::static_pointer_cast<CaptureDevice>(ll));
-    }
-    co_return _captureDevices;
-}
+CORBA::async<std::vector<std::shared_ptr<CaptureDevice>>> Backend_impl::captureDevices() { co_return _captureDevices; }
 
 CORBA::async<std::shared_ptr<Recorder>> Backend_impl::recorder() { co_return _recorder; }
 

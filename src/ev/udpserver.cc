@@ -41,11 +41,11 @@ UDPServer::UDPServer(struct ev_loop *loop, unsigned port) : loop(loop), port(por
     ev_io_init(&handler->watcher, libev_read_cb, fd, EV_READ);
     ev_io_start(loop, &handler->watcher);
 
-    println("start listening on udp port {}", port);
+    // println("start listening on udp port {}", port);
 }
 
 UDPServer::~UDPServer() {
-    println("stop listening on udp port {}", port);
+    // println("stop listening on udp port {}", port);
     ev_io_stop(loop, &handler->watcher);
     close(fd);
     delete handler;
