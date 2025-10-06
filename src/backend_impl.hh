@@ -4,6 +4,7 @@
 #include "opencv/videowriter.hh"
 #include "opencv/videoreader.hh"
 
+#include "capturedevice.hh"
 #include "mediapipe/blazepose.hh"
 #include "mediapipe/mediapipetask_impl.hh"
 
@@ -30,7 +31,7 @@ class Backend_impl : public Backend_skel {
         OpenCVLoop *openCVLoop;
         // std::atomic<std::shared_ptr<Frontend>> frontend;
         std::shared_ptr<Frontend> frontend;
-        std::vector<std::shared_ptr<CaptureDevice>> _captureDevices;
+        std::vector<std::shared_ptr<LocalCaptureDevice>> _captureDevices;
 
         std::shared_ptr<Recorder_impl> _recorder;
 
@@ -64,7 +65,7 @@ class Backend_impl : public Backend_skel {
         inline std::shared_ptr<Frontend> getFrontend() {
             return std::atomic_load(&frontend);
         }
-        CORBA::async<std::vector<std::shared_ptr<CaptureDevice>>> captureDevices() override;
+        CORBA::async<std::vector<CaptureDeviceInfo>> captureDevices() override;
         CORBA::async<std::shared_ptr<Recorder>> recorder() override;
 
         CORBA::async<std::vector<std::shared_ptr<VideoCamera>>> getVideoCameras() override;

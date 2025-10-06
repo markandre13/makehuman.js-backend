@@ -123,7 +123,8 @@
         "alignedvector3": "cpp",
         "fft": "cpp",
         "barrier": "cpp",
-        "latch": "cpp"
+        "latch": "cpp",
+        "text_encoding": "cpp"
     },
     "cmake.configureOnOpen": false,
     "makefile.makefilePath": "test/Makefile",

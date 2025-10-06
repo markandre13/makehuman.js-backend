@@ -19,12 +19,15 @@ LiveLinkFaceDevice::LiveLinkFaceDevice(struct ev_loop *loop, unsigned port) : UD
 }
 
 CORBA::async<void> LiveLinkFaceDevice::receiver(std::shared_ptr<ARKitFaceReceiver> receiver) {
-    co_await ARKitFaceDevice_impl::receiver(receiver);
+    // co_await ARKitFaceDevice_impl::receiver(receiver);
+    _receiver = receiver;
     _blendshapeNamesHaveBeenSend = false;
     co_return;
 }
-CORBA::async<CaptureDeviceType> LiveLinkFaceDevice::type() { co_return CaptureDeviceType::FACE; }
-CORBA::async<std::string> LiveLinkFaceDevice::name() { co_return "Live Link Face"; }
+
+std::string LiveLinkFaceDevice::id() { return "xxx"; }
+CaptureDeviceType LiveLinkFaceDevice::type() { return CaptureDeviceType::FACE; }
+std::string LiveLinkFaceDevice::name() { return "Life Link Face"; }
 
 void LiveLinkFaceDevice::read() {
     unsigned char buffer[8192];

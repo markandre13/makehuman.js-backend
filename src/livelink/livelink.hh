@@ -10,8 +10,9 @@ class LiveLinkFaceDevice : public virtual ARKitFaceDevice_impl, private UDPServe
     public:
         LiveLinkFaceDevice(struct ev_loop *loop, unsigned port);
         CORBA::async<void> receiver(std::shared_ptr<ARKitFaceReceiver>) override;
-        virtual CORBA::async<CaptureDeviceType> type() override;
-        virtual CORBA::async<std::string> name() override;
+        std::string id() override;
+        CaptureDeviceType type() override;
+        std::string name() override;
 
     private:
         bool _blendshapeNamesHaveBeenSend;
