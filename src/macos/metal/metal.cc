@@ -15,6 +15,10 @@
 #include "renderapp.hh"
 #include "target.hh"
 
+/**
+ * render blendshapes natively with apple metal to have something to compare
+ * makehuman.js' latency with
+ */
 class FaceRenderer {
     public:
         FaceRenderer();
@@ -330,7 +334,7 @@ void MetalFacerenderer::faceLandmarks(std::optional<mediapipe::cc_lib::vision::f
 
 void MetalFacerenderer::faceLandmarks(const LiveLinkFrame& frame) {
     for (int i = 0; i < 61; ++i) {
-        auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i].data());
+        auto x = delegate->faceRenderer->blendshapes.find(frame.blendshapeNames[i]);
         if (x == delegate->faceRenderer->blendshapes.end()) {
             continue;
         }

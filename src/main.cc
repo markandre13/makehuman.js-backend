@@ -9,14 +9,13 @@
 #include <thread>
 
 #include "backend_impl.hh"
-#include "fs_impl.hh"
-#include "macos/video/videocamera_impl.hh"
-
-#include "ev/timer.hh"
 #include "chordata/chordata.hh"
+#include "ev/timer.hh"
 #include "freemocap/freemocap.hh"
+#include "fs_impl.hh"
 #include "livelink/livelink.hh"
 #include "livelink/livelinkframe.hh"
+#include "macos/video/videocamera_impl.hh"
 
 #if HAVE_MEDIAPIPE
 #include "mediapipe/face.hh"
@@ -35,7 +34,7 @@ using namespace std;
 
 void XinitAsync();
 
-void run(OpenCVLoop *openCvLoop, struct ev_loop *libEvLoop) {
+void run(OpenCVLoop* openCvLoop, struct ev_loop* libEvLoop) {
     openCvLoop->initAsync();
     XinitAsync();
     ev_run(libEvLoop, 0);
@@ -52,7 +51,7 @@ int main(void) {
     auto orb = make_shared<CORBA::ORB>();
     // orb->debug = true;
 
-    struct ev_loop *loop = EV_DEFAULT;
+    struct ev_loop* loop = EV_DEFAULT;
     println("the audience is listening...");
 
     auto protocol = new CORBA::detail::WsProtocol(loop);

@@ -16,7 +16,7 @@ class LiveLinkFrame {
         uint32_t fps;
         uint32_t fpsDenominator;
         uint8_t blendshapeCount;
-        static std::vector<std::string_view> blendshapeNames;
+        static const char * blendshapeNames[61];
         float weights[61];
 
     protected:
