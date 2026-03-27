@@ -1,10 +1,10 @@
 
 #include "backend_impl.hh"
-
 #include <ev.h>
-
 #include "livelink/livelink.hh"
+#include "mediapipe-py/face.hh"
 #include "macos/video/videocamera_impl.hh"
+
 #include "opencv/loop.hh"
 #include "recorder_impl.hh"
 #include "util.hh"
@@ -38,6 +38,10 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     : _loop(loop), openCVLoop(openCVLoop), cameras(::getVideoCameras(orb)), mediaPipeTasks(::getMediaPipeTasks(orb, this)) {
     Xloop = loop;
     Xbackend = this;
+
+    auto mp = make_shared<MediapipePyFaceDevice>(_loop, 11110);
+    orb->activate_object(mp);
+    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mp));
 
     auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
     orb->activate_object(ll);

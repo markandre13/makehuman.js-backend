@@ -8,6 +8,9 @@ The software is work in progress
 
 #### macOS
 
+(mediapipe doesn't build at the moment, hence mediapipe-face-to-udp.py
+serves as a workaround)
+
 * Xcode 16.2 (bazel 6.5.0 fails to build zlib with Xcode 16.3)
   [Apple Downloads](https://developer.apple.com/download/all/?q=xcode)
 * brew
@@ -41,18 +44,3 @@ for now we just start with the camcorder
 * ...
 
 we put most of the logic into the frontend
-
-```
-
-#### how to extend the collada exporter
-
-function exportCollada(humanMesh: HumanMesh)
-    colladaHead() +
-    colladaEffects(materials) +
-    colladaMaterials(materials) +
-    colladaGeometries(s, geometry, materials) + // mesh
-    colladaControllers(s, geometry, materials) + // weights
-    colladaAnimations() +
-    colladaVisualScenes(s, materials) + // skeleton
-    colladaScene() +
-    colladaTail()

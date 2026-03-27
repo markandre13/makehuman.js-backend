@@ -146,12 +146,12 @@ void LiveLinkFaceDevice::read() {
                 _receiver->faceLandmarks(weights, transform, frame.frame);
             }
         } catch (exception& ex) {
-            println("LiveLink::read(): {}", ex.what());
+            println("LiveLinkFaceDevice::read(): {}", ex.what());
         }
     } else {
         // println("recv -> {}", nbytes);
         if (nbytes < 0) {
-            perror("LiveLink::read(): recv");
+            perror("LiveLinkFaceDevice::read(): recv");
         }
     }
 }

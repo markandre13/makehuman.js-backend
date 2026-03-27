@@ -11,6 +11,7 @@ APP_SRC=main.cc \
 		mediapipe/mediapipetask_impl.cc \
 		opencv/loop.cc opencv/videoreader.cc \
 		capturedevice.cc \
+		mediapipe-py/face.cc \
 		livelink/livelink.cc livelink/livelinkframe.cc \
 		freemocap/freemocap.cc freemocap/player.cc \
 		chordata/chordata.cc \

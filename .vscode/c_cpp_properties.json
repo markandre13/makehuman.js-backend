@@ -5,7 +5,7 @@
             "includePath": [
                 "${default}",
                 "/opt/homebrew/include/c++",
-                "/opt/homebrew/opt/opencv@4/include",
+                "/opt/homebrew/include/opencv4",
                 "/opt/homebrew/include",
                 "${workspaceFolder}/src",
                 "${workspaceFolder}/upstream/kaffeeklatsch/src",
@@ -19,10 +19,10 @@
             ],
             "cStandard": "c17",
             "intelliSenseMode": "macos-clang-x64",
-            "compilerPath": "/opt/homebrew/Cellar/llvm/21.1.1/bin/clang++",
+            "compilerPath": "/opt/homebrew/Cellar/llvm/22.1.1/bin/clang++",
             "compilerArgs": [
                 "-std=c++26",
-                "-ObjC++",
+                "-ObjC++"
             ],
             "cppStandard": "c++26"
         }
