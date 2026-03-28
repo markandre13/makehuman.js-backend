@@ -1,18 +1,14 @@
 #include "face.hh"
 
 #include <sys/socket.h>
+
 #include <print>
 #include <string>
 
 using namespace std;
 
-MediapipePyFaceDevice::MediapipePyFaceDevice(struct ev_loop* loop, unsigned port) : UDPServer(loop, port), _blendshapeNamesHaveBeenSend(false) {
+MediapipePyFaceDevice::MediapipePyFaceDevice(struct ev_loop* loop, unsigned port) : UDPServer(loop, port) {
     println("MediapipePyFaceDevice listening on udp port {}", port);
-}
-
-CORBA::async<void> MediapipePyFaceDevice::receiver(std::shared_ptr<ARKitFaceReceiver> receiver) {
-    _receiver = receiver;
-    co_return;
 }
 
 std::string MediapipePyFaceDevice::id() { return "MediapipePyFaceDevice"; }
@@ -20,10 +16,10 @@ CaptureDeviceType MediapipePyFaceDevice::type() { return CaptureDeviceType::FACE
 std::string MediapipePyFaceDevice::name() { return "Mediapipe (Python) Face"; }
 
 struct X {
-    float weights[53];
-    float spacer;
-    float transform[16];
-    uint64_t timestamp_ms;
+        float weights[53];
+        float spacer;
+        float transform[16];
+        uint64_t timestamp_ms;
 };
 
 void MediapipePyFaceDevice::read() {
@@ -36,10 +32,7 @@ void MediapipePyFaceDevice::read() {
         try {
             // println("got {} bytes {}", nbytes, fbuffer->timestamp_ms);
             if (_receiver) {
-                auto weights = span(fbuffer->weights, 53);
-                auto transform = span(fbuffer->transform, 16);
-                uint64_t timestamp_ms = fbuffer->timestamp_ms;
-                _receiver->faceLandmarks(weights, transform, timestamp_ms);
+                _receiver->faceLandmarks(fbuffer->weights, fbuffer->transform, fbuffer->timestamp_ms);
             }
         } catch (exception& ex) {
             println("MediapipePyFaceDevice::read(): {}", ex.what());

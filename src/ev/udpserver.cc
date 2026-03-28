@@ -18,7 +18,7 @@ struct UDPServer::handler_t {
         UDPServer *object;
 };
 
-UDPServer::UDPServer(struct ev_loop *loop, unsigned port) : loop(loop), port(port) {
+UDPServer::UDPServer(struct ev_loop *loop, unsigned port) : loop(loop) {
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     int yes = 1;

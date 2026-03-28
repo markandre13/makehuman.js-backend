@@ -26,7 +26,8 @@ void MoCapPlayer::tick() {
         if (pos >= mocap.size()) {
             pos = 0;
         }
-        backend->poseLandmarks(mocap[pos], pos);
+        println("MoCapPlayer::tick(): sending pose landmarks not implemented yet");
+        // backend->poseLandmarks(mocap[pos], pos);
     }
 }
 void MoCapPlayer::play() { paused = false; }

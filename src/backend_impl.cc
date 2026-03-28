@@ -3,6 +3,7 @@
 #include <ev.h>
 #include "livelink/livelink.hh"
 #include "mediapipe-py/face.hh"
+#include "mediapipe-py/holistic.hh"
 #include "macos/video/videocamera_impl.hh"
 
 #include "opencv/loop.hh"
@@ -39,13 +40,17 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     Xloop = loop;
     Xbackend = this;
 
-    auto mp = make_shared<MediapipePyFaceDevice>(_loop, 11110);
-    orb->activate_object(mp);
-    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mp));
+    auto mf = make_shared<MediapipePyFaceDevice>(_loop, 11110);
+    orb->activate_object(mf);
+    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mf));
 
     auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
     orb->activate_object(ll);
     _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(ll));
+
+    auto mh = make_shared<MediapipePyHolisticDevice>(_loop, 11112);
+    orb->activate_object(mh);
+    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mh));
 
     _recorder = make_shared<Recorder_impl>(openCVLoop);
     orb->activate_object(_recorder);
@@ -193,19 +198,19 @@ void Backend_impl::chordata(const char *buffer, size_t nbytes) {
     fe->chordata(CORBA::blob_view(buffer, nbytes));
 }
 
-void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
-    std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
-    if (!fe) {
-        return;
-    }
+// void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
+//     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
+//     if (!fe) {
+//         return;
+//     }
 
-    BlazePose a(pose);  // WTF???
-    // float &lm_array[33 * 3] {pose.landmarks};
-    // std::span<float> landmarks{span(*pose.landmarks, sizeof(pose.landmarks)};
+//     BlazePose a(pose);  // WTF???
+//     // float &lm_array[33 * 3] {pose.landmarks};
+//     // std::span<float> landmarks{span(*pose.landmarks, sizeof(pose.landmarks)};
 
-    std::span<float> landmarks(a.landmarks, 99);
-    fe->poseLandmarks(landmarks, timestamp_ms);
-}
+//     std::span<float> landmarks(a.landmarks, 99);
+//     fe->poseLandmarks(landmarks, timestamp_ms);
+// }
 
 /*
  *

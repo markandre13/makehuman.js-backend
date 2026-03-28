@@ -82,6 +82,5 @@ class Backend_impl : public Backend_skel {
         void saveFrame(const cv::Mat &frame, double fps);
 
         void chordata(const char *buffer, size_t nbytes);
-
-        void poseLandmarks(const BlazePose &pose, int64_t timestamp_ms);
+        // void poseLandmarks(const BlazePose &pose, int64_t timestamp_ms);
 };

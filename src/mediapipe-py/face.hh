@@ -8,13 +8,11 @@
  */
 class MediapipePyFaceDevice : public virtual ARKitFaceDevice_impl, private UDPServer {
     public:
-        MediapipePyFaceDevice(struct ev_loop *loop, unsigned port);
-        CORBA::async<void> receiver(std::shared_ptr<ARKitFaceReceiver>) override;
+        MediapipePyFaceDevice(struct ev_loop* loop, unsigned port);
         std::string id() override;
         CaptureDeviceType type() override;
         std::string name() override;
 
     private:
-        bool _blendshapeNamesHaveBeenSend;
         void read() override;
 };
