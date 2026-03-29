@@ -3,8 +3,6 @@
 #include "../ev/timer.hh"
 #include "freemocap.hh"
 
-class Backend_impl;
-
 /**
  * the goal of the MoCapPlayer is this:
  *
@@ -18,12 +16,11 @@ class MoCapPlayer {
     private:
         Timer timer;
         MoCap mocap;
-        Backend_impl *backend;
         size_t pos = 0;
         bool paused = false;
 
     public:
-        MoCapPlayer(struct ev_loop *loop, const std::string_view &filename, Backend_impl *backend);
+        MoCapPlayer(struct ev_loop *loop, const std::string &filename);
         ~MoCapPlayer();
         void play();
         void pause();

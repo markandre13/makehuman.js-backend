@@ -80,7 +80,7 @@ MACOS_LFLAGS=-framework Metal \
 			 -framework CoreMedia
 endif
 
-CFLAGS=-std=c++23 $(MEMCHECK) \
+CFLAGS=-std=c++26 $(MEMCHECK) \
 	-Wall -Wextra \
 	-Werror=return-type \
 	-Werror=shadow \
@@ -222,10 +222,12 @@ recorder/recorder_impl.o: ../upstream/corba.cc/src/corba/exception.hh
 recorder/recorder_impl.o: ../upstream/corba.cc/src/corba/orb.hh
 recorder/recorder_impl.o: ../upstream/corba.cc/src/corba/giop.hh
 recorder/recorder_impl.o: ../upstream/corba.cc/src/corba/coroutine.hh
-recorder/recorder_impl.o: generated/makehuman.hh recorder/recorderdevice.hh
-recorder/recorder_impl.o: capturedevice.hh generated/makehuman_skel.hh
-recorder/recorder_impl.o: opencv/loop.hh lib/threadsync.hh
-recorder/recorder_impl.o: opencv/videoreader.hh
+recorder/recorder_impl.o: generated/makehuman.hh opencv/loop.hh
+recorder/recorder_impl.o: lib/threadsync.hh opencv/videoreader.hh
+recorder/recorder_impl.o: freemocap/player.hh ev/timer.hh
+recorder/recorder_impl.o: freemocap/freemocap.hh capturedevice.hh
+recorder/recorder_impl.o: generated/makehuman_skel.hh mediapipe/blazepose.hh
+recorder/recorder_impl.o: recorder/recorderdevice.hh
 recorder/recorderdevice.o: recorder/recorderdevice.hh capturedevice.hh
 recorder/recorderdevice.o: generated/makehuman_skel.hh
 recorder/recorderdevice.o: ../upstream/corba.cc/src/corba/corba.hh

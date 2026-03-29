@@ -9,6 +9,10 @@
 #include "../capturedevice.hh"
 #include "../mediapipe/blazepose.hh"
 
+// mediapipe_face_3d_xyz.csv does not contain the blendshapes
+// one implementation to calculate the blendshapes from the landmarks
+// https://github.com/JimWest/MeFaMo/blob/main/mefamo/blendshapes/blendshape_calculator.py
+
 /**
  * Read FreeMoCap body pose CSV file.
  */
@@ -17,15 +21,7 @@ class FreeMoCap {
         bool eof;
 
     public:
-        FreeMoCap(const std::string& filename) : in(filename), eof(false) {
-            if (!in) {
-                throw std::runtime_error(format("failed to open file '{}'", filename));
-            }
-            // skip csv header
-            std::string line;
-            getline(in, line);
-            // println("got line '{}'", line);
-        }
+        FreeMoCap(const std::string& filename);
 
         /**
          * 'true' when the last frame has been read.

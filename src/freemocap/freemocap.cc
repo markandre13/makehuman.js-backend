@@ -1,9 +1,23 @@
 #include "freemocap.hh"
+
 #include "../util.hh"
 
 using namespace std;
 
-void FreeMoCap::getPose(BlazePose *blazepose) {
+FreeMoCap::FreeMoCap(const std::string& filename) : in(filename), eof(false) {
+    if (!in) {
+        throw std::runtime_error(format("failed to open file '{}'", filename));
+    }
+    // skip csv header
+    std::string line;
+    getline(in, line);
+    if (!line.starts_with("body_nose_x,body_nose_y,body_nose_z,body_left_eye_inner_x,body_left_eye_inner_y,body_left_eye_inner_z,body_left_eye_x,body_left_eye_y,body_left_eye_z,body_left_eye_outer_x,body_left_eye_outer_y,body_left_eye_outer_z,body_right_eye_inner_x,body_right_eye_inner_y,body_right_eye_inner_z,body_right_eye_x,body_right_eye_y,body_right_eye_z,body_right_eye_outer")) {
+        throw runtime_error(format("unexpected header in file mediapipe_body_3d_xyz.csv file ({})", filename));
+    }
+    // println("got line '{}'", line);
+}
+
+void FreeMoCap::getPose(BlazePose* blazepose) {
     std::string line;
     eof = false;
     if (!getline(in, line) || trim(line).size() == 0) {
@@ -29,10 +43,10 @@ void FreeMoCap::getPose(BlazePose *blazepose) {
     }
 }
 
-MoCap::MoCap(FreeMoCap &&mocap) {
-    while(!mocap.isEof()) {
-        store.resize(store.size()+1);
+MoCap::MoCap(FreeMoCap&& mocap) {
+    while (!mocap.isEof()) {
+        store.resize(store.size() + 1);
         mocap.getPose(&store.back());
     }
-    store.resize(store.size()-1);
+    store.resize(store.size() - 1);
 }

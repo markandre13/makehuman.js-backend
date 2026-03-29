@@ -60,7 +60,7 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     orb->activate_object(mh);
     _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mh));
 
-    _recorder = make_shared<Recorder_impl>(openCVLoop);
+    _recorder = make_shared<Recorder_impl>(loop, openCVLoop);
     orb->activate_object(_recorder);
 
     // when the openCVLoop delivers a frame, forward it to the _mediaPipeTask
