@@ -1,13 +1,17 @@
 
 #include "backend_impl.hh"
 #include <ev.h>
+
+#include "recorder/recorder_impl.hh"
+#include "recorder/recorderdevice.hh"
+#include "freemocap/freemocap.hh"
 #include "livelink/livelink.hh"
 #include "mediapipe-py/face.hh"
 #include "mediapipe-py/holistic.hh"
+
 #include "macos/video/videocamera_impl.hh"
 
 #include "opencv/loop.hh"
-#include "recorder_impl.hh"
 #include "util.hh"
 
 using namespace std;
@@ -40,13 +44,17 @@ Backend_impl::Backend_impl(std::shared_ptr<CORBA::ORB> orb, struct ev_loop *loop
     Xloop = loop;
     Xbackend = this;
 
-    auto mf = make_shared<MediapipePyFaceDevice>(_loop, 11110);
-    orb->activate_object(mf);
-    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mf));
+    auto rd = make_shared<RecorderDevice>(_loop);
+    orb->activate_object(rd);
+    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(rd));
 
     auto ll = make_shared<LiveLinkFaceDevice>(_loop, 11111);
     orb->activate_object(ll);
     _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(ll));
+
+    auto mf = make_shared<MediapipePyFaceDevice>(_loop, 11110);
+    orb->activate_object(mf);
+    _captureDevices.push_back(std::static_pointer_cast<LocalCaptureDevice>(mf));
 
     auto mh = make_shared<MediapipePyHolisticDevice>(_loop, 11112);
     orb->activate_object(mh);
@@ -142,54 +150,6 @@ CORBA::async<> Backend_impl::mediaPipeTask(shared_ptr<MediaPipeTask> task) {
  *
  */
 
-// CORBA::async<> Backend_impl::setEngine(MotionCaptureType type, MotionCaptureEngine engine) {
-//     println("Backend_impl::setEngine(...)");
-//     switch (type) {
-//         case MotionCaptureType::FACE:
-//             blendshapeNamesHaveBeenSend = false;
-//             switch (engine) {
-//                 case MotionCaptureEngine::NONE:
-//                     // face = nullptr;
-//                     face.reset();
-//                     break;
-//                 case MotionCaptureEngine::MEDIAPIPE:
-//                     // face = nullptr;
-//                     face.reset();
-//                     // TODO: this is currently always on...
-//                     // captureEngine = new MediaPipe(...);
-//                     break;
-//                 case MotionCaptureEngine::LIVELINK:
-//                     // NOTE: loop runs in it's own thread... but CORBA is on the same thread
-//                     //       so adding a udp listener here should work
-//                     face = make_unique<LiveLink>(loop, 11111, [&](const LiveLinkFrame &frame) {
-//                         // println("frame {}.{}", frame.frame, frame.subframe);
-//                         this->livelink(const_cast<LiveLinkFrame &>(frame));
-//                         // metalRenderer->faceLandmarks(frame);
-//                     });
-//                     break;
-//                 default:;
-//             }
-//             break;
-//         case MotionCaptureType::BODY:
-//             switch (engine) {
-//                 case MotionCaptureEngine::NONE:
-//                     // face = nullptr;
-//                     body.reset();
-//                     break;
-//                 case MotionCaptureEngine::MEDIAPIPE:
-//                     // face = nullptr;
-//                     body.reset();
-//                     // captureEngine = new MediaPipe(...);
-//                     break;
-//                 default:;
-//             }
-//             break;
-//         default:
-//             println("Backend::setEngine(type={}, engine={}): not possible or implemented", as_int(type), as_int(engine));
-//     }
-//     co_return;
-// }
-
 void Backend_impl::chordata(const char *buffer, size_t nbytes) {
     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
     if (!fe) {
@@ -197,20 +157,6 @@ void Backend_impl::chordata(const char *buffer, size_t nbytes) {
     }
     fe->chordata(CORBA::blob_view(buffer, nbytes));
 }
-
-// void Backend_impl::poseLandmarks(const BlazePose &pose, int64_t timestamp_ms) {
-//     std::shared_ptr<Frontend> fe = std::atomic_load(&this->frontend);
-//     if (!fe) {
-//         return;
-//     }
-
-//     BlazePose a(pose);  // WTF???
-//     // float &lm_array[33 * 3] {pose.landmarks};
-//     // std::span<float> landmarks{span(*pose.landmarks, sizeof(pose.landmarks)};
-
-//     std::span<float> landmarks(a.landmarks, 99);
-//     fe->poseLandmarks(landmarks, timestamp_ms);
-// }
 
 /*
  *

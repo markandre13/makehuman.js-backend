@@ -1,6 +1,7 @@
 #include "recorder_impl.hh"
-#include "opencv/loop.hh"
-#include "opencv/videoreader.hh"
+#include "recorderdevice.hh"
+#include "../opencv/loop.hh"
+#include "../opencv/videoreader.hh"
 
 using namespace std;
 

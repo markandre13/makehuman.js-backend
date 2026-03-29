@@ -14,6 +14,5 @@ class MediapipePyHolisticDevice : public virtual HolisticDevice_impl, private UD
         std::string name() override;
 
     private:
-        bool _blendshapeNamesHaveBeenSend;
         void read() override;
 };

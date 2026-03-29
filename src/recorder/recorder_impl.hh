@@ -1,6 +1,6 @@
 #pragma once
 
-#include "generated/makehuman_skel.hh"
+#include "../generated/makehuman_skel.hh"
 
 class OpenCVLoop;
 class VideoReader;

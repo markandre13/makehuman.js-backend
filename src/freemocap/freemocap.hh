@@ -1,11 +1,12 @@
 #pragma once
 
 #include <fstream>
+#include <print>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
-#include <print>
 
+#include "../capturedevice.hh"
 #include "../mediapipe/blazepose.hh"
 
 /**
@@ -16,7 +17,7 @@ class FreeMoCap {
         bool eof;
 
     public:
-        FreeMoCap(const std::string &filename) : in(filename), eof(false) {
+        FreeMoCap(const std::string& filename) : in(filename), eof(false) {
             if (!in) {
                 throw std::runtime_error(format("failed to open file '{}'", filename));
             }
@@ -29,20 +30,22 @@ class FreeMoCap {
         /**
          * 'true' when the last frame has been read.
          */
-        inline bool isEof() const {
-            return eof;
-        }
+        inline bool isEof() const { return eof; }
 
         /**
          * read the next pose.
          */
-        void getPose(BlazePose *blazepose);
+        void getPose(BlazePose* blazepose);
 };
 
+/**
+ * Read FreeMoCap into memory for random access.
+ */
 class MoCap {
         std::vector<BlazePose> store;
+
     public:
-        MoCap(FreeMoCap &&mocap);
+        MoCap(FreeMoCap&& mocap);
         size_t size() const { return store.size(); }
-        const BlazePose & operator[] (size_t pos) { return store[pos]; }
+        const BlazePose& operator[](size_t pos) { return store[pos]; }
 };

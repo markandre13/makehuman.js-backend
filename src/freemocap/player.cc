@@ -1,5 +1,6 @@
 #include "player.hh"
 #include "../backend_impl.hh"
+#include "../recorder/recorderdevice.hh"
 #include <string>
 #include <print>
 
@@ -28,6 +29,8 @@ void MoCapPlayer::tick() {
         }
         println("MoCapPlayer::tick(): sending pose landmarks not implemented yet");
         // backend->poseLandmarks(mocap[pos], pos);
+        // RecorderDevice::instance->landmarks(mocap[pos]);
+
     }
 }
 void MoCapPlayer::play() { paused = false; }
